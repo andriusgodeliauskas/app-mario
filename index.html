@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Super Mario — Learn English Adventure</title>
+
+    <!-- Google Fonts: Press Start 2P -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Game Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="touch-controls">
+            <div id="touch-dpad">
+                <button id="touch-left" class="touch-btn">&lt;</button>
+                <button id="touch-right" class="touch-btn">&gt;</button>
+            </div>
+            <button id="touch-jump" class="touch-btn">JUMP</button>
+        </div>
+    </div>
+
+    <!-- Phaser 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+    <!-- Utils -->
+    <script src="js/utils/sprites.js"></script>
+    <script src="js/utils/english.js"></script>
+    <script src="js/utils/audio.js"></script>
+    <script src="js/utils/touch.js"></script>
+
+    <!-- Entities -->
+    <script src="js/entities/Player.js"></script>
+    <script src="js/entities/Goomba.js"></script>
+    <script src="js/entities/Koopa.js"></script>
+
+    <!-- Scenes -->
+    <script src="js/scenes/BootScene.js"></script>
+    <script src="js/scenes/MenuScene.js"></script>
+    <script src="js/scenes/GameScene.js"></script>
+    <script src="js/scenes/HUDScene.js"></script>
+    <script src="js/scenes/WinScene.js"></script>
+
+    <!-- Game Config (must be last — references scenes) -->
+    <script src="js/config.js"></script>
+</body>
+</html>

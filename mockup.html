@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Mario — Dizaino Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #6B8CFF;
+    --sky-underground: #0a0a1e;
+    --sky-cloud: #9494FF;
+    --sky-castle: #2d1b2e;
+    --ground: #C06000;
+    --ground-top: #30C030;
+    --brick: #C84C0C;
+    --brick-line: #E8A060;
+    --question: #F8B800;
+    --coin: #F8D830;
+    --pipe-green: #30C030;
+    --pipe-dark: #008000;
+    --mario-red: #E8261C;
+    --mario-skin: #FCA044;
+    --mario-brown: #AC7C00;
+    --goomba-brown: #A0522D;
+    --koopa-green: #30C030;
+    --hud-white: #ffffff;
+    --star-yellow: #F8D830;
+    --mushroom-red: #E8261C;
+    --princess-pink: #FF69B4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    font-family: 'Press Start 2P', monospace;
+    color: white;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* === HEADER === */
+  .mockup-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 30px 20px;
+    text-align: center;
+    border-bottom: 4px solid var(--question);
+    position: relative;
+    overflow: hidden;
+  }
+  .mockup-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.02) 2px,
+      rgba(255,255,255,0.02) 4px
+    );
+    pointer-events: none;
+  }
+  .mockup-header h1 {
+    font-size: 24px;
+    color: var(--question);
+    text-shadow: 3px 3px 0 #000, -1px -1px 0 #000;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  .mockup-header p {
+    font-size: 10px;
+    color: #888;
+    line-height: 1.8;
+  }
+
+  /* === NAV TABS === */
+  .screen-nav {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 16px 10px;
+    background: #0a0a0a;
+    border-bottom: 2px solid #222;
+    flex-wrap: wrap;
+  }
+  .screen-nav button {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 10px 16px;
+    background: #1a1a1a;
+    color: #666;
+    border: 2px solid #333;
+    cursor: pointer;
+    transition: all 0.2s;
+    image-rendering: pixelated;
+  }
+  .screen-nav button:hover {
+    color: #fff;
+    border-color: #555;
+    background: #222;
+  }
+  .screen-nav button.active {
+    color: var(--question);
+    border-color: var(--question);
+    background: #1a1500;
+    box-shadow: 0 0 12px rgba(248,184,0,0.3);
+  }
+
+  /* === SCREEN CONTAINER === */
+  .screen-container {
+    max-width: 860px;
+    margin: 30px auto;
+    padding: 0 20px;
+  }
+  .screen-frame {
+    background: #000;
+    border: 4px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 80px rgba(92,148,252,0.1);
+    position: relative;
+  }
+  .screen-frame::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(0,0,0,0.03) 1px,
+      rgba(0,0,0,0.03) 2px
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+  .screen-label {
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    margin-top: 12px;
+    margin-bottom: 30px;
+  }
+
+  /* === GAME CANVAS === */
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  /* === SCREEN SECTIONS === */
+  .screen-section { display: none; }
+  .screen-section.active { display: block; }
+
+  /* === INFO PANELS === */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    max-width: 860px;
+    margin: 0 auto 40px;
+    padding: 0 20px;
+  }
+  .info-card {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 2px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .info-card h3 {
+    font-size: 9px;
+    color: var(--question);
+    margin-bottom: 10px;
+  }
+  .info-card p, .info-card li {
+    font-size: 8px;
+    color: #aaa;
+    line-height: 2;
+  }
+  .info-card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .info-card ul li::before {
+    content: '> ';
+    color: var(--coin);
+  }
+
+  /* === TOUCH OVERLAY PREVIEW === */
+  .touch-preview {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .touch-btn {
+    position: absolute;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: rgba(255,255,255,0.5);
+  }
+  .touch-dpad {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+  }
+  .touch-dpad .touch-btn {
+    width: 50px;
+    height: 50px;
+  }
+  .touch-dpad .btn-left { position: absolute; left: 0; top: 25px; }
+  .touch-dpad .btn-right { position: absolute; left: 60px; top: 25px; }
+  .touch-jump {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 64px;
+    height: 64px;
+    font-size: 10px;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 600px) {
+    .mockup-header h1 { font-size: 14px; }
+    .screen-nav button { font-size: 7px; padding: 8px 10px; }
+    .info-card h3 { font-size: 7px; }
+    .info-card p, .info-card li { font-size: 7px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-header">
+  <h1>SUPER MARIO</h1>
+  <p>Dizaino mockup'as — mario.godeliauskas.com</p>
+  <p>Pasirinkite ekrana apacijoje</p>
+</div>
+
+<nav class="screen-nav">
+  <button class="active" data-screen="menu">MENU</button>
+  <button data-screen="level1">WORLD 1</button>
+  <button data-screen="level2">WORLD 2</button>
+  <button data-screen="level3">WORLD 3</button>
+  <button data-screen="level4">WORLD 4</button>
+  <button data-screen="princess">PRINCESS</button>
+  <button data-screen="touch">TOUCH</button>
+</nav>
+
+<!-- MENU SCREEN -->
+<div class="screen-section active" id="screen-menu">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-menu" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">Pradinis ekranas — paspaudus START prasideda zaidimas</p>
+  </div>
+</div>
+
+<!-- LEVEL 1 — GRASSLAND -->
+<div class="screen-section" id="screen-level1">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-level1" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">World 1-1 Grassland — pievele, monetos, ? blokai, Goomba</p>
+  </div>
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>VALDYMAS</h3>
+      <ul>
+        <li>LEFT RIGHT arba A D — judejimas</li>
+        <li>SPACE — suolis</li>
+        <li>M — garso isjungimas</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>ENGLISH WORDS</h3>
+      <ul>
+        <li>"Coin!" — surinkus moneta</li>
+        <li>"Mushroom!" — gavus gryba</li>
+        <li>"Star!" — gavus zvaigzde</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- LEVEL 2 — UNDERGROUND -->
+<div class="screen-section" id="screen-level2">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-level2" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">World 2-1 Underground — tamsus poziemis, monetos, priesai</p>
+  </div>
+</div>
+
+<!-- LEVEL 3 — SKY -->
+<div class="screen-section" id="screen-level3">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-level3" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">World 3-1 Sky — debesu platformos, aukstai virs zemes</p>
+  </div>
+</div>
+
+<!-- LEVEL 4 — CASTLE -->
+<div class="screen-section" id="screen-level4">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-level4" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">World 4-1 Castle — pilis, lava, finalinis bosas</p>
+  </div>
+</div>
+
+<!-- PRINCESS SCREEN -->
+<div class="screen-section" id="screen-princess">
+  <div class="screen-container">
+    <div class="screen-frame">
+      <canvas id="canvas-princess" width="800" height="600"></canvas>
+    </div>
+    <p class="screen-label">Princeses dialogas — anglu/lietuviu kalba</p>
+  </div>
+</div>
+
+<!-- TOUCH CONTROLS -->
+<div class="screen-section" id="screen-touch">
+  <div class="screen-container">
+    <div class="screen-frame" style="position:relative;">
+      <canvas id="canvas-touch" width="800" height="600"></canvas>
+      <div class="touch-preview">
+        <div class="touch-dpad">
+          <div class="touch-btn btn-left">&#9664;</div>
+          <div class="touch-btn btn-right">&#9654;</div>
+        </div>
+        <div class="touch-btn touch-jump">JUMP</div>
+      </div>
+    </div>
+    <p class="screen-label">Touch valdymas — mobiliam/plansetei, rodomas tik touch irenginiuose</p>
+  </div>
+</div>
+
+<script>
+// ========================================
+// PIXEL ART DRAWING UTILITIES
+// ========================================
+const S = 3; // Global pixel scale
+
+function px(ctx, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
+}
+
+function drawPixelGrid(ctx, startX, startY, scale, grid, palette) {
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[row].length; col++) {
+      const ch = grid[row][col];
+      if (ch && ch !== '.' && palette[ch]) {
+        ctx.fillStyle = palette[ch];
+        ctx.fillRect(startX + col * scale, startY + row * scale, scale, scale);
+      }
+    }
+  }
+}
+
+// ========================================
+// IMPROVED SKY WITH GRADIENT
+// ========================================
+function drawSky(ctx, w, h, color1, color2) {
+  // NES-style solid sky color (no gradient for classic look)
+  ctx.fillStyle = color1;
+  ctx.fillRect(0, 0, w, h);
+}
+
+// ========================================
+// IMPROVED CLOUDS — Puffy multi-circle with shadow
+// ========================================
+function drawCloud(ctx, x, y, scale) {
+  const s = scale || 1;
+
+  // NES-style cloud: white puffy shape with subtle blue outline bottom
+  // Blue tint outline (bottom edge like NES clouds)
+  ctx.fillStyle = '#A0C0FF';
+  fillCircle(ctx, x + 12*s, y + 22*s, 14*s);
+  fillCircle(ctx, x + 32*s, y + 22*s, 16*s);
+  fillCircle(ctx, x + 52*s, y + 22*s, 14*s);
+
+  // Main white body — big solid puffs
+  ctx.fillStyle = '#FFFFFF';
+  fillCircle(ctx, x + 10*s, y + 16*s, 14*s);
+  fillCircle(ctx, x + 26*s, y + 10*s, 18*s);
+  fillCircle(ctx, x + 44*s, y + 8*s, 20*s);
+  fillCircle(ctx, x + 58*s, y + 12*s, 16*s);
+  // Fill center solid
+  px(ctx, x + 4*s, y + 10*s, 58*s, 14*s, '#FFFFFF');
+}
+
+function fillCircle(ctx, cx, cy, r) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ========================================
+// IMPROVED HILLS — Smooth rounded with stripe patterns
+// ========================================
+function drawHill(ctx, x, y, w, h, color1, color2) {
+  // NES-style rounded hill — solid green with lighter vertical stripes
+  // Main hill shape (rounder top)
+  ctx.fillStyle = color1;
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.bezierCurveTo(x + w * 0.05, y - h * 0.2, x + w * 0.95, y - h * 0.2, x + w, y + h);
+  ctx.fill();
+
+  // Dark spots pattern (like NES SMB hills)
+  ctx.fillStyle = color2 || '#28A028';
+  for (var dy = 0; dy < h; dy += 14) {
+    for (var dx = 0; dx < w; dx += 18) {
+      var hx = x + dx + (dy % 28 < 14 ? 0 : 9);
+      var hy = y + h - dy;
+      // Check if inside hill (simple approximation)
+      var relX = (hx - x) / w - 0.5;
+      var relY = 1 - dy / h;
+      if (relX * relX * 4 + relY * relY < 0.9 && relY > 0.1) {
+        fillCircle(ctx, hx, hy, 3);
+      }
+    }
+  }
+}
+
+// ========================================
+// IMPROVED GROUND — Two-row: green grass top + brown earth with brick pattern
+// ========================================
+function drawGround(ctx, y, w, h, topColor, bodyColor) {
+  var grassH = 16;
+  var earthH = h - grassH;
+
+  // Grass top row — green bricks with highlight
+  for (var gx = 0; gx < w; gx += 32) {
+    // Base green
+    px(ctx, gx, y, 32, grassH, '#30C030');
+    // Highlight top edge
+    px(ctx, gx, y, 32, 3, '#58E858');
+    // Darker bottom
+    px(ctx, gx, y + grassH - 3, 32, 3, '#208020');
+    // Vertical mortar lines
+    px(ctx, gx, y, 2, grassH, '#48D848');
+    px(ctx, gx + 30, y, 2, grassH, '#188018');
+    // Horizontal mortar
+    px(ctx, gx, y + 8, 32, 2, '#28A828');
+  }
+
+  // Earth below — brown bricks
+  for (var ey = y + grassH; ey < y + h; ey += 16) {
+    var rowIndex = Math.floor((ey - y - grassH) / 16);
+    var offset = (rowIndex % 2 === 0) ? 0 : 16;
+    for (var ex = -16; ex < w + 16; ex += 32) {
+      var bx = ex + offset;
+      // Main brown
+      px(ctx, bx, ey, 32, 16, '#C06000');
+      // Highlight top-left
+      px(ctx, bx, ey, 32, 2, '#D88030');
+      px(ctx, bx, ey, 2, 16, '#D88030');
+      // Shadow bottom-right
+      px(ctx, bx, ey + 14, 32, 2, '#804000');
+      px(ctx, bx + 30, ey, 2, 16, '#804000');
+      // Mortar lines
+      px(ctx, bx - 1, ey, 2, 16, '#E8A060');
+    }
+  }
+
+  // Decorative grass tufts on top
+  for (var tx = 8; tx < w; tx += 48) {
+    drawGrassTuft(ctx, tx, y - 6);
+  }
+}
+
+function drawGrassTuft(ctx, x, y) {
+  px(ctx, x, y + 2, 2, 4, '#30C030');
+  px(ctx, x + 4, y, 2, 6, '#48D848');
+  px(ctx, x + 8, y + 1, 2, 5, '#30C030');
+  px(ctx, x + 2, y + 3, 2, 3, '#208020');
+}
+
+// ========================================
+// IMPROVED BUSH — Rounded with darker base
+// ========================================
+function drawBush(ctx, x, y) {
+  // Shadow base
+  ctx.fillStyle = '#208020';
+  fillCircle(ctx, x + 32, y + 12, 22);
+  fillCircle(ctx, x + 12, y + 12, 16);
+  fillCircle(ctx, x + 52, y + 12, 16);
+
+  // Main green body
+  ctx.fillStyle = '#30C030';
+  fillCircle(ctx, x + 32, y + 8, 20);
+  fillCircle(ctx, x + 12, y + 8, 14);
+  fillCircle(ctx, x + 52, y + 8, 14);
+
+  // Highlight
+  ctx.fillStyle = '#58E858';
+  fillCircle(ctx, x + 28, y + 2, 10);
+  fillCircle(ctx, x + 10, y + 3, 8);
+  fillCircle(ctx, x + 48, y + 3, 8);
+
+  // Top spots
+  ctx.fillStyle = '#78FF78';
+  fillCircle(ctx, x + 30, y - 2, 4);
+  fillCircle(ctx, x + 14, y + 1, 3);
+}
+
+// ========================================
+// DECORATIVE FLOWERS at ground level
+// ========================================
+function drawFlower(ctx, x, y) {
+  // Stem
+  px(ctx, x + 3, y + 4, 2, 8, '#30C030');
+  // Petals
+  var colors = ['#FF4444', '#FFDD44', '#FF4444'];
+  px(ctx, x + 1, y + 1, 3, 3, colors[0]);
+  px(ctx, x + 5, y + 1, 3, 3, colors[2]);
+  px(ctx, x + 3, y - 1, 3, 3, colors[1]);
+  px(ctx, x + 1, y + 3, 3, 3, colors[1]);
+  px(ctx, x + 5, y + 3, 3, 3, colors[0]);
+  // Center
+  px(ctx, x + 3, y + 2, 2, 2, '#FFFFFF');
+}
+
+// ========================================
+// IMPROVED BRICK BLOCK — Classic SMB with 3D shading
+// ========================================
+function drawBrickBlock(ctx, x, y, size) {
+  size = size || 32;
+  var half = size / 2;
+  var qtr = size / 4;
+
+  // NES-style brick block: dark outline, 4 bricks (2x2), mortar lines
+  // Black outline
+  px(ctx, x, y, size, size, '#000000');
+
+  // Fill bricks with individual shading
+  // Top-left brick
+  drawSingleBrick(ctx, x + 1, y + 1, half - 1, half - 1);
+  // Top-right brick
+  drawSingleBrick(ctx, x + half, y + 1, half - 1, half - 1);
+  // Bottom-left brick (offset)
+  drawSingleBrick(ctx, x + 1, y + half, qtr - 1, half - 1);
+  drawSingleBrick(ctx, x + qtr, y + half, half, half - 1);
+  drawSingleBrick(ctx, x + qtr + half, y + half, qtr - 1, half - 1);
+
+  // Mortar lines (dark gaps between bricks)
+  px(ctx, x, y + half - 1, size, 2, '#E8A060');
+  px(ctx, x + half - 1, y, 2, half, '#E8A060');
+  px(ctx, x + qtr - 1, y + half, 2, half, '#E8A060');
+  px(ctx, x + qtr + half - 1, y + half, 2, half, '#E8A060');
+
+  // Outer highlight (top-left) and shadow (bottom-right) like NES
+  px(ctx, x, y, size, 1, '#F0A060');
+  px(ctx, x, y, 1, size, '#F0A060');
+  px(ctx, x, y + size - 1, size, 1, '#602000');
+  px(ctx, x + size - 1, y, 1, size, '#602000');
+}
+
+function drawSingleBrick(ctx, x, y, w, h) {
+  // Main brick color
+  px(ctx, x, y, w, h, '#C84C0C');
+  // Highlight top + left
+  px(ctx, x, y, w, 2, '#E09050');
+  px(ctx, x, y, 2, h, '#E09050');
+  // Shadow bottom + right
+  px(ctx, x, y + h - 2, w, 2, '#803808');
+  px(ctx, x + w - 2, y, 2, h, '#803808');
+}
+
+// ========================================
+// IMPROVED ? BLOCK — Rich gold with beveled 3D edges, bold "?"
+// ========================================
+function drawQuestionBlock(ctx, x, y, size) {
+  size = size || 32;
+
+  // Main gold fill
+  px(ctx, x, y, size, size, '#F8B800');
+
+  // Inner slightly darker
+  px(ctx, x + 3, y + 3, size - 6, size - 6, '#E8A800');
+
+  // Beveled edges: bright top-left
+  px(ctx, x, y, size, 3, '#FFF0A0');
+  px(ctx, x, y, 3, size, '#FFF0A0');
+  // Shadow bottom-right
+  px(ctx, x, y + size - 3, size, 3, '#885500');
+  px(ctx, x + size - 3, y, 3, size, '#885500');
+
+  // Corner pixels (cut corners for nicer look)
+  px(ctx, x, y, 1, 1, '#C08000');
+  px(ctx, x + size - 1, y, 1, 1, '#C08000');
+  px(ctx, x, y + size - 1, 1, 1, '#604000');
+  px(ctx, x + size - 1, y + size - 1, 1, 1, '#604000');
+
+  // Inner rivets (4 corner dots)
+  var d = 5;
+  px(ctx, x + d, y + d, 2, 2, '#FFF0A0');
+  px(ctx, x + size - d - 2, y + d, 2, 2, '#FFF0A0');
+  px(ctx, x + d, y + size - d - 2, 2, 2, '#885500');
+  px(ctx, x + size - d - 2, y + size - d - 2, 2, 2, '#885500');
+
+  // Bold "?" — drawn as pixels for crispness
+  var qx = x + Math.floor(size * 0.25);
+  var qy = y + Math.floor(size * 0.15);
+  var qs = Math.max(2, Math.floor(size / 12));
+
+  // ? shape shadow
+  drawQuestionMark(ctx, qx + 1, qy + 1, qs, '#885500');
+  // ? shape white
+  drawQuestionMark(ctx, qx, qy, qs, '#FFFFFF');
+}
+
+function drawQuestionMark(ctx, x, y, s, color) {
+  // Top arc of ?
+  px(ctx, x + 2*s, y, 4*s, s, color);
+  px(ctx, x + s, y + s, 2*s, s, color);
+  px(ctx, x + 6*s, y + s, 2*s, s, color);
+  px(ctx, x + 6*s, y + 2*s, 2*s, s, color);
+  px(ctx, x + 4*s, y + 3*s, 3*s, s, color);
+  px(ctx, x + 3*s, y + 4*s, 2*s, s, color);
+  // Dot
+  px(ctx, x + 3*s, y + 6*s, 2*s, s, color);
+}
+
+// ========================================
+// IMPROVED PIPE — Bright green with cylindrical shading
+// ========================================
+function drawPipe(ctx, x, y, h) {
+  var w = 48;
+  var lipH = 20;
+  var lipExtra = 6;
+
+  // === BODY (below lip) ===
+  // Main body
+  px(ctx, x, y + lipH, w, h - lipH, '#30C030');
+  // Left highlight strip
+  px(ctx, x, y + lipH, 6, h - lipH, '#58E858');
+  px(ctx, x + 6, y + lipH, 4, h - lipH, '#48D848');
+  // Center highlight
+  px(ctx, x + 12, y + lipH, 3, h - lipH, '#68F868');
+  // Right shadow
+  px(ctx, x + w - 8, y + lipH, 4, h - lipH, '#188018');
+  px(ctx, x + w - 4, y + lipH, 4, h - lipH, '#106010');
+
+  // === LIP (top) ===
+  // Main lip
+  px(ctx, x - lipExtra, y, w + lipExtra * 2, lipH, '#30C030');
+  // Lip highlight top
+  px(ctx, x - lipExtra, y, w + lipExtra * 2, 3, '#78FF78');
+  // Lip left highlight
+  px(ctx, x - lipExtra, y, 6, lipH, '#58E858');
+  // Center highlight stripe on lip
+  px(ctx, x + 6, y + 3, 4, lipH - 6, '#68F868');
+  // Lip right shadow
+  px(ctx, x + w + lipExtra - 6, y, 6, lipH, '#106010');
+  // Lip bottom edge
+  px(ctx, x - lipExtra, y + lipH - 3, w + lipExtra * 2, 3, '#188018');
+
+  // Rim line under lip
+  px(ctx, x - 1, y + lipH, w + 2, 2, '#106010');
+}
+
+// ========================================
+// IMPROVED COIN — With rotating look and shine
+// ========================================
+function drawCoinSprite(ctx, x, y, s) {
+  s = s || 2;
+  var pal = {
+    'Y': '#F8D830', 'y': '#C8A020', 'O': '#F8B800',
+    'W': '#FFFFF0', 'w': '#FFF0B0', 'D': '#A07800'
+  };
+  var coin = [
+    '...YYY...',
+    '..YOOOY..',
+    '.YOwwOOY.',
+    '.YOwWOOY.',
+    '.YOOOOOY.',
+    '.YOOOOOY.',
+    '.YOwWOOY.',
+    '.YOwwOOY.',
+    '..YOOOY..',
+    '...yyy...',
+  ];
+  drawPixelGrid(ctx, x, y, s, coin, pal);
+
+  // Shine sparkle
+  px(ctx, x + 2*s, y + 1*s, s, s, '#FFFFFF');
+}
+
+// ========================================
+// IMPROVED MARIO — 16x16 detailed with hat brim, mustache, buttons, proper proportions
+// ========================================
+function drawMarioSprite(ctx, x, y, s) {
+  s = s || 3;
+  var pal = {
+    'R': '#E8261C', 'r': '#B01010',
+    'S': '#FCA044', 's': '#E08030',
+    'B': '#AC7C00', 'b': '#8A5A00',
+    'W': '#FFFFFF', 'K': '#000000',
+    'H': '#D07018', 'O': '#F87818',
+    'Y': '#F8D830'
+  };
+
+  // Classic-style Mario standing sprite (16x16)
+  var mario = [
+    '....rRRRRr......',
+    '...RRRRRRRRRR...',
+    '...HHHSSSKSs...',
+    '..HSHSSSkSSSs..',
+    '..HSHHSSSkSSS..',
+    '..HHsSSSKKKK...',
+    '.....SSSSSS.....',
+    '...RRBRRBR......',
+    '..RRRBRRRBRRs..',
+    '..SSRRBBBBRSS..',
+    '..SSBBWBKWBBSS.',
+    '..SSbBWBKWBbSS.',
+    '...bBBBBBBBBb..',
+    '...BBb....bBB..',
+    '..BBBb....bBBB.',
+    '.bbbbb....bbbbb',
+  ];
+  drawPixelGrid(ctx, x, y, s, mario, pal);
+}
+
+// ========================================
+// IMPROVED GOOMBA — Proper mushroom head, angry eyebrows, fangs
+// ========================================
+function drawGoombaSprite(ctx, x, y, s) {
+  s = s || 2;
+  var pal = {
+    'B': '#A0522D', 'b': '#8B4513', 'D': '#654321',
+    'W': '#FFFFFF', 'K': '#000000',
+    'T': '#F5DEB3', 't': '#E0C8A0',
+    'A': '#FF4444' // angry brows
+  };
+
+  var goomba = [
+    '.....BBBBB......',
+    '....BBBBBBB.....',
+    '...BBBBBBBBB....',
+    '..BBBBBBBBBBBb..',
+    '.bBWWBBbBBWWBb..',
+    '.BWKKWBBBBWKKB..',
+    '.BBAKKBTTBKKADB.',
+    '.BBBBBBTTBBBBBb.',
+    '.BBBBBbTTbBBBBb.',
+    '..bBBBBTTBBBBb..',
+    '....TTtKKtTT....',
+    '...TTTT..TTTT...',
+    '..DDDD....DDDD..',
+  ];
+  drawPixelGrid(ctx, x, y, s, goomba, pal);
+}
+
+// ========================================
+// IMPROVED KOOPA — Better shell with hex pattern, beak
+// ========================================
+function drawKoopaSprite(ctx, x, y, s) {
+  s = s || 2;
+  var pal = {
+    'G': '#30C030', 'g': '#208020', 'd': '#106010',
+    'Y': '#F8D830', 'y': '#C8A020',
+    'W': '#FFFFFF', 'K': '#000000',
+    'S': '#FCA044', 's': '#E08030',
+    'R': '#E8261C', 'B': '#F8B800', // beak
+    'H': '#48D848'
+  };
+
+  var koopa = [
+    '.....GGGg.......',
+    '....GGGGGg......',
+    '...GWKGGGGg.....',
+    '..GWKKGBGGGg....',
+    '..gGGGGGGGGg....',
+    '...sSGGGGSs.....',
+    '..sYYYYYYYs.....',
+    '.gYHYYYHYYYg....',
+    'gGYYHYYYHYYGg...',
+    'gGGYYYYYYYGGg...',
+    'gGGGYYYYYGGGg...',
+    '.gGGGGGGGGGg....',
+    '..dGGGGGGGd.....',
+    '..RRRR.RRRR.....',
+    '.RRRR...RRRR....',
+  ];
+  drawPixelGrid(ctx, x, y, s, koopa, pal);
+}
+
+// ========================================
+// IMPROVED MUSHROOM — Rounded cap with white spots, proper stem
+// ========================================
+function drawMushroomSprite(ctx, x, y, s) {
+  s = s || 2;
+  var pal = {
+    'R': '#E8261C', 'r': '#B01010',
+    'W': '#FFFFFF', 'w': '#E0E0E0',
+    'S': '#FCA044', 's': '#E08030',
+    'K': '#000000', 'C': '#CC1818',
+    'H': '#FF4444'
+  };
+
+  var mush = [
+    '.....RRRRRR.....',
+    '...RRRRRRRRRR...',
+    '..RRWWRRRRWWRr..',
+    '.RRWWWWRRWWWWRr.',
+    '.RWWWWRRRRWWWRr.',
+    'RRRWWRRRRRWWRRr.',
+    'RRRRRRRRRRRRRRr.',
+    '.rRRRRRRRRRRRr..',
+    '...KSSSSSSSK....',
+    '..KSSSSSSSSSSK..',
+    '..KSSwwSSwwSSK..',
+    '..KSSwwSSwwSSK..',
+    '..KSSSSSSSSSSK..',
+    '...KSSSSSSSK....',
+  ];
+  drawPixelGrid(ctx, x, y, s, mush, pal);
+}
+
+// ========================================
+// IMPROVED STAR — Five-pointed with eyes
+// ========================================
+function drawStarSprite(ctx, x, y, s) {
+  s = s || 2;
+  var pal = {
+    'Y': '#F8D830', 'y': '#C8A020', 'O': '#F8B800',
+    'W': '#FFFFFF', 'K': '#000000',
+    'H': '#FFF8A0'
+  };
+
+  var star = [
+    '......YY........',
+    '.....YYYY.......',
+    '.....YHYY.......',
+    '....YYYYYY......',
+    '...YYYYYYYY.....',
+    'YYYYYYYYYYYYYY..',
+    '.YYYYYYYYYYYY...',
+    '..YYWYYYYWYY....',
+    '..YYKYYYYKYY....',
+    '...YYYYYYYY.....',
+    '...YYYOYYY......',
+    '..YYYY..YYYY....',
+    '..YYY....YYY....',
+    '.YYy......yYY...',
+    '.Yy........yY...',
+  ];
+  drawPixelGrid(ctx, x, y, s, star, pal);
+}
+
+// ========================================
+// IMPROVED FLAGPOLE — Proper pole with ball top and triangular flag
+// ========================================
+function drawFlagpole(ctx, x, y, h) {
+  // Pole shadow
+  px(ctx, x + 6, y, 3, h, '#555555');
+  // Pole main
+  px(ctx, x + 2, y, 4, h, '#AAAAAA');
+  // Pole highlight
+  px(ctx, x + 2, y, 2, h, '#CCCCCC');
+
+  // Ball top (golden)
+  px(ctx, x - 2, y - 10, 12, 12, '#F8B800');
+  px(ctx, x - 1, y - 9, 10, 10, '#F8D830');
+  px(ctx, x, y - 8, 4, 4, '#FFF8A0'); // highlight
+
+  // Triangular flag (green)
+  for (var fy = 0; fy < 28; fy++) {
+    var fw = Math.floor(28 - fy);
+    px(ctx, x + 8, y + 6 + fy, fw, 1, '#30C030');
+  }
+  // Flag highlight
+  for (var fy2 = 0; fy2 < 14; fy2++) {
+    var fw2 = Math.floor(14 - fy2);
+    px(ctx, x + 8, y + 6 + fy2, fw2, 1, '#48D848');
+  }
+  // Flag edge
+  px(ctx, x + 8, y + 6, 28, 2, '#58E858');
+
+  // Base
+  px(ctx, x - 6, y + h - 4, 20, 8, '#30C030');
+  px(ctx, x - 6, y + h - 4, 20, 2, '#48D848');
+  px(ctx, x - 4, y + h + 4, 16, 4, '#208020');
+}
+
+// ========================================
+// IMPROVED BOWSER — Larger, more menacing with shell, horns, fire breath
+// ========================================
+function drawBowser(ctx, x, y, s) {
+  s = s || 3;
+  var pal = {
+    'G': '#30C030', 'g': '#208020', 'd': '#106010',
+    'Y': '#F8D830', 'y': '#C8A020',
+    'R': '#E8261C', 'r': '#B01010',
+    'K': '#000000', 'W': '#FFFFFF',
+    'S': '#445544', 's': '#334433',
+    'O': '#FF8800', 'F': '#FF4400',
+    'H': '#FFD060', // horn
+    'T': '#FCA044', // teeth/belly
+  };
+
+  // Horns
+  px(ctx, x, y, 4*s, 6*s, '#F8D830');
+  px(ctx, x + 16*s, y, 4*s, 6*s, '#F8D830');
+  px(ctx, x + 1*s, y, 2*s, 2*s, '#FFF8A0');
+  px(ctx, x + 17*s, y, 2*s, 2*s, '#FFF8A0');
+
+  // Head
+  px(ctx, x + 2*s, y + 4*s, 16*s, 10*s, '#30C030');
+  px(ctx, x + 4*s, y + 3*s, 12*s, 3*s, '#30C030');
+  // Eyes
+  px(ctx, x + 4*s, y + 6*s, 4*s, 3*s, '#FFFFFF');
+  px(ctx, x + 12*s, y + 6*s, 4*s, 3*s, '#FFFFFF');
+  px(ctx, x + 6*s, y + 7*s, 2*s, 2*s, '#E8261C');
+  px(ctx, x + 14*s, y + 7*s, 2*s, 2*s, '#E8261C');
+  // Angry brows
+  px(ctx, x + 3*s, y + 5*s, 6*s, 2*s, '#208020');
+  px(ctx, x + 11*s, y + 5*s, 6*s, 2*s, '#208020');
+  // Mouth with fangs
+  px(ctx, x + 4*s, y + 10*s, 12*s, 4*s, '#E8261C');
+  px(ctx, x + 5*s, y + 10*s, 2*s, 2*s, '#FFFFFF');
+  px(ctx, x + 9*s, y + 10*s, 2*s, 2*s, '#FFFFFF');
+  px(ctx, x + 13*s, y + 10*s, 2*s, 2*s, '#FFFFFF');
+
+  // Body
+  px(ctx, x + 1*s, y + 14*s, 18*s, 14*s, '#30C030');
+  // Belly
+  px(ctx, x + 4*s, y + 15*s, 12*s, 10*s, '#F8D830');
+  // Belly lines
+  px(ctx, x + 4*s, y + 18*s, 12*s, 1*s, '#C8A020');
+  px(ctx, x + 4*s, y + 21*s, 12*s, 1*s, '#C8A020');
+
+  // Shell
+  px(ctx, x - 1*s, y + 16*s, 22*s, 10*s, '#445544');
+  px(ctx, x + 1*s, y + 17*s, 18*s, 8*s, '#30C030');
+  // Shell spikes
+  for (var i = 0; i < 4; i++) {
+    px(ctx, x + (3 + i * 4)*s, y + 14*s, 3*s, 4*s, '#F8D830');
+    px(ctx, x + (3 + i * 4)*s, y + 13*s, 2*s, 2*s, '#FFF8A0');
+  }
+
+  // Arms
+  px(ctx, x - 3*s, y + 16*s, 4*s, 6*s, '#30C030');
+  px(ctx, x - 3*s, y + 21*s, 4*s, 3*s, '#208020');
+  px(ctx, x + 19*s, y + 16*s, 4*s, 6*s, '#30C030');
+
+  // Legs
+  px(ctx, x + 2*s, y + 28*s, 5*s, 4*s, '#30C030');
+  px(ctx, x + 13*s, y + 28*s, 5*s, 4*s, '#30C030');
+  // Feet
+  px(ctx, x + 1*s, y + 30*s, 6*s, 3*s, '#208020');
+  px(ctx, x + 13*s, y + 30*s, 6*s, 3*s, '#208020');
+
+  // Fire breath
+  px(ctx, x - 10*s, y + 9*s, 8*s, 3*s, '#FF4400');
+  px(ctx, x - 18*s, y + 10*s, 10*s, 2*s, '#FF8800');
+  px(ctx, x - 24*s, y + 10*s, 8*s, 1*s, '#FFCC00');
+  // Fire particles
+  px(ctx, x - 14*s, y + 7*s, 3*s, 2*s, '#FFCC00');
+  px(ctx, x - 20*s, y + 12*s, 2*s, 2*s, '#FF8800');
+  px(ctx, x - 8*s, y + 12*s, 3*s, 2*s, '#FF4400');
+}
+
+// ========================================
+// IMPROVED PRINCESS — Crown, pink dress, blonde hair
+// ========================================
+function drawPrincessSprite(ctx, x, y, s) {
+  s = s || 3;
+  var pal = {
+    'P': '#FF69B4', 'p': '#CC5599', 'H': '#FF88CC',
+    'Y': '#F8D830', 'y': '#C8A020',
+    'S': '#FCA044', 's': '#E08030',
+    'W': '#FFFFFF', 'K': '#000000',
+    'R': '#E8261C', 'B': '#4444FF',
+    'G': '#F8D830', // gold hair
+    'g': '#E0B020', // darker hair
+    'L': '#FFB0D0', // light pink
+  };
+
+  var princess = [
+    '...Y.Y.Y....',
+    '..YYYYYYY...',
+    '..YYYYYYY...',
+    '.gGGGGGGGg..',
+    '.GGGGGGGGGg.',
+    '.gGSSSSGGg..',
+    '..SSWKWSS...',
+    '..SSRSRSS...',
+    '..SSSSSSS...',
+    '.LPPPPPPPL..',
+    '.PPPPPPPPPP.',
+    'PPPPPpPPPPP.',
+    'PPPPPpPPPPP.',
+    '.PPPPPPPPPP.',
+    '..PPPPPPPP..',
+    '..PPPHPPPP..',
+    '..PPPPPPPP..',
+    '...PP..PP...',
+    '..WW....WW..',
+  ];
+  drawPixelGrid(ctx, x, y, s, princess, pal);
+}
+
+// ========================================
+// HUD — Score, Coins, World, Lives
+// ========================================
+function drawHUD(ctx, w, score, coins, world, lives) {
+  // Semi-transparent bar
+  px(ctx, 0, 0, w, 42, 'rgba(0,0,0,0.4)');
+  px(ctx, 0, 42, w, 1, 'rgba(255,255,255,0.1)');
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'left';
+  ctx.fillText('SCORE', 20, 17);
+  ctx.fillText(String(score).padStart(6, '0'), 20, 34);
+
+  ctx.textAlign = 'center';
+  ctx.fillText('COINS', w * 0.35, 17);
+  ctx.fillStyle = '#F8D830';
+  ctx.fillText('x' + String(coins).padStart(2, '0'), w * 0.35, 34);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.fillText('WORLD', w * 0.6, 17);
+  ctx.fillText(world, w * 0.6, 34);
+
+  ctx.textAlign = 'right';
+  ctx.fillText('LIVES', w - 20, 17);
+  ctx.fillStyle = '#E8261C';
+  var hearts = '';
+  for (var i = 0; i < lives; i++) hearts += 'M ';
+  ctx.fillText(hearts.trim(), w - 20, 34);
+}
+
+// ========================================
+// ENGLISH POPUP — Speech bubble
+// ========================================
+function drawEnglishPopup(ctx, x, y, word, translation) {
+  ctx.font = '12px "Press Start 2P"';
+  var pw = ctx.measureText(word).width + 30;
+
+  // Bubble bg
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  roundRect(ctx, x - pw/2 - 6, y - 30, pw + 12, 42, 6);
+  ctx.fill();
+
+  // Gold border
+  ctx.strokeStyle = '#F8D830';
+  ctx.lineWidth = 2;
+  roundRect(ctx, x - pw/2 - 6, y - 30, pw + 12, 42, 6);
+  ctx.stroke();
+
+  // Word
+  ctx.fillStyle = '#F8D830';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText(word, x, y - 14);
+
+  if (translation) {
+    ctx.fillStyle = '#999999';
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillText(translation, x, y + 4);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ========================================
+// PARALLAX BACKGROUND LAYERS
+// ========================================
+function drawParallaxBg(ctx, w, groundY, theme) {
+  if (theme === 'overworld') {
+    // Far hills (lighter, bluer)
+    drawHill(ctx, -80, groundY - 50, 350, 70, '#70B870', '#90D090');
+    drawHill(ctx, 300, groundY - 35, 220, 50, '#78C078', '#98D898');
+    drawHill(ctx, 550, groundY - 60, 400, 80, '#70B870', '#90D090');
+
+    // Near hills (more saturated)
+    drawHill(ctx, -30, groundY - 90, 250, 90, '#30A030', '#48C048');
+    drawHill(ctx, 280, groundY - 65, 180, 65, '#28A028', '#40B840');
+    drawHill(ctx, 500, groundY - 110, 320, 110, '#30A030', '#48C048');
+
+    // Far clouds
+    drawCloud(ctx, 50, 55, 0.8);
+    drawCloud(ctx, 350, 80, 0.7);
+    drawCloud(ctx, 650, 45, 0.9);
+
+    // Near clouds (bigger)
+    drawCloud(ctx, 120, 70, 1.3);
+    drawCloud(ctx, 480, 50, 1.5);
+    drawCloud(ctx, 720, 90, 1.0);
+
+    // Bushes and flowers
+    drawBush(ctx, 60, groundY - 16);
+    drawBush(ctx, 350, groundY - 16);
+    drawBush(ctx, 580, groundY - 14);
+
+    drawFlower(ctx, 110, groundY - 12);
+    drawFlower(ctx, 250, groundY - 10);
+    drawFlower(ctx, 420, groundY - 12);
+    drawFlower(ctx, 620, groundY - 10);
+    drawFlower(ctx, 750, groundY - 12);
+  }
+}
+
+// ========================================
+// SCREEN: MENU
+// ========================================
+function drawMenuScreen() {
+  var c = document.getElementById('canvas-menu');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Solid NES sky blue
+  drawSky(ctx, W, H, '#6B8CFF');
+
+  // Parallax background
+  drawParallaxBg(ctx, W, groundY, 'overworld');
+
+  // Ground
+  drawGround(ctx, groundY, W, 64, '#30C030', '#C06000');
+
+  // Pipes for decoration
+  drawPipe(ctx, 650, groundY - 80, 80);
+  drawPipe(ctx, 30, groundY - 56, 56);
+
+  // Title background panel
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  roundRect(ctx, W/2 - 240, 85, 480, 130, 12);
+  ctx.fill();
+  ctx.strokeStyle = '#F8B800';
+  ctx.lineWidth = 4;
+  roundRect(ctx, W/2 - 240, 85, 480, 130, 12);
+  ctx.stroke();
+
+  // SUPER text with shadow
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = '#B01010';
+  ctx.font = '42px "Press Start 2P"';
+  ctx.fillText('SUPER', W/2 + 3, 128 + 3);
+  ctx.fillStyle = '#E8261C';
+  ctx.fillText('SUPER', W/2, 128);
+
+  // MARIO text with shadow
+  ctx.fillStyle = '#A08000';
+  ctx.font = '42px "Press Start 2P"';
+  ctx.fillText('MARIO', W/2 + 3, 178 + 3);
+  ctx.fillStyle = '#F8D830';
+  ctx.fillText('MARIO', W/2, 178);
+
+  // Subtitle
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillText('Learn English Adventure', W/2, 205);
+
+  // Mario sprite on ground
+  drawMarioSprite(ctx, W/2 - 80, groundY - 52, 3);
+
+  // Mushroom near Mario
+  drawMushroomSprite(ctx, W/2 + 30, groundY - 30, 2);
+
+  // Star decoration
+  drawStarSprite(ctx, W/2 - 130, groundY - 35, 2);
+
+  // Decorative coins around title
+  drawCoinSprite(ctx, W/2 - 200, 120, 2.5);
+  drawCoinSprite(ctx, W/2 + 185, 120, 2.5);
+  drawCoinSprite(ctx, W/2 - 200, 165, 2.5);
+  drawCoinSprite(ctx, W/2 + 185, 165, 2.5);
+
+  // Stars flanking title
+  drawStarSprite(ctx, W/2 - 230, 135, 2);
+  drawStarSprite(ctx, W/2 + 210, 135, 2);
+
+  // START button with better styling
+  var btnY = 270;
+  ctx.fillStyle = '#B01010';
+  roundRect(ctx, W/2 - 106, btnY + 3, 212, 52, 8);
+  ctx.fill();
+  ctx.fillStyle = '#E8261C';
+  roundRect(ctx, W/2 - 104, btnY, 208, 50, 8);
+  ctx.fill();
+  // Button highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  roundRect(ctx, W/2 - 100, btnY + 2, 200, 22, 6);
+  ctx.fill();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '18px "Press Start 2P"';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('START', W/2, btnY + 26);
+
+  // ? blocks row at top
+  for (var qi = 0; qi < 4; qi++) {
+    drawQuestionBlock(ctx, 100 + qi * 180, groundY - 160, 28);
+  }
+
+  // Brick block decoration
+  drawBrickBlock(ctx, 150, groundY - 130, 28);
+  drawBrickBlock(ctx, 620, groundY - 130, 28);
+
+  // Footer
+  ctx.fillStyle = '#666666';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('2026 mario.godeliauskas.com', W/2, H - 16);
+
+  ctx.fillStyle = '#888888';
+  ctx.fillText('Press SPACE or tap START', W/2, 350);
+}
+
+// ========================================
+// SCREEN: LEVEL 1 — GRASSLAND
+// ========================================
+function drawLevel1() {
+  var c = document.getElementById('canvas-level1');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Solid NES sky blue
+  drawSky(ctx, W, H, '#6B8CFF');
+
+  // Parallax background
+  drawParallaxBg(ctx, W, groundY, 'overworld');
+
+  // Ground
+  drawGround(ctx, groundY, W, 64, '#30C030', '#C06000');
+
+  // Bricks + ? blocks row
+  var blockY = groundY - 150;
+  drawBrickBlock(ctx, 196, blockY);
+  drawQuestionBlock(ctx, 228, blockY);
+  drawBrickBlock(ctx, 260, blockY);
+  drawQuestionBlock(ctx, 292, blockY);
+  drawBrickBlock(ctx, 324, blockY);
+
+  // Floating coins above blocks
+  drawCoinSprite(ctx, 208, blockY - 36, 2.5);
+  drawCoinSprite(ctx, 248, blockY - 36, 2.5);
+  drawCoinSprite(ctx, 288, blockY - 36, 2.5);
+
+  // Higher platform
+  var highY = blockY - 70;
+  drawBrickBlock(ctx, 470, highY);
+  drawBrickBlock(ctx, 502, highY);
+  drawQuestionBlock(ctx, 534, highY);
+
+  // Ground-level coins
+  drawCoinSprite(ctx, 130, groundY - 40, 2.5);
+  drawCoinSprite(ctx, 158, groundY - 40, 2.5);
+  drawCoinSprite(ctx, 400, groundY - 40, 2.5);
+
+  // Pipe
+  drawPipe(ctx, 600, groundY - 86, 86);
+
+  // Small pipe
+  drawPipe(ctx, 160, groundY - 50, 50);
+
+  // Mario
+  drawMarioSprite(ctx, 75, groundY - 52, 3);
+
+  // Goomba
+  drawGoombaSprite(ctx, 355, groundY - 28, 2.5);
+
+  // Koopa
+  drawKoopaSprite(ctx, 520, groundY - 32, 2.5);
+
+  // Mushroom emerging from ? block
+  drawMushroomSprite(ctx, 230, blockY - 28, 1.8);
+
+  // English popup
+  ctx.font = '12px "Press Start 2P"';
+  drawEnglishPopup(ctx, 150, groundY - 72, 'Coin!', '(Moneta)');
+
+  // Flagpole at far right
+  drawFlagpole(ctx, 738, groundY - 190, 190);
+
+  // Flowers near ground
+  drawFlower(ctx, 300, groundY - 10);
+  drawFlower(ctx, 460, groundY - 12);
+  drawFlower(ctx, 680, groundY - 10);
+
+  // HUD
+  drawHUD(ctx, W, 1250, 7, '1-1', 3);
+}
+
+// ========================================
+// SCREEN: LEVEL 2 — UNDERGROUND
+// ========================================
+function drawLevel2() {
+  var c = document.getElementById('canvas-level2');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Dark underground bg
+  drawSky(ctx, W, H, '#000000', '#0A0A2E');
+
+  // Ceiling bricks
+  for (var cx = 0; cx < W; cx += 32) {
+    drawBrickBlock(ctx, cx, 0);
+  }
+
+  // Ground bricks
+  for (var gx = 0; gx < W; gx += 32) {
+    drawBrickBlock(ctx, gx, groundY);
+    drawBrickBlock(ctx, gx, groundY + 32);
+  }
+
+  // Underground wall texture (subtle)
+  ctx.fillStyle = 'rgba(40, 40, 60, 0.3)';
+  for (var wy = 40; wy < groundY; wy += 32) {
+    for (var wx = 0; wx < W; wx += 64) {
+      var wo = (Math.floor(wy / 32) % 2) * 32;
+      px(ctx, wx + wo, wy, 62, 30, 'rgba(20, 20, 40, 0.15)');
+      px(ctx, wx + wo, wy, 62, 1, 'rgba(40, 40, 80, 0.2)');
+    }
+  }
+
+  // Floating blocks
+  var blockY = groundY - 130;
+  drawBrickBlock(ctx, 150, blockY);
+  drawQuestionBlock(ctx, 182, blockY);
+  drawBrickBlock(ctx, 214, blockY);
+  drawBrickBlock(ctx, 246, blockY);
+
+  // Upper row
+  drawBrickBlock(ctx, 400, blockY - 70);
+  drawQuestionBlock(ctx, 432, blockY - 70);
+  drawBrickBlock(ctx, 464, blockY - 70);
+
+  // Stairs
+  for (var i = 0; i < 5; i++) {
+    for (var j = 0; j <= i; j++) {
+      drawBrickBlock(ctx, 570 + i * 32, groundY - (j + 1) * 32);
+    }
+  }
+
+  // Coins (with glow in underground)
+  function drawGlowCoin(cx2, cy2) {
+    // Glow effect
+    ctx.fillStyle = 'rgba(248, 216, 48, 0.15)';
+    fillCircle(ctx, cx2 + 8, cy2 + 10, 14);
+    drawCoinSprite(ctx, cx2, cy2, 2.5);
+  }
+
+  drawGlowCoin(160, blockY - 40);
+  drawGlowCoin(198, blockY - 40);
+  drawGlowCoin(235, blockY - 40);
+
+  drawGlowCoin(410, blockY - 110);
+  drawGlowCoin(448, blockY - 110);
+
+  // Ground-level coins
+  drawGlowCoin(320, groundY - 35);
+  drawGlowCoin(350, groundY - 35);
+
+  // Goombas
+  drawGoombaSprite(ctx, 300, groundY - 28, 2.5);
+  drawGoombaSprite(ctx, 345, groundY - 28, 2.5);
+
+  // Mario
+  drawMarioSprite(ctx, 60, groundY - 52, 3);
+
+  // Star sprite on upper platform
+  drawStarSprite(ctx, 436, blockY - 100, 2.5);
+
+  // English popup
+  ctx.font = '12px "Press Start 2P"';
+  drawEnglishPopup(ctx, 440, blockY - 130, 'Star!', '(Zvaigzde)');
+
+  // HUD
+  drawHUD(ctx, W, 3400, 15, '2-1', 3);
+}
+
+// ========================================
+// SCREEN: LEVEL 3 — SKY
+// ========================================
+function drawLevel3() {
+  var c = document.getElementById('canvas-level3');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+
+  // Sky level — lighter NES blue
+  drawSky(ctx, W, H, '#9494FF');
+
+  // Distant tiny clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  fillCircle(ctx, 100, 520, 20);
+  fillCircle(ctx, 130, 525, 15);
+  fillCircle(ctx, 300, 550, 25);
+  fillCircle(ctx, 340, 555, 18);
+  fillCircle(ctx, 600, 540, 22);
+  fillCircle(ctx, 640, 545, 16);
+
+  // Background clouds (decorative, far)
+  drawCloud(ctx, 30, 25, 0.7);
+  drawCloud(ctx, 380, 40, 0.6);
+  drawCloud(ctx, 650, 15, 0.8);
+
+  // Cloud platforms function
+  function drawCloudPlatform(x2, y2, w2) {
+    // Shadow
+    ctx.fillStyle = '#C0D8FF';
+    fillCircle(ctx, x2 + w2 * 0.2, y2 + 18, 16);
+    fillCircle(ctx, x2 + w2 * 0.5, y2 + 18, 18);
+    fillCircle(ctx, x2 + w2 * 0.8, y2 + 18, 16);
+    px(ctx, x2, y2 + 10, w2, 14, '#C0D8FF');
+
+    // Main platform body
+    ctx.fillStyle = '#FFFFFF';
+    fillCircle(ctx, x2 + w2 * 0.15, y2 + 8, 18);
+    fillCircle(ctx, x2 + w2 * 0.35, y2 + 4, 22);
+    fillCircle(ctx, x2 + w2 * 0.55, y2 + 2, 24);
+    fillCircle(ctx, x2 + w2 * 0.75, y2 + 6, 20);
+    fillCircle(ctx, x2 + w2 * 0.9, y2 + 10, 16);
+    px(ctx, x2 + 4, y2 + 6, w2 - 8, 16, '#FFFFFF');
+
+    // Highlight top
+    ctx.fillStyle = '#F8FCFF';
+    fillCircle(ctx, x2 + w2 * 0.4, y2 - 2, 14);
+    fillCircle(ctx, x2 + w2 * 0.6, y2, 12);
+  }
+
+  // Playable cloud platforms at various heights
+  drawCloudPlatform(40, 460, 130);
+  drawCloudPlatform(210, 390, 110);
+  drawCloudPlatform(370, 320, 150);
+  drawCloudPlatform(560, 260, 110);
+  drawCloudPlatform(340, 200, 130);
+  drawCloudPlatform(140, 150, 110);
+  drawCloudPlatform(490, 150, 140);
+  drawCloudPlatform(670, 360, 90);
+
+  // Coins on platforms
+  drawCoinSprite(ctx, 80, 430, 2.5);
+  drawCoinSprite(ctx, 110, 430, 2.5);
+  drawCoinSprite(ctx, 245, 360, 2.5);
+  drawCoinSprite(ctx, 410, 290, 2.5);
+  drawCoinSprite(ctx, 445, 290, 2.5);
+  drawCoinSprite(ctx, 595, 230, 2.5);
+
+  // ? blocks floating
+  drawQuestionBlock(ctx, 255, 320, 28);
+  drawQuestionBlock(ctx, 590, 190, 28);
+
+  // Star on high platform
+  drawStarSprite(ctx, 180, 120, 2.5);
+
+  // Mario jumping
+  drawMarioSprite(ctx, 300, 275, 3);
+
+  // Koopa on cloud
+  drawKoopaSprite(ctx, 405, 296, 2.5);
+
+  // English popup
+  ctx.font = '12px "Press Start 2P"';
+  drawEnglishPopup(ctx, 125, 425, 'Cloud!', '(Debesis)');
+
+  // HUD
+  drawHUD(ctx, W, 5800, 28, '3-1', 2);
+
+  // Bottom text
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('~ Aukstai danguje ~', W/2, H - 20);
+}
+
+// ========================================
+// SCREEN: LEVEL 4 — CASTLE
+// ========================================
+function drawLevel4() {
+  var c = document.getElementById('canvas-level4');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Dark castle bg
+  drawSky(ctx, W, H, '#1A0A1E', '#2D1B2E');
+
+  // Stone wall texture
+  for (var wy = 0; wy < H - 64; wy += 32) {
+    var rowIdx = Math.floor(wy / 32);
+    var wo2 = (rowIdx % 2 === 0) ? 0 : 24;
+    for (var wx = -24; wx < W + 24; wx += 48) {
+      var bx2 = wx + wo2;
+      px(ctx, bx2, wy, 46, 30, '#2A1A2E');
+      // Highlight
+      px(ctx, bx2, wy, 46, 2, '#3A2A3E');
+      px(ctx, bx2, wy, 2, 30, '#3A2A3E');
+      // Shadow
+      px(ctx, bx2, wy + 28, 46, 2, '#1A0A1E');
+      px(ctx, bx2 + 44, wy, 2, 30, '#1A0A1E');
+    }
+  }
+
+  // Lava at bottom with proper glow
+  // Lava glow
+  var lavaGrad = ctx.createLinearGradient(0, groundY - 20, 0, H);
+  lavaGrad.addColorStop(0, 'rgba(255,68,0,0)');
+  lavaGrad.addColorStop(0.3, 'rgba(255,68,0,0.2)');
+  lavaGrad.addColorStop(1, 'rgba(255,68,0,0.5)');
+  ctx.fillStyle = lavaGrad;
+  ctx.fillRect(0, groundY - 20, W, H - groundY + 20);
+
+  px(ctx, 0, groundY, W, 64, '#CC2200');
+  px(ctx, 0, groundY, W, 6, '#FFCC00');
+  px(ctx, 0, groundY + 6, W, 6, '#FF8800');
+  px(ctx, 0, groundY + 12, W, 8, '#FF4400');
+
+  // Lava bubbles
+  for (var lx = 25; lx < W; lx += 70) {
+    ctx.fillStyle = '#FFCC00';
+    fillCircle(ctx, lx, groundY + 30, 5);
+    ctx.fillStyle = '#FF8800';
+    fillCircle(ctx, lx + 35, groundY + 40, 4);
+    ctx.fillStyle = '#FFAA00';
+    fillCircle(ctx, lx + 15, groundY + 25, 3);
+  }
+
+  // Stone platforms
+  function drawStonePlatform2(x2, y2, w2) {
+    px(ctx, x2, y2, w2, 32, '#555555');
+    // Highlight top
+    px(ctx, x2, y2, w2, 3, '#777777');
+    px(ctx, x2, y2, 3, 32, '#777777');
+    // Shadow bottom
+    px(ctx, x2, y2 + 28, w2, 4, '#333333');
+    px(ctx, x2 + w2 - 3, y2, 3, 32, '#333333');
+    // Segment lines
+    for (var sx = x2; sx < x2 + w2; sx += 32) {
+      px(ctx, sx + 30, y2, 2, 32, '#444444');
+    }
+    // Surface cracks
+    px(ctx, x2 + 10, y2 + 12, 8, 1, '#444444');
+    px(ctx, x2 + w2 - 25, y2 + 18, 12, 1, '#444444');
+  }
+
+  drawStonePlatform2(0, groundY - 48, 160);
+  drawStonePlatform2(200, groundY - 85, 130);
+  drawStonePlatform2(380, groundY - 125, 170);
+  drawStonePlatform2(600, groundY - 85, 200);
+
+  // Chains hanging from ceiling
+  for (var ch = 50; ch < W; ch += 200) {
+    for (var cy = 10; cy < 80; cy += 12) {
+      px(ctx, ch, cy, 6, 10, '#666666');
+      px(ctx, ch, cy, 6, 2, '#888888');
+    }
+  }
+
+  // Fire bars (visual)
+  ctx.fillStyle = '#FF4400';
+  for (var fi = 0; fi < 6; fi++) {
+    px(ctx, 170 + fi * 3, groundY - 50 + fi * 2, 6, 6, '#FF4400');
+    px(ctx, 172 + fi * 3, groundY - 48 + fi * 2, 2, 2, '#FFCC00');
+  }
+
+  // Bowser boss area
+  drawStonePlatform2(610, groundY - 185, 180);
+
+  // Bowser
+  drawBowser(ctx, 670, groundY - 280, 3);
+
+  // Mario
+  drawMarioSprite(ctx, 80, groundY - 94, 3);
+
+  // ? block
+  drawQuestionBlock(ctx, 250, groundY - 165, 28);
+  drawQuestionBlock(ctx, 420, groundY - 200, 28);
+
+  // Coins
+  drawCoinSprite(ctx, 260, groundY - 200, 2.5);
+  drawCoinSprite(ctx, 430, groundY - 240, 2.5);
+
+  // English popup
+  ctx.font = '12px "Press Start 2P"';
+  drawEnglishPopup(ctx, 710, groundY - 300, 'Castle!', '(Pilis)');
+
+  // HUD
+  drawHUD(ctx, W, 9200, 42, '4-1', 1);
+
+  // Boss label with glow
+  ctx.fillStyle = '#FF2222';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('BOSS', 720, groundY - 310);
+}
+
+// ========================================
+// SCREEN: PRINCESS
+// ========================================
+function drawPrincessScreen() {
+  var c = document.getElementById('canvas-princess');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Happy sky — NES blue
+  drawSky(ctx, W, H, '#6B8CFF');
+
+  // Background clouds
+  drawCloud(ctx, 30, 45, 1.2);
+  drawCloud(ctx, 350, 60, 0.9);
+  drawCloud(ctx, 600, 30, 1.3);
+
+  // Ground
+  drawGround(ctx, groundY, W, 64, '#30C030', '#C06000');
+
+  // Castle in background
+  // Main body
+  px(ctx, W/2 - 120, 90, 240, groundY - 90, '#E0D8D0');
+  px(ctx, W/2 - 120, 90, 240, 6, '#F0E8E0');
+  px(ctx, W/2 - 120, 90, 4, groundY - 90, '#F0E8E0');
+  px(ctx, W/2 + 116, 90, 4, groundY - 90, '#B8B0A8');
+  // Stone pattern on castle
+  for (var cy2 = 100; cy2 < groundY; cy2 += 24) {
+    var cr = Math.floor((cy2 - 100) / 24);
+    var co = (cr % 2 === 0) ? 0 : 20;
+    for (var cx2 = W/2 - 118; cx2 < W/2 + 118; cx2 += 40) {
+      px(ctx, cx2 + co, cy2, 38, 22, '#D8D0C8');
+      px(ctx, cx2 + co, cy2, 38, 2, '#E8E0D8');
+    }
+  }
+
+  // Towers
+  px(ctx, W/2 - 150, 50, 50, groundY - 50, '#D0C8C0');
+  px(ctx, W/2 + 100, 50, 50, groundY - 50, '#D0C8C0');
+
+  // Tower tops (crenellations)
+  for (var ci = 0; ci < 4; ci++) {
+    px(ctx, W/2 - 150 + ci * 14, 32, 10, 18, '#D0C8C0');
+    px(ctx, W/2 + 100 + ci * 14, 32, 10, 18, '#D0C8C0');
+    // Highlights
+    px(ctx, W/2 - 150 + ci * 14, 32, 10, 3, '#E8E0D8');
+    px(ctx, W/2 + 100 + ci * 14, 32, 10, 3, '#E8E0D8');
+  }
+
+  // Door
+  ctx.fillStyle = '#8B4513';
+  roundRect(ctx, W/2 - 24, groundY - 65, 48, 65, 24);
+  ctx.fill();
+  ctx.fillStyle = '#A0522D';
+  roundRect(ctx, W/2 - 20, groundY - 60, 40, 60, 20);
+  ctx.fill();
+  // Door handle
+  px(ctx, W/2 + 8, groundY - 35, 5, 5, '#F8D830');
+
+  // Windows
+  ctx.fillStyle = '#6B8CFF';
+  roundRect(ctx, W/2 - 85, 140, 32, 44, 16);
+  ctx.fill();
+  roundRect(ctx, W/2 + 53, 140, 32, 44, 16);
+  ctx.fill();
+  // Window frames
+  ctx.strokeStyle = '#B8B0A8';
+  ctx.lineWidth = 3;
+  roundRect(ctx, W/2 - 85, 140, 32, 44, 16);
+  ctx.stroke();
+  roundRect(ctx, W/2 + 53, 140, 32, 44, 16);
+  ctx.stroke();
+  // Window cross
+  px(ctx, W/2 - 70, 140, 2, 44, '#B8B0A8');
+  px(ctx, W/2 - 85, 161, 32, 2, '#B8B0A8');
+  px(ctx, W/2 + 68, 140, 2, 44, '#B8B0A8');
+  px(ctx, W/2 + 53, 161, 32, 2, '#B8B0A8');
+
+  // Flag on tower
+  px(ctx, W/2 - 128, 10, 4, 32, '#888888');
+  // Triangular pink flag
+  for (var fy = 0; fy < 18; fy++) {
+    px(ctx, W/2 - 124, 12 + fy, 18 - fy, 1, '#FF69B4');
+  }
+
+  // Confetti / sparkles
+  var confettiColors = ['#FF69B4', '#F8D830', '#30C030', '#6B8CFF', '#E8261C', '#FF8800'];
+  for (var si = 0; si < 40; si++) {
+    var sx = Math.sin(si * 7.3) * 320 + W/2;
+    var sy = Math.cos(si * 5.1) * 180 + 200;
+    ctx.fillStyle = confettiColors[si % confettiColors.length];
+    px(ctx, sx, sy, 4 + (si % 3) * 2, 4 + (si % 2) * 2, confettiColors[si % confettiColors.length]);
+  }
+
+  // Stars decoration
+  for (var sti = 0; sti < 5; sti++) {
+    drawStarSprite(ctx, 60 + sti * 155, 35 + (sti % 3) * 25, 1.8);
+  }
+
+  // Mario (left of center)
+  drawMarioSprite(ctx, W/2 - 90, groundY - 52, 3);
+
+  // Princess (right of center, using new sprite)
+  drawPrincessSprite(ctx, W/2 + 30, groundY - 60, 3);
+
+  // Heart between them
+  ctx.fillStyle = '#E8261C';
+  // Pixel heart
+  var hx = W/2 - 8;
+  var hy = groundY - 40;
+  px(ctx, hx + 2, hy, 5, 3, '#E8261C');
+  px(ctx, hx + 9, hy, 5, 3, '#E8261C');
+  px(ctx, hx, hy + 2, 16, 4, '#E8261C');
+  px(ctx, hx + 1, hy + 6, 14, 3, '#E8261C');
+  px(ctx, hx + 3, hy + 9, 10, 2, '#E8261C');
+  px(ctx, hx + 5, hy + 11, 6, 2, '#E8261C');
+  px(ctx, hx + 7, hy + 13, 2, 2, '#E8261C');
+  // Heart highlight
+  px(ctx, hx + 3, hy + 1, 3, 2, '#FF6666');
+
+  // Dialog box
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  roundRect(ctx, W/2 - 260, 315, 520, 108, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#F8D830';
+  ctx.lineWidth = 3;
+  roundRect(ctx, W/2 - 260, 315, 520, 108, 8);
+  ctx.stroke();
+
+  // Princess name tag
+  ctx.fillStyle = '#FF69B4';
+  roundRect(ctx, W/2 - 248, 303, 90, 18, 4);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'left';
+  ctx.fillText('PRINCESS', W/2 - 244, 316);
+
+  // Dialog text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('Thank you Mario!', W/2, 352);
+  ctx.fillText('You are my hero!', W/2, 375);
+
+  ctx.fillStyle = '#999999';
+  ctx.font = '9px "Press Start 2P"';
+  ctx.fillText('(Aciu Mario! Tu mano didvyris!)', W/2, 405);
+
+  // Victory text
+  ctx.fillStyle = '#000000';
+  ctx.font = '22px "Press Start 2P"';
+  ctx.fillText('YOU WIN!', W/2 + 2, 280 + 2);
+  ctx.fillStyle = '#F8D830';
+  ctx.fillText('YOU WIN!', W/2, 280);
+
+  // Score
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillText('FINAL SCORE: 012400  COINS: 56', W/2, 455);
+}
+
+// ========================================
+// SCREEN: TOUCH CONTROLS
+// ========================================
+function drawTouchScreen() {
+  var c = document.getElementById('canvas-touch');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var groundY = H - 64;
+
+  // Solid NES sky blue
+  drawSky(ctx, W, H, '#6B8CFF');
+
+  // Background
+  drawHill(ctx, -30, groundY - 80, 220, 80, '#30A030', '#48C048');
+  drawHill(ctx, 380, groundY - 55, 160, 55, '#28A028', '#40B840');
+  drawCloud(ctx, 100, 55, 1.2);
+  drawCloud(ctx, 480, 35, 1.0);
+
+  // Ground
+  drawGround(ctx, groundY, W, 64, '#30C030', '#C06000');
+
+  // Platforms
+  drawBrickBlock(ctx, 246, groundY - 126);
+  drawQuestionBlock(ctx, 278, groundY - 126);
+  drawBrickBlock(ctx, 310, groundY - 126);
+
+  // Pipe
+  drawPipe(ctx, 490, groundY - 76, 76);
+
+  // Mario
+  drawMarioSprite(ctx, 195, groundY - 52, 3);
+
+  // Goomba
+  drawGoombaSprite(ctx, 390, groundY - 28, 2.5);
+
+  // Coins
+  drawCoinSprite(ctx, 260, groundY - 164, 2.5);
+  drawCoinSprite(ctx, 295, groundY - 164, 2.5);
+
+  // HUD
+  drawHUD(ctx, W, 800, 3, '1-1', 3);
+
+  // Touch controls overlay drawn on canvas
+  ctx.globalAlpha = 0.35;
+
+  // D-pad background circle
+  ctx.fillStyle = '#000000';
+  fillCircle(ctx, 100, H - 85, 65);
+
+  // Left button
+  ctx.fillStyle = '#FFFFFF';
+  fillCircle(ctx, 55, H - 85, 30);
+
+  // Right button
+  fillCircle(ctx, 145, H - 85, 30);
+
+  // Jump button background
+  ctx.fillStyle = '#000000';
+  fillCircle(ctx, W - 85, H - 85, 50);
+
+  // Jump button red
+  ctx.fillStyle = '#E8261C';
+  fillCircle(ctx, W - 85, H - 85, 42);
+
+  ctx.globalAlpha = 1;
+
+  // Button labels
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = '22px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('<', 55, H - 85);
+  ctx.fillText('>', 145, H - 85);
+
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillText('JUMP', W - 85, H - 85);
+
+  // Info text
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '9px "Press Start 2P"';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('TOUCH CONTROLS — tik mobiliuose/plansetese', W/2, 470);
+}
+
+// ========================================
+// NAVIGATION
+// ========================================
+document.querySelectorAll('.screen-nav button').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.screen-nav button').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.screen-section').forEach(function(s) { s.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('screen-' + btn.dataset.screen).classList.add('active');
+  });
+});
+
+// ========================================
+// RENDER ALL SCREENS
+// ========================================
+window.addEventListener('load', function() {
+  document.fonts.ready.then(function() {
+    drawMenuScreen();
+    drawLevel1();
+    drawLevel2();
+    drawLevel3();
+    drawLevel4();
+    drawPrincessScreen();
+    drawTouchScreen();
+  });
+});
+</script>
+
+</body>
+</html>
