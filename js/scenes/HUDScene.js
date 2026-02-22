@@ -83,6 +83,25 @@ var HUDScene = new Phaser.Class({
         this.marioIcon.setDepth(1);
 
         // ----------------------------------
+        // Restart/Quit button
+        // ----------------------------------
+        var restartBtnX = livesX - 120;
+        var restartBtn = this.add.text(restartBtnX, 14, '[X]', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#FF6666'
+        }).setDepth(2).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+
+        restartBtn.on('pointerover', function() { restartBtn.setColor('#FF0000'); });
+        restartBtn.on('pointerout', function() { restartBtn.setColor('#FF6666'); });
+        restartBtn.on('pointerdown', function() { self.showQuitDialog(); });
+
+        // ----------------------------------
+        // Quit dialog state
+        // ----------------------------------
+        this.quitDialogVisible = false;
+
+        // ----------------------------------
         // Listen to registry events for live updates
         // ----------------------------------
         this.registry.events.on('changedata-score', function (parent, value) {
@@ -115,9 +134,121 @@ var HUDScene = new Phaser.Class({
     },
 
     // ==========================================
+    // QUIT DIALOG
+    // ==========================================
+    showQuitDialog: function () {
+        if (this.quitDialogVisible) return;
+        this.quitDialogVisible = true;
+
+        var W = this.cameras.main.width;
+        var H = this.cameras.main.height;
+        var self = this;
+
+        // Pause the game scene
+        var gameScene = this.scene.get('GameScene');
+        if (gameScene) gameScene.scene.pause();
+
+        // Dark overlay
+        this.quitOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7)
+            .setDepth(50).setInteractive();
+
+        // Dialog panel
+        var panelW = 400;
+        var panelH = 200;
+        this.quitPanel = this.add.graphics().setDepth(51);
+        this.quitPanel.fillStyle(0x222244, 1);
+        this.quitPanel.fillRoundedRect(W / 2 - panelW / 2, H / 2 - panelH / 2, panelW, panelH, 16);
+        this.quitPanel.lineStyle(3, 0xF8B800, 1);
+        this.quitPanel.strokeRoundedRect(W / 2 - panelW / 2, H / 2 - panelH / 2, panelW, panelH, 16);
+
+        // Question text
+        this.quitText = this.add.text(W / 2, H / 2 - 40, 'Ar nori baigti\nžaidimą?', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#FFFFFF',
+            align: 'center',
+            lineSpacing: 8
+        }).setOrigin(0.5).setDepth(52);
+
+        // YES button
+        var yesBtnX = W / 2 - 80;
+        var yesBtnY = H / 2 + 40;
+        this.yesBtnBg = this.add.graphics().setDepth(52);
+        this.yesBtnBg.fillStyle(0xE8261C, 1);
+        this.yesBtnBg.fillRoundedRect(yesBtnX - 60, yesBtnY - 18, 120, 36, 8);
+
+        this.yesBtnText = this.add.text(yesBtnX, yesBtnY, 'TAIP', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(53);
+
+        var yesZone = this.add.zone(yesBtnX, yesBtnY, 120, 36)
+            .setDepth(54).setInteractive({ useHandCursor: true });
+        this.yesZone = yesZone;
+
+        yesZone.on('pointerdown', function() {
+            self.quitGame();
+        });
+
+        // NO button
+        var noBtnX = W / 2 + 80;
+        var noBtnY = H / 2 + 40;
+        this.noBtnBg = this.add.graphics().setDepth(52);
+        this.noBtnBg.fillStyle(0x30A030, 1);
+        this.noBtnBg.fillRoundedRect(noBtnX - 60, noBtnY - 18, 120, 36, 8);
+
+        this.noBtnText = this.add.text(noBtnX, noBtnY, 'NE', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(53);
+
+        var noZone = this.add.zone(noBtnX, noBtnY, 120, 36)
+            .setDepth(54).setInteractive({ useHandCursor: true });
+        this.noZone = noZone;
+
+        noZone.on('pointerdown', function() {
+            self.hideQuitDialog();
+        });
+    },
+
+    hideQuitDialog: function () {
+        this.quitDialogVisible = false;
+
+        // Resume game
+        var gameScene = this.scene.get('GameScene');
+        if (gameScene) gameScene.scene.resume();
+
+        // Destroy dialog elements
+        if (this.quitOverlay) this.quitOverlay.destroy();
+        if (this.quitPanel) this.quitPanel.destroy();
+        if (this.quitText) this.quitText.destroy();
+        if (this.yesBtnBg) this.yesBtnBg.destroy();
+        if (this.yesBtnText) this.yesBtnText.destroy();
+        if (this.yesZone) this.yesZone.destroy();
+        if (this.noBtnBg) this.noBtnBg.destroy();
+        if (this.noBtnText) this.noBtnText.destroy();
+        if (this.noZone) this.noZone.destroy();
+    },
+
+    quitGame: function () {
+        // Stop music
+        if (window.AudioManager) AudioManager.stopMusic();
+
+        // Stop both scenes and go to menu
+        this.scene.stop('GameScene');
+        this.scene.stop('HUDScene');
+        this.scene.start('MenuScene');
+    },
+
+    // ==========================================
     // SHUTDOWN — clean up registry listeners to prevent leaks
     // ==========================================
     shutdown: function () {
+        // Clean up quit dialog if open
+        this.hideQuitDialog();
+
         this.registry.events.off('changedata-score');
         this.registry.events.off('changedata-coins');
         this.registry.events.off('changedata-lives');

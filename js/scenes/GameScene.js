@@ -212,13 +212,14 @@ var GameScene = new Phaser.Class({
         // Flagpole
         // ----------------------------------
         if (flagpolePos) {
-            this.flagpole = this.physics.add.sprite(flagpolePos.x, flagpolePos.y, 'flagpole');
-            this.flagpole.setOrigin(0.5, 1);
-            this.flagpole.y = (ROWS - 2) * TILE; // Place base at ground level
+            var flagBaseY = (ROWS - 2) * TILE; // Ground level (544)
+            this.flagpole = this.physics.add.sprite(flagpolePos.x, flagBaseY - 128, 'flagpole');
+            this.flagpole.setOrigin(0.5, 0.5);
             this.flagpole.body.setAllowGravity(false);
             this.flagpole.setImmovable(true);
-            this.flagpole.setSize(48, 256);
-            this.flagpole.setOffset(-16, 0);
+            // Tall hitbox centered on the pole
+            this.flagpole.setSize(64, 256);
+            this.flagpole.body.setOffset(-24, -32);
             this.flagpole.setDepth(5);
         } else {
             this.flagpole = null;
@@ -399,7 +400,7 @@ var GameScene = new Phaser.Class({
             var e = enemies[i];
             if (!e.active || e.isSquished) continue;
 
-            // Turn around at edges or walls
+            // Turn around at walls
             if (e.body.blocked.left) {
                 e.setVelocityX(60);
                 e.patrolDir = 1;
@@ -408,6 +409,38 @@ var GameScene = new Phaser.Class({
                 e.setVelocityX(-60);
                 e.patrolDir = -1;
                 e.setFlipX(false);
+            }
+
+            // Stuck detection — if on ground but barely moving, re-kick
+            if (e.body.blocked.down && Math.abs(e.body.velocity.x) < 5) {
+                e.setVelocityX(60 * e.patrolDir);
+            }
+
+            // Edge detection — turn around at platform edges
+            if (e.body.blocked.down) {
+                var aheadX = e.patrolDir > 0 ? e.body.right + 2 : e.body.left - 2;
+                var belowY = e.body.bottom + 4;
+                var hasGround = false;
+
+                var tileGroups = [this.groundTiles, this.brickTiles, this.pipeTiles];
+                for (var g = 0; g < tileGroups.length && !hasGround; g++) {
+                    var tiles = tileGroups[g].getChildren();
+                    for (var t = 0; t < tiles.length; t++) {
+                        var tile = tiles[t];
+                        if (tile.active &&
+                            aheadX >= tile.body.left && aheadX <= tile.body.right &&
+                            belowY >= tile.body.top && belowY <= tile.body.bottom) {
+                            hasGround = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasGround) {
+                    e.patrolDir = -e.patrolDir;
+                    e.setVelocityX(60 * e.patrolDir);
+                    e.setFlipX(e.patrolDir > 0);
+                }
             }
 
             // Fall death for enemies
@@ -474,7 +507,7 @@ var GameScene = new Phaser.Class({
             this.events.emit('livesChange', this.lives);
             this.showEnglishPopup('life');
         } else {
-            this.showEnglishPopup('coin');
+            this.showEnglishPopup(); // random word each time
         }
     },
 
@@ -482,15 +515,18 @@ var GameScene = new Phaser.Class({
     // HIT BRICK FROM BELOW
     // ==========================================
     hitBrick: function (player, brick) {
-        // Check if player is hitting block from below based on relative positions
+        // Only trigger when hitting from below: player must be moving upward
+        // and player's top must be near block's bottom
+        if (player.body.velocity.y >= 0) return; // Must be jumping upward
         var playerTop = player.body.y;
         var blockBottom = brick.body.y + brick.body.height;
         var playerCenterX = player.body.x + player.body.width / 2;
         var blockLeft = brick.body.x;
         var blockRight = brick.body.x + brick.body.width;
 
-        // Player's top should be near block's bottom, and player should be under the block
-        if (playerTop > blockBottom || playerCenterX < blockLeft || playerCenterX > blockRight) return;
+        // Player's top should be near block's bottom (within 8px tolerance)
+        if (Math.abs(playerTop - blockBottom) > 8) return;
+        if (playerCenterX < blockLeft || playerCenterX > blockRight) return;
         // Only trigger once per collision
         if (brick._justHit) return;
         brick._justHit = true;
@@ -507,7 +543,7 @@ var GameScene = new Phaser.Class({
             // Simple break effect — small particles
             this.createBreakEffect(brick.x, brick.y);
             brick.destroy();
-            this.showEnglishPopup('brick');
+            this.showEnglishPopup(); // random word
         } else {
             // Small Mario — bump only
             if (window.AudioManager) AudioManager.play('bump');
@@ -519,15 +555,18 @@ var GameScene = new Phaser.Class({
     // HIT QUESTION BLOCK FROM BELOW
     // ==========================================
     hitQuestion: function (player, block) {
-        // Check if player is hitting block from below based on relative positions
+        // Only trigger when hitting from below: player must be moving upward
+        // and player's top must be near block's bottom
+        if (player.body.velocity.y >= 0) return; // Must be jumping upward
         var playerTop = player.body.y;
         var blockBottom = block.body.y + block.body.height;
         var playerCenterX = player.body.x + player.body.width / 2;
         var blockLeft = block.body.x;
         var blockRight = block.body.x + block.body.width;
 
-        // Player's top should be near block's bottom, and player should be under the block
-        if (playerTop > blockBottom || playerCenterX < blockLeft || playerCenterX > blockRight) return;
+        // Player's top should be near block's bottom (within 8px tolerance)
+        if (Math.abs(playerTop - blockBottom) > 8) return;
+        if (playerCenterX < blockLeft || playerCenterX > blockRight) return;
         // Only trigger once per collision
         if (block._justHit) return;
         block._justHit = true;
@@ -560,7 +599,7 @@ var GameScene = new Phaser.Class({
             this.registry.set('coins', this.coins);
             this.events.emit('scoreChange', this.score);
             this.events.emit('coinCollect', this.coins);
-            this.showEnglishPopup('coin');
+            this.showEnglishPopup(); // random word each time
         } else if (block.content === 'mushroom') {
             // Spawn mushroom
             var mush = this.mushrooms.create(block.x, block.y - 32, 'mushroom');
@@ -667,7 +706,7 @@ var GameScene = new Phaser.Class({
 
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
-        this.showEnglishPopup(enemy.enemyType === 'koopa' ? 'turtle' : 'score');
+        this.showEnglishPopup(); // random word
 
         // Remove after short delay
         var self = this;
@@ -766,8 +805,8 @@ var GameScene = new Phaser.Class({
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('flagpole'); }
 
         // Calculate score bonus based on height
-        var flagTop = flagpole.y - 180;
-        var flagBottom = flagpole.y;
+        var flagTop = flagpole.body.top;
+        var flagBottom = flagpole.body.bottom;
         var grabHeight = 1 - ((player.y - flagTop) / (flagBottom - flagTop));
         grabHeight = Phaser.Math.Clamp(grabHeight, 0, 1);
 
@@ -791,10 +830,11 @@ var GameScene = new Phaser.Class({
         player.body.setEnable(false);
         player.x = flagpole.x;
 
+        var slideToY = flagBottom - 48;
         var self = this;
         this.tweens.add({
             targets: player,
-            y: flagBottom - 48,
+            y: slideToY,
             duration: 800,
             ease: 'Linear',
             onComplete: function () {
@@ -867,36 +907,79 @@ var GameScene = new Phaser.Class({
     },
 
     // ==========================================
-    // ENGLISH WORD POPUP
+    // ENGLISH WORD POPUP — card-style with icon
     // ==========================================
     showEnglishPopup: function (wordKey) {
         var word = window.EnglishWords ? window.EnglishWords.getWord(wordKey) : null;
         if (!word) {
-            // Try random word as fallback
             word = window.EnglishWords ? window.EnglishWords.getRandomWord() : null;
         }
         if (!word) return;
 
-        var text = word.en + '! (' + word.lt + ')';
-        var popup = this.add.text(this.player.x, this.player.y - 40, text, {
+        var self = this;
+        var px = this.player.x;
+        var py = this.player.y - 70;
+
+        // Category colors
+        var catColors = {
+            animals: { bg: 0x4A90D9, stripe: 0x2E6BAA },
+            nature:  { bg: 0x50B050, stripe: 0x308030 },
+            fruits:  { bg: 0xE87A2E, stripe: 0xC05A1E },
+            colors:  { bg: 0xCC44CC, stripe: 0x993399 },
+            objects: { bg: 0xCCCC33, stripe: 0x999922 },
+            body:    { bg: 0xE85050, stripe: 0xBB3333 },
+            food:    { bg: 0xE8A030, stripe: 0xCC8020 },
+            game:    { bg: 0x6B8CFF, stripe: 0x4A6ACC }
+        };
+        var cat = word.category || 'game';
+        var colors = catColors[cat] || catColors.game;
+
+        // Background card
+        var cardW = 160;
+        var cardH = 60;
+        var card = this.add.graphics().setDepth(99);
+        card.fillStyle(0x000000, 0.6);
+        card.fillRoundedRect(px - cardW / 2 + 2, py - cardH / 2 + 2, cardW, cardH, 8);
+        card.fillStyle(colors.bg, 0.95);
+        card.fillRoundedRect(px - cardW / 2, py - cardH / 2, cardW, cardH, 8);
+        card.lineStyle(2, 0xFFFFFF, 0.6);
+        card.strokeRoundedRect(px - cardW / 2, py - cardH / 2, cardW, cardH, 8);
+
+        // English word (big)
+        var enText = this.add.text(px, py - 10, word.en, {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '10px',
+            fontSize: '14px',
             color: '#FFFFFF',
             stroke: '#000000',
-            strokeThickness: 3,
+            strokeThickness: 2,
             align: 'center'
-        }).setOrigin(0.5).setDepth(100);
+        }).setOrigin(0.5).setDepth(101);
 
-        this.tweens.add({
-            targets: popup,
-            y: popup.y - 50,
-            alpha: 0,
-            duration: 1500,
-            ease: 'Power1',
-            onComplete: function () {
-                popup.destroy();
-            }
-        });
+        // Lithuanian translation (smaller)
+        var ltText = this.add.text(px, py + 12, word.lt, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '9px',
+            color: '#FFE880',
+            stroke: '#000000',
+            strokeThickness: 1,
+            align: 'center'
+        }).setOrigin(0.5).setDepth(101);
+
+        // Animate — float up and fade
+        var elements = [card, enText, ltText];
+        for (var ei = 0; ei < elements.length; ei++) {
+            this.tweens.add({
+                targets: elements[ei],
+                y: '-=60',
+                alpha: 0,
+                duration: 2500,
+                delay: 500,
+                ease: 'Power1',
+                onComplete: function () {
+                    this.targets[0].destroy();
+                }.bind({ targets: [elements[ei]] })
+            });
+        }
     },
 
     // ==========================================
@@ -937,6 +1020,62 @@ var GameScene = new Phaser.Class({
                 bush.setDepth(2);
                 bush.setOrigin(0.5, 1);
                 if (bd.scale) bush.setScale(bd.scale);
+            }
+        }
+
+        // Flowers (at ground level, foreground)
+        if (decorations.flowers) {
+            for (var fi = 0; fi < decorations.flowers.length; fi++) {
+                var fd = decorations.flowers[fi];
+                var fl = this.add.image(fd.x, fd.y, 'flower-deco');
+                fl.setDepth(3);
+                fl.setOrigin(0.5, 1);
+                if (fd.scale) fl.setScale(fd.scale);
+                if (fd.tint) fl.setTint(fd.tint);
+            }
+        }
+
+        // Grass tufts (small details at ground level)
+        if (decorations.grass) {
+            for (var gi = 0; gi < decorations.grass.length; gi++) {
+                var gd = decorations.grass[gi];
+                var gr = this.add.image(gd.x, gd.y, 'grass-tuft');
+                gr.setDepth(3);
+                gr.setOrigin(0.5, 1);
+                if (gd.scale) gr.setScale(gd.scale);
+            }
+        }
+
+        // Decorative mushrooms (small, near ground)
+        if (decorations.mushrooms) {
+            for (var mi = 0; mi < decorations.mushrooms.length; mi++) {
+                var md = decorations.mushrooms[mi];
+                var mu = this.add.image(md.x, md.y, 'mushroom-deco');
+                mu.setDepth(3);
+                mu.setOrigin(0.5, 1);
+                if (md.scale) mu.setScale(md.scale);
+            }
+        }
+
+        // Rocks
+        if (decorations.rocks) {
+            for (var ri = 0; ri < decorations.rocks.length; ri++) {
+                var rd = decorations.rocks[ri];
+                var rk = this.add.image(rd.x, rd.y, 'rock-deco');
+                rk.setDepth(2);
+                rk.setOrigin(0.5, 1);
+                if (rd.scale) rk.setScale(rd.scale);
+            }
+        }
+
+        // Fences
+        if (decorations.fences) {
+            for (var fni = 0; fni < decorations.fences.length; fni++) {
+                var fnd = decorations.fences[fni];
+                var fn = this.add.image(fnd.x, fnd.y, 'fence');
+                fn.setDepth(2);
+                fn.setOrigin(0, 1);
+                if (fnd.scale) fn.setScale(fnd.scale);
             }
         }
     },
@@ -1129,44 +1268,161 @@ var GameScene = new Phaser.Class({
             }
         }
 
-        // Decorations
+        // Decorations — rich environment like real Mario
+        var gY = 544; // ground Y
         var decorations = {
             clouds: [
                 { x: 100, y: 60, scale: 1 },
-                { x: 400, y: 40, scale: 0.8 },
+                { x: 300, y: 30, scale: 0.6 },
+                { x: 550, y: 50, scale: 0.8 },
                 { x: 700, y: 70, scale: 1.2 },
+                { x: 1000, y: 25, scale: 0.7 },
                 { x: 1100, y: 50, scale: 0.9 },
+                { x: 1400, y: 70, scale: 0.5 },
                 { x: 1500, y: 35, scale: 1.1 },
+                { x: 1800, y: 55, scale: 0.6 },
                 { x: 1900, y: 65, scale: 0.7 },
+                { x: 2200, y: 30, scale: 0.8 },
                 { x: 2400, y: 45, scale: 1 },
+                { x: 2700, y: 65, scale: 0.5 },
                 { x: 2900, y: 55, scale: 0.85 },
+                { x: 3200, y: 30, scale: 0.7 },
                 { x: 3400, y: 40, scale: 1.1 },
+                { x: 3700, y: 70, scale: 0.6 },
                 { x: 3900, y: 60, scale: 0.9 },
+                { x: 4200, y: 35, scale: 0.8 },
                 { x: 4400, y: 50, scale: 1 },
+                { x: 4800, y: 25, scale: 0.6 },
                 { x: 5000, y: 35, scale: 0.8 },
+                { x: 5300, y: 55, scale: 0.7 },
                 { x: 5500, y: 65, scale: 1.2 },
+                { x: 5800, y: 30, scale: 0.5 },
                 { x: 6000, y: 45, scale: 0.9 }
             ],
             hills: [
-                { x: 200, y: 544, scale: 1.2 },
-                { x: 800, y: 544, scale: 0.8 },
-                { x: 1600, y: 544, scale: 1.0 },
-                { x: 2400, y: 544, scale: 1.3 },
-                { x: 3200, y: 544, scale: 0.9 },
-                { x: 4000, y: 544, scale: 1.1 },
-                { x: 4800, y: 544, scale: 0.7 },
-                { x: 5600, y: 544, scale: 1.0 }
+                { x: 200, y: gY, scale: 1.2 },
+                { x: 600, y: gY, scale: 0.6 },
+                { x: 800, y: gY, scale: 0.8 },
+                { x: 1200, y: gY, scale: 1.4 },
+                { x: 1600, y: gY, scale: 1.0 },
+                { x: 2000, y: gY, scale: 0.7 },
+                { x: 2400, y: gY, scale: 1.3 },
+                { x: 2800, y: gY, scale: 0.6 },
+                { x: 3200, y: gY, scale: 0.9 },
+                { x: 3600, y: gY, scale: 1.2 },
+                { x: 4000, y: gY, scale: 1.1 },
+                { x: 4400, y: gY, scale: 0.6 },
+                { x: 4800, y: gY, scale: 0.7 },
+                { x: 5200, y: gY, scale: 1.3 },
+                { x: 5600, y: gY, scale: 1.0 },
+                { x: 6000, y: gY, scale: 0.8 }
             ],
             bushes: [
-                { x: 350, y: 544, scale: 1 },
-                { x: 900, y: 544, scale: 0.8 },
-                { x: 1300, y: 544, scale: 1.1 },
-                { x: 2000, y: 544, scale: 0.9 },
-                { x: 2700, y: 544, scale: 1 },
-                { x: 3500, y: 544, scale: 0.8 },
-                { x: 4200, y: 544, scale: 1.2 },
-                { x: 5100, y: 544, scale: 0.9 },
-                { x: 5800, y: 544, scale: 1 }
+                { x: 180, y: gY, scale: 1 },
+                { x: 350, y: gY, scale: 0.7 },
+                { x: 550, y: gY, scale: 1.2 },
+                { x: 900, y: gY, scale: 0.8 },
+                { x: 1100, y: gY, scale: 1.0 },
+                { x: 1300, y: gY, scale: 1.1 },
+                { x: 1700, y: gY, scale: 0.6 },
+                { x: 2000, y: gY, scale: 0.9 },
+                { x: 2300, y: gY, scale: 1.2 },
+                { x: 2700, y: gY, scale: 1 },
+                { x: 3100, y: gY, scale: 0.7 },
+                { x: 3500, y: gY, scale: 0.8 },
+                { x: 3800, y: gY, scale: 1.1 },
+                { x: 4200, y: gY, scale: 1.2 },
+                { x: 4600, y: gY, scale: 0.7 },
+                { x: 5100, y: gY, scale: 0.9 },
+                { x: 5500, y: gY, scale: 1.0 },
+                { x: 5800, y: gY, scale: 1 }
+            ],
+            flowers: [
+                { x: 160, y: gY, scale: 1.2 },
+                { x: 420, y: gY, scale: 1.0 },
+                { x: 680, y: gY, scale: 1.4, tint: 0xFF88FF },
+                { x: 1050, y: gY, scale: 1.1 },
+                { x: 1350, y: gY, scale: 1.3, tint: 0xFFFF44 },
+                { x: 1650, y: gY, scale: 1.0 },
+                { x: 1920, y: gY, scale: 1.2, tint: 0xFF88FF },
+                { x: 2250, y: gY, scale: 1.1 },
+                { x: 2580, y: gY, scale: 1.3 },
+                { x: 2850, y: gY, scale: 1.0, tint: 0xFFFF44 },
+                { x: 3150, y: gY, scale: 1.2 },
+                { x: 3480, y: gY, scale: 1.1, tint: 0xFF88FF },
+                { x: 3750, y: gY, scale: 1.3 },
+                { x: 4050, y: gY, scale: 1.0 },
+                { x: 4380, y: gY, scale: 1.2, tint: 0xFFFF44 },
+                { x: 4680, y: gY, scale: 1.1 },
+                { x: 4980, y: gY, scale: 1.3, tint: 0xFF88FF },
+                { x: 5280, y: gY, scale: 1.0 },
+                { x: 5580, y: gY, scale: 1.2 },
+                { x: 5880, y: gY, scale: 1.1, tint: 0xFFFF44 }
+            ],
+            grass: [
+                { x: 120, y: gY, scale: 1.0 },
+                { x: 250, y: gY, scale: 0.8 },
+                { x: 380, y: gY, scale: 1.2 },
+                { x: 520, y: gY, scale: 0.9 },
+                { x: 640, y: gY, scale: 1.1 },
+                { x: 780, y: gY, scale: 1.0 },
+                { x: 960, y: gY, scale: 0.8 },
+                { x: 1180, y: gY, scale: 1.2 },
+                { x: 1420, y: gY, scale: 1.0 },
+                { x: 1580, y: gY, scale: 0.9 },
+                { x: 1760, y: gY, scale: 1.1 },
+                { x: 1950, y: gY, scale: 1.0 },
+                { x: 2150, y: gY, scale: 0.8 },
+                { x: 2380, y: gY, scale: 1.2 },
+                { x: 2620, y: gY, scale: 1.0 },
+                { x: 2860, y: gY, scale: 0.9 },
+                { x: 3080, y: gY, scale: 1.1 },
+                { x: 3320, y: gY, scale: 1.0 },
+                { x: 3580, y: gY, scale: 0.8 },
+                { x: 3820, y: gY, scale: 1.2 },
+                { x: 4050, y: gY, scale: 1.0 },
+                { x: 4320, y: gY, scale: 0.9 },
+                { x: 4580, y: gY, scale: 1.1 },
+                { x: 4820, y: gY, scale: 1.0 },
+                { x: 5080, y: gY, scale: 0.8 },
+                { x: 5380, y: gY, scale: 1.2 },
+                { x: 5680, y: gY, scale: 1.0 },
+                { x: 5920, y: gY, scale: 0.9 }
+            ],
+            mushrooms: [
+                { x: 300, y: gY, scale: 1.0 },
+                { x: 750, y: gY, scale: 1.2 },
+                { x: 1250, y: gY, scale: 0.9 },
+                { x: 1800, y: gY, scale: 1.1 },
+                { x: 2500, y: gY, scale: 1.0 },
+                { x: 3000, y: gY, scale: 1.2 },
+                { x: 3600, y: gY, scale: 0.9 },
+                { x: 4100, y: gY, scale: 1.1 },
+                { x: 4700, y: gY, scale: 1.0 },
+                { x: 5200, y: gY, scale: 1.2 },
+                { x: 5700, y: gY, scale: 0.9 }
+            ],
+            rocks: [
+                { x: 500, y: gY, scale: 0.8 },
+                { x: 1500, y: gY, scale: 1.0 },
+                { x: 2200, y: gY, scale: 0.9 },
+                { x: 3300, y: gY, scale: 1.1 },
+                { x: 4500, y: gY, scale: 0.8 },
+                { x: 5400, y: gY, scale: 1.0 }
+            ],
+            fences: [
+                { x: 220, y: gY, scale: 1.0 },
+                { x: 252, y: gY, scale: 1.0 },
+                { x: 1000, y: gY, scale: 1.0 },
+                { x: 1032, y: gY, scale: 1.0 },
+                { x: 1064, y: gY, scale: 1.0 },
+                { x: 2600, y: gY, scale: 1.0 },
+                { x: 2632, y: gY, scale: 1.0 },
+                { x: 3900, y: gY, scale: 1.0 },
+                { x: 3932, y: gY, scale: 1.0 },
+                { x: 3964, y: gY, scale: 1.0 },
+                { x: 5050, y: gY, scale: 1.0 },
+                { x: 5082, y: gY, scale: 1.0 }
             ]
         };
 
@@ -1217,7 +1473,30 @@ var GameScene = new Phaser.Class({
 
         return {
             map: map,
-            decorations: { clouds: [], hills: [], bushes: [] }
+            decorations: {
+                clouds: [],
+                hills: [],
+                bushes: [],
+                mushrooms: [
+                    { x: 200, y: 544, scale: 1.2 },
+                    { x: 800, y: 544, scale: 1.0 },
+                    { x: 1600, y: 544, scale: 1.1 },
+                    { x: 2400, y: 544, scale: 0.9 },
+                    { x: 3200, y: 544, scale: 1.2 },
+                    { x: 4000, y: 544, scale: 1.0 },
+                    { x: 4800, y: 544, scale: 1.1 },
+                    { x: 5600, y: 544, scale: 0.9 }
+                ],
+                rocks: [
+                    { x: 500, y: 544, scale: 0.9 },
+                    { x: 1200, y: 544, scale: 1.1 },
+                    { x: 2000, y: 544, scale: 0.8 },
+                    { x: 2800, y: 544, scale: 1.0 },
+                    { x: 3600, y: 544, scale: 0.9 },
+                    { x: 4400, y: 544, scale: 1.1 },
+                    { x: 5200, y: 544, scale: 0.8 }
+                ]
+            }
         };
     },
 
@@ -1291,15 +1570,40 @@ var GameScene = new Phaser.Class({
             map: map,
             decorations: {
                 clouds: [
-                    { x: 200, y: 40, scale: 1.5 },
-                    { x: 600, y: 30, scale: 1.2 },
-                    { x: 1000, y: 50, scale: 1.8 },
+                    { x: 100, y: 50, scale: 1.5 },
+                    { x: 300, y: 25, scale: 0.8 },
+                    { x: 500, y: 60, scale: 1.2 },
+                    { x: 700, y: 35, scale: 0.6 },
+                    { x: 900, y: 55, scale: 1.8 },
+                    { x: 1100, y: 20, scale: 1.0 },
+                    { x: 1300, y: 45, scale: 0.7 },
                     { x: 1500, y: 35, scale: 1.3 },
-                    { x: 2200, y: 45, scale: 1.6 },
-                    { x: 3000, y: 30, scale: 1.4 }
+                    { x: 1700, y: 60, scale: 0.9 },
+                    { x: 1900, y: 25, scale: 1.6 },
+                    { x: 2100, y: 50, scale: 0.8 },
+                    { x: 2300, y: 40, scale: 1.4 },
+                    { x: 2500, y: 55, scale: 0.6 },
+                    { x: 2700, y: 30, scale: 1.1 },
+                    { x: 2900, y: 65, scale: 1.5 },
+                    { x: 3100, y: 20, scale: 0.9 },
+                    { x: 3300, y: 45, scale: 1.3 },
+                    { x: 3500, y: 55, scale: 0.7 },
+                    { x: 3800, y: 30, scale: 1.4 },
+                    { x: 4100, y: 50, scale: 1.0 },
+                    { x: 4400, y: 25, scale: 0.8 },
+                    { x: 4700, y: 60, scale: 1.6 },
+                    { x: 5000, y: 35, scale: 1.2 },
+                    { x: 5300, y: 45, scale: 0.9 },
+                    { x: 5600, y: 55, scale: 1.4 },
+                    { x: 5900, y: 20, scale: 1.1 }
                 ],
                 hills: [],
-                bushes: []
+                bushes: [],
+                flowers: [
+                    { x: 80, y: 544, scale: 1.5 },
+                    { x: 5950, y: 544, scale: 1.5, tint: 0xFFFF44 },
+                    { x: 6050, y: 544, scale: 1.2 }
+                ]
             }
         };
     },
@@ -1349,7 +1653,42 @@ var GameScene = new Phaser.Class({
 
         return {
             map: map,
-            decorations: { clouds: [], hills: [], bushes: [] }
+            decorations: {
+                clouds: [],
+                hills: [],
+                bushes: [],
+                rocks: [
+                    { x: 200, y: 544, scale: 0.8 },
+                    { x: 600, y: 544, scale: 1.0 },
+                    { x: 1000, y: 544, scale: 0.9 },
+                    { x: 1400, y: 544, scale: 1.1 },
+                    { x: 1800, y: 544, scale: 0.8 },
+                    { x: 2200, y: 544, scale: 1.0 },
+                    { x: 2600, y: 544, scale: 0.9 },
+                    { x: 3000, y: 544, scale: 1.1 },
+                    { x: 3400, y: 544, scale: 0.8 },
+                    { x: 3800, y: 544, scale: 1.0 },
+                    { x: 4200, y: 544, scale: 0.9 },
+                    { x: 4600, y: 544, scale: 1.1 },
+                    { x: 5000, y: 544, scale: 0.8 },
+                    { x: 5400, y: 544, scale: 1.0 },
+                    { x: 5800, y: 544, scale: 0.9 }
+                ],
+                fences: [
+                    { x: 300, y: 544, scale: 1.0 },
+                    { x: 332, y: 544, scale: 1.0 },
+                    { x: 900, y: 544, scale: 1.0 },
+                    { x: 932, y: 544, scale: 1.0 },
+                    { x: 964, y: 544, scale: 1.0 },
+                    { x: 1700, y: 544, scale: 1.0 },
+                    { x: 1732, y: 544, scale: 1.0 },
+                    { x: 2500, y: 544, scale: 1.0 },
+                    { x: 2532, y: 544, scale: 1.0 },
+                    { x: 3300, y: 544, scale: 1.0 },
+                    { x: 3332, y: 544, scale: 1.0 },
+                    { x: 3364, y: 544, scale: 1.0 }
+                ]
+            }
         };
     },
 

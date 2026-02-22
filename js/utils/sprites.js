@@ -1517,6 +1517,177 @@
     }
 
     // ========================================
+    // 13. SMALL FLOWER (16x16 decorative)
+    // ========================================
+    function generateFlower(scene) {
+        var w = 16, h = 16;
+        var canvas = makeCanvas(w, h);
+        var ctx = canvas.getContext('2d');
+
+        // Stem
+        px(ctx, 7, 8, 2, 8, '#30A030');
+        px(ctx, 5, 10, 2, 2, '#48D848'); // leaf left
+        px(ctx, 9, 12, 2, 2, '#48D848'); // leaf right
+
+        // Petals (red)
+        fillCircleOnCtx(ctx, 5, 5, 3, '#FF4444');
+        fillCircleOnCtx(ctx, 11, 5, 3, '#FF4444');
+        fillCircleOnCtx(ctx, 8, 2, 3, '#FF4444');
+        fillCircleOnCtx(ctx, 5, 8, 3, '#FF4444');
+        fillCircleOnCtx(ctx, 11, 8, 3, '#FF4444');
+
+        // Center (yellow)
+        fillCircleOnCtx(ctx, 8, 5, 2, '#F8D830');
+        px(ctx, 7, 4, 2, 2, '#FFFFFF'); // sparkle
+
+        scene.textures.addSpriteSheet('flower-deco', canvas, {
+            frameWidth: w,
+            frameHeight: h
+        });
+    }
+
+    // ========================================
+    // 14. GRASS TUFT (16x12 decorative)
+    // ========================================
+    function generateGrassTuft(scene) {
+        var w = 16, h = 12;
+        var canvas = makeCanvas(w, h);
+        var ctx = canvas.getContext('2d');
+
+        // Grass blades
+        ctx.fillStyle = '#48D848';
+        // Blade 1 (left, leaning left)
+        ctx.beginPath();
+        ctx.moveTo(3, h);
+        ctx.lineTo(1, 2);
+        ctx.lineTo(5, h);
+        ctx.fill();
+        // Blade 2 (center)
+        ctx.beginPath();
+        ctx.moveTo(6, h);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(10, h);
+        ctx.fill();
+        // Blade 3 (right, leaning right)
+        ctx.beginPath();
+        ctx.moveTo(11, h);
+        ctx.lineTo(14, 3);
+        ctx.lineTo(13, h);
+        ctx.fill();
+
+        // Darker blade tips
+        ctx.fillStyle = '#30A030';
+        ctx.fillRect(1, 2, 2, 2);
+        ctx.fillRect(7, 0, 2, 2);
+        ctx.fillRect(13, 3, 2, 2);
+
+        scene.textures.addSpriteSheet('grass-tuft', canvas, {
+            frameWidth: w,
+            frameHeight: h
+        });
+    }
+
+    // ========================================
+    // 15. SMALL MUSHROOM DECO (12x12 decorative)
+    // ========================================
+    function generateMushroomDeco(scene) {
+        var w = 12, h = 12;
+        var canvas = makeCanvas(w, h);
+        var ctx = canvas.getContext('2d');
+
+        // Stem
+        px(ctx, 4, 6, 4, 6, '#F0E0C8');
+        px(ctx, 4, 6, 1, 6, '#E0D0B0');
+
+        // Cap
+        fillCircleOnCtx(ctx, 6, 5, 5, '#E8261C');
+        // White dots on cap
+        fillCircleOnCtx(ctx, 4, 3, 1, '#FFFFFF');
+        fillCircleOnCtx(ctx, 8, 4, 1, '#FFFFFF');
+        fillCircleOnCtx(ctx, 6, 2, 1, '#FFFFFF');
+
+        scene.textures.addSpriteSheet('mushroom-deco', canvas, {
+            frameWidth: w,
+            frameHeight: h
+        });
+    }
+
+    // ========================================
+    // 16. ROCK (24x16 decorative)
+    // ========================================
+    function generateRock(scene) {
+        var w = 24, h = 16;
+        var canvas = makeCanvas(w, h);
+        var ctx = canvas.getContext('2d');
+
+        // Rock shape
+        ctx.fillStyle = '#888888';
+        ctx.beginPath();
+        ctx.moveTo(2, h);
+        ctx.lineTo(0, h - 4);
+        ctx.lineTo(4, 4);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(18, 2);
+        ctx.lineTo(22, 8);
+        ctx.lineTo(24, h);
+        ctx.fill();
+
+        // Highlight
+        ctx.fillStyle = '#AAAAAA';
+        ctx.beginPath();
+        ctx.moveTo(6, h - 4);
+        ctx.lineTo(8, 4);
+        ctx.lineTo(14, 2);
+        ctx.lineTo(16, 6);
+        ctx.lineTo(10, h - 2);
+        ctx.fill();
+
+        // Dark edge
+        px(ctx, 0, h - 2, 24, 2, '#666666');
+
+        scene.textures.addSpriteSheet('rock-deco', canvas, {
+            frameWidth: w,
+            frameHeight: h
+        });
+    }
+
+    // ========================================
+    // 17. FENCE (32x24 decorative)
+    // ========================================
+    function generateFence(scene) {
+        var w = 32, h = 24;
+        var canvas = makeCanvas(w, h);
+        var ctx = canvas.getContext('2d');
+
+        // Posts
+        px(ctx, 2, 0, 4, h, '#D4A056');
+        px(ctx, 14, 0, 4, h, '#D4A056');
+        px(ctx, 26, 0, 4, h, '#D4A056');
+
+        // Post tops (pointed)
+        px(ctx, 3, 0, 2, 2, '#E8B868');
+        px(ctx, 15, 0, 2, 2, '#E8B868');
+        px(ctx, 27, 0, 2, 2, '#E8B868');
+
+        // Rails
+        px(ctx, 0, 6, w, 3, '#D4A056');
+        px(ctx, 0, 16, w, 3, '#D4A056');
+
+        // Highlights
+        px(ctx, 0, 6, w, 1, '#E8C878');
+        px(ctx, 0, 16, w, 1, '#E8C878');
+
+        // Shadows
+        px(ctx, 0, 8, w, 1, '#B08040');
+        px(ctx, 0, 18, w, 1, '#B08040');
+
+        scene.textures.addSpriteSheet('fence', canvas, {
+            frameWidth: w,
+            frameHeight: h
+        });
+    }
+
+    // ========================================
     // MAIN: generateAll(scene)
     // ========================================
     var SpriteGenerator = {
@@ -1536,6 +1707,11 @@
             generateBush(scene);
             generateFireball(scene);
             generateBowser(scene);
+            generateFlower(scene);
+            generateGrassTuft(scene);
+            generateMushroomDeco(scene);
+            generateRock(scene);
+            generateFence(scene);
 
             console.log('[SpriteGenerator] All sprites generated successfully.');
         }
