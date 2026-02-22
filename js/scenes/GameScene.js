@@ -983,7 +983,9 @@ var GameScene = new Phaser.Class({
     },
 
     // ==========================================
-    // DECORATIVE BACKGROUNDS
+    // DECORATIVE BACKGROUNDS — all behind gameplay (negative depth)
+    // Depth layers: -10 clouds, -8 hills, -6 bushes/fences/rocks, -4 flowers/grass/mushrooms
+    // Gameplay objects use default depth 0+ so they always render on top
     // ==========================================
     createDecorations: function (decorations) {
         if (!decorations) return;
@@ -993,10 +995,10 @@ var GameScene = new Phaser.Class({
             for (var ci = 0; ci < decorations.clouds.length; ci++) {
                 var cd = decorations.clouds[ci];
                 var cloud = this.add.image(cd.x, cd.y, 'cloud');
-                cloud.setDepth(0);
+                cloud.setDepth(-10);
                 cloud.setAlpha(0.8);
                 if (cd.scale) cloud.setScale(cd.scale);
-                cloud.setScrollFactor(0.3); // Parallax
+                cloud.setScrollFactor(0.3);
             }
         }
 
@@ -1005,75 +1007,75 @@ var GameScene = new Phaser.Class({
             for (var hi = 0; hi < decorations.hills.length; hi++) {
                 var hd = decorations.hills[hi];
                 var hill = this.add.image(hd.x, hd.y, 'hill');
-                hill.setDepth(1);
+                hill.setDepth(-8);
                 hill.setOrigin(0.5, 1);
                 if (hd.scale) hill.setScale(hd.scale);
-                hill.setScrollFactor(0.5); // Parallax
+                hill.setScrollFactor(0.5);
             }
         }
 
-        // Bushes (near ground)
+        // Bushes (near ground, behind gameplay)
         if (decorations.bushes) {
             for (var bi = 0; bi < decorations.bushes.length; bi++) {
                 var bd = decorations.bushes[bi];
                 var bush = this.add.image(bd.x, bd.y, 'bush');
-                bush.setDepth(2);
+                bush.setDepth(-6);
                 bush.setOrigin(0.5, 1);
                 if (bd.scale) bush.setScale(bd.scale);
             }
         }
 
-        // Flowers (at ground level, foreground)
+        // Flowers (behind gameplay)
         if (decorations.flowers) {
             for (var fi = 0; fi < decorations.flowers.length; fi++) {
                 var fd = decorations.flowers[fi];
                 var fl = this.add.image(fd.x, fd.y, 'flower-deco');
-                fl.setDepth(3);
+                fl.setDepth(-4);
                 fl.setOrigin(0.5, 1);
                 if (fd.scale) fl.setScale(fd.scale);
                 if (fd.tint) fl.setTint(fd.tint);
             }
         }
 
-        // Grass tufts (small details at ground level)
+        // Grass tufts (behind gameplay)
         if (decorations.grass) {
             for (var gi = 0; gi < decorations.grass.length; gi++) {
                 var gd = decorations.grass[gi];
                 var gr = this.add.image(gd.x, gd.y, 'grass-tuft');
-                gr.setDepth(3);
+                gr.setDepth(-4);
                 gr.setOrigin(0.5, 1);
                 if (gd.scale) gr.setScale(gd.scale);
             }
         }
 
-        // Decorative mushrooms (small, near ground)
+        // Decorative mushrooms (behind gameplay)
         if (decorations.mushrooms) {
             for (var mi = 0; mi < decorations.mushrooms.length; mi++) {
                 var md = decorations.mushrooms[mi];
                 var mu = this.add.image(md.x, md.y, 'mushroom-deco');
-                mu.setDepth(3);
+                mu.setDepth(-4);
                 mu.setOrigin(0.5, 1);
                 if (md.scale) mu.setScale(md.scale);
             }
         }
 
-        // Rocks
+        // Rocks (behind gameplay)
         if (decorations.rocks) {
             for (var ri = 0; ri < decorations.rocks.length; ri++) {
                 var rd = decorations.rocks[ri];
                 var rk = this.add.image(rd.x, rd.y, 'rock-deco');
-                rk.setDepth(2);
+                rk.setDepth(-6);
                 rk.setOrigin(0.5, 1);
                 if (rd.scale) rk.setScale(rd.scale);
             }
         }
 
-        // Fences
+        // Fences (behind gameplay)
         if (decorations.fences) {
             for (var fni = 0; fni < decorations.fences.length; fni++) {
                 var fnd = decorations.fences[fni];
                 var fn = this.add.image(fnd.x, fnd.y, 'fence');
-                fn.setDepth(2);
+                fn.setDepth(-6);
                 fn.setOrigin(0, 1);
                 if (fnd.scale) fn.setScale(fnd.scale);
             }
