@@ -846,21 +846,12 @@ var GameScene = new Phaser.Class({
             onComplete: function () {
                 self.time.delayedCall(1500, function () {
                     self.scene.stop('HUDScene');
-                    if (self.currentLevel >= 4) {
-                        self.scene.start('WinScene', {
-                            score: self.score,
-                            coins: self.coins,
-                            lives: self.lives,
-                            level: self.currentLevel
-                        });
-                    } else {
-                        self.scene.start('GameScene', {
-                            level: self.currentLevel + 1,
-                            score: self.score,
-                            coins: self.coins,
-                            lives: self.lives
-                        });
-                    }
+                    self.scene.start('WinScene', {
+                        score: self.score,
+                        coins: self.coins,
+                        lives: self.lives,
+                        level: self.currentLevel
+                    });
                 });
             }
         });
