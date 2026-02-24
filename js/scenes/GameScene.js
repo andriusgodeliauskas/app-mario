@@ -211,15 +211,20 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Flagpole
         // ----------------------------------
+        this.groundLevelY = (ROWS - 2) * TILE; // Ground tile top (544)
+
         if (flagpolePos) {
-            var flagBaseY = (ROWS - 2) * TILE; // Ground level (544)
+            var flagBaseY = this.groundLevelY;
             this.flagpole = this.physics.add.sprite(flagpolePos.x, flagBaseY - 128, 'flagpole');
             this.flagpole.setOrigin(0.5, 0.5);
             this.flagpole.body.setAllowGravity(false);
-            this.flagpole.setImmovable(true);
-            // Tall hitbox centered on the pole
-            this.flagpole.setSize(64, 256);
-            this.flagpole.body.setOffset(-24, -32);
+            this.flagpole.body.setImmovable(true);
+            // Explicitly set physics body size (wide and tall enough to reach ground)
+            this.flagpole.body.setSize(80, 320);
+            this.flagpole.body.setOffset(
+                (this.flagpole.width - 80) / 2,
+                (this.flagpole.height - 320) / 2
+            );
             this.flagpole.setDepth(5);
         } else {
             this.flagpole = null;
@@ -804,10 +809,10 @@ var GameScene = new Phaser.Class({
 
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('flagpole'); }
 
-        // Calculate score bonus based on height
-        var flagTop = flagpole.body.top;
-        var flagBottom = flagpole.body.bottom;
-        var grabHeight = 1 - ((player.y - flagTop) / (flagBottom - flagTop));
+        // Calculate score bonus based on grab height on the visible pole
+        var poleVisualTop = flagpole.y - flagpole.height / 2; // top of sprite
+        var poleVisualBottom = flagpole.y + flagpole.height / 2; // bottom of sprite
+        var grabHeight = 1 - ((player.y - poleVisualTop) / (poleVisualBottom - poleVisualTop));
         grabHeight = Phaser.Math.Clamp(grabHeight, 0, 1);
 
         var bonus;
@@ -824,13 +829,14 @@ var GameScene = new Phaser.Class({
         this.events.emit('scoreChange', this.score);
         this.showEnglishPopup('flag');
 
-        // Stop player and slide down
+        // Stop player and slide down to ground level
         player.body.setVelocity(0, 0);
         player.body.setAllowGravity(false);
         player.body.setEnable(false);
         player.x = flagpole.x;
 
-        var slideToY = flagBottom - 48;
+        // Slide to ground level (player center = groundY - half player height)
+        var slideToY = this.groundLevelY - 16;
         var self = this;
         this.tweens.add({
             targets: player,
@@ -838,9 +844,6 @@ var GameScene = new Phaser.Class({
             duration: 800,
             ease: 'Linear',
             onComplete: function () {
-                player.body.setAllowGravity(true);
-                player.body.setEnable(true);
-
                 self.time.delayedCall(1500, function () {
                     self.scene.stop('HUDScene');
                     if (self.currentLevel >= 4) {
