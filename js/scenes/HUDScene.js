@@ -50,7 +50,7 @@ var HUDScene = new Phaser.Class({
         // Coin icon — small animated sprite
         this.coinIcon = this.add.sprite(200, 30, 'coin');
         this.coinIcon.play('coin-spin');
-        this.coinIcon.setScale(1.2);
+        this.coinIcon.setScale(0.3);
         this.coinIcon.setDepth(1);
 
         this.coinsText = this.add.text(214, 22, 'x00', valueStyle).setDepth(1);
@@ -79,7 +79,7 @@ var HUDScene = new Phaser.Class({
         // Mini Mario icon next to lives
         // ----------------------------------
         this.marioIcon = this.add.sprite(livesX - 80, 30, 'mario', 0);
-        this.marioIcon.setScale(0.7);
+        this.marioIcon.setScale(0.175);
         this.marioIcon.setDepth(1);
 
         // ----------------------------------

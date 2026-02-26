@@ -53,7 +53,7 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Sky background — per level
         // ----------------------------------
-        var bgColors = { 1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E' };
+        var bgColors = { 1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E', 5: '#87CEEB', 6: '#1A3A1A', 7: '#E8A050', 8: '#C0D8E8', 9: '#2A0808' };
         this.cameras.main.setBackgroundColor(bgColors[this.currentLevel] || '#6B8CFF');
 
         // ----------------------------------
@@ -91,42 +91,42 @@ var GameScene = new Phaser.Class({
                 if (tileId === 1 || tileId === 2) {
                     // Ground tiles (grass top or earth)
                     var gt = this.groundTiles.create(tx, ty, 'tiles', tileId);
-                    gt.setSize(TILE, TILE).refreshBody();
+                    gt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                 } else if (tileId === 3) {
                     // Brick block
                     var bt = this.brickTiles.create(tx, ty, 'tiles', 3);
-                    bt.setSize(TILE, TILE).refreshBody();
+                    bt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     bt.tileType = 'brick';
                     bt.isUsed = false;
                 } else if (tileId === 4) {
                     // Question block
                     var qt = this.questionTiles.create(tx, ty, 'tiles', 4);
-                    qt.setSize(TILE, TILE).refreshBody();
+                    qt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     qt.tileType = 'question';
                     qt.isUsed = false;
                     qt.content = 'coin'; // default content
                 } else if (tileId === 40) {
                     // Question block with mushroom
                     var qm = this.questionTiles.create(tx, ty, 'tiles', 4);
-                    qm.setSize(TILE, TILE).refreshBody();
+                    qm.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     qm.tileType = 'question';
                     qm.isUsed = false;
                     qm.content = 'mushroom';
                 } else if (tileId === 41) {
                     // Question block with star
                     var qs = this.questionTiles.create(tx, ty, 'tiles', 4);
-                    qs.setSize(TILE, TILE).refreshBody();
+                    qs.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     qs.tileType = 'question';
                     qs.isUsed = false;
                     qs.content = 'star';
                 } else if (tileId === 6 || tileId === 7 || tileId === 8 || tileId === 9) {
                     // Pipe tiles
                     var pt = this.pipeTiles.create(tx, ty, 'tiles', tileId);
-                    pt.setSize(TILE, TILE).refreshBody();
+                    pt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                 } else if (tileId === 11) {
                     // Stone platform
                     var st = this.groundTiles.create(tx, ty, 'tiles', 11);
-                    st.setSize(TILE, TILE).refreshBody();
+                    st.setScale(0.5).setSize(TILE, TILE).refreshBody();
                 } else if (tileId === 50) {
                     // Coin spawn marker
                     coinPositions.push({ x: tx, y: ty });
@@ -150,8 +150,9 @@ var GameScene = new Phaser.Class({
         var spawnY = (ROWS - 3) * TILE + TILE / 2; // Above the ground rows
 
         this.player = this.physics.add.sprite(spawnX, spawnY, 'mario');
-        this.player.setSize(24, 30);
-        this.player.setOffset(4, 2);
+        this.player.setScale(0.25);
+        this.player.setSize(96, 120);
+        this.player.setOffset(16, 8);
         this.player.setBounce(0);
         this.player.setCollideWorldBounds(false);
         this.player.setDepth(10);
@@ -163,9 +164,10 @@ var GameScene = new Phaser.Class({
         this.coinGroup = this.physics.add.group();
         for (var ci = 0; ci < coinPositions.length; ci++) {
             var c = this.coinGroup.create(coinPositions[ci].x, coinPositions[ci].y, 'coin');
+            c.setScale(0.25);
             c.play('coin-spin');
             c.body.setAllowGravity(false);
-            c.setSize(12, 14);
+            c.setSize(48, 56);
             c.setImmovable(true);
         }
 
@@ -178,15 +180,17 @@ var GameScene = new Phaser.Class({
             var enemy;
             if (esp.type === 'goomba') {
                 enemy = this.enemies.create(esp.x, esp.y, 'goomba');
+                enemy.setScale(0.25);
                 enemy.play('goomba-walk');
-                enemy.setSize(28, 28);
-                enemy.setOffset(2, 4);
+                enemy.setSize(112, 112);
+                enemy.setOffset(8, 16);
                 enemy.enemyType = 'goomba';
             } else if (esp.type === 'koopa') {
                 enemy = this.enemies.create(esp.x, esp.y, 'koopa');
+                enemy.setScale(0.25);
                 enemy.play('koopa-walk');
-                enemy.setSize(28, 40);
-                enemy.setOffset(2, 8);
+                enemy.setSize(112, 160);
+                enemy.setOffset(8, 32);
                 enemy.enemyType = 'koopa';
             }
             if (enemy) {
@@ -293,7 +297,7 @@ var GameScene = new Phaser.Class({
         // Audio — init and start level music
         // ----------------------------------
         if (window.AudioManager) { AudioManager.init(); }
-        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle' };
+        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle' };
         if (window.AudioManager) AudioManager.startMusic(musicMap[this.currentLevel] || 'overworld');
     },
 
@@ -405,26 +409,29 @@ var GameScene = new Phaser.Class({
             var e = enemies[i];
             if (!e.active || e.isSquished) continue;
 
+            // Initialize tracking vars
+            if (e._lastX === undefined) { e._lastX = e.x; e._stuckTime = 0; e._turnCooldown = 0; }
+
+            // Turn cooldown prevents rapid flip-flopping
+            if (e._turnCooldown > 0) e._turnCooldown -= delta;
+
             // Turn around at walls
-            if (e.body.blocked.left) {
+            if (e.body.blocked.left && e._turnCooldown <= 0) {
                 e.setVelocityX(60);
                 e.patrolDir = 1;
                 e.setFlipX(true);
-            } else if (e.body.blocked.right) {
+                e._turnCooldown = 300;
+            } else if (e.body.blocked.right && e._turnCooldown <= 0) {
                 e.setVelocityX(-60);
                 e.patrolDir = -1;
                 e.setFlipX(false);
+                e._turnCooldown = 300;
             }
 
-            // Stuck detection — if on ground but barely moving, re-kick
-            if (e.body.blocked.down && Math.abs(e.body.velocity.x) < 5) {
-                e.setVelocityX(60 * e.patrolDir);
-            }
-
-            // Edge detection — turn around at platform edges
-            if (e.body.blocked.down) {
-                var aheadX = e.patrolDir > 0 ? e.body.right + 2 : e.body.left - 2;
-                var belowY = e.body.bottom + 4;
+            // Edge detection — turn around at platform edges (only if not cooling down)
+            if (e.body.blocked.down && e._turnCooldown <= 0) {
+                var aheadX = e.patrolDir > 0 ? e.body.right + 4 : e.body.left - 4;
+                var belowY = e.body.bottom + 6;
                 var hasGround = false;
 
                 var tileGroups = [this.groundTiles, this.brickTiles, this.pipeTiles];
@@ -445,7 +452,27 @@ var GameScene = new Phaser.Class({
                     e.patrolDir = -e.patrolDir;
                     e.setVelocityX(60 * e.patrolDir);
                     e.setFlipX(e.patrolDir > 0);
+                    e._turnCooldown = 400;
                 }
+            }
+
+            // Stuck detection — if enemy barely moved over 500ms, force reverse
+            e._stuckTime += delta;
+            if (e._stuckTime > 500) {
+                var moved = Math.abs(e.x - e._lastX);
+                if (moved < 5) {
+                    e.patrolDir = -e.patrolDir;
+                    e.setVelocityX(80 * e.patrolDir);
+                    e.setFlipX(e.patrolDir > 0);
+                    e._turnCooldown = 500;
+                }
+                e._lastX = e.x;
+                e._stuckTime = 0;
+            }
+
+            // Re-kick if velocity dropped too low
+            if (e.body.blocked.down && Math.abs(e.body.velocity.x) < 10) {
+                e.setVelocityX(60 * e.patrolDir);
             }
 
             // Fall death for enemies
@@ -520,18 +547,11 @@ var GameScene = new Phaser.Class({
     // HIT BRICK FROM BELOW
     // ==========================================
     hitBrick: function (player, brick) {
-        // Only trigger when hitting from below: player must be moving upward
-        // and player's top must be near block's bottom
-        if (player.body.velocity.y >= 0) return; // Must be jumping upward
-        var playerTop = player.body.y;
-        var blockBottom = brick.body.y + brick.body.height;
-        var playerCenterX = player.body.x + player.body.width / 2;
-        var blockLeft = brick.body.x;
-        var blockRight = brick.body.x + brick.body.width;
-
-        // Player's top should be near block's bottom (within 8px tolerance)
-        if (Math.abs(playerTop - blockBottom) > 8) return;
-        if (playerCenterX < blockLeft || playerCenterX > blockRight) return;
+        // Only trigger when hitting from below: player center must be below block center
+        // (velocity check doesn't work because Phaser resolves collision before callback)
+        var pcy = player.body.y + player.body.height / 2;
+        var bcy = brick.body.y + brick.body.height / 2;
+        if (pcy <= bcy) return;
         // Only trigger once per collision
         if (brick._justHit) return;
         brick._justHit = true;
@@ -560,18 +580,11 @@ var GameScene = new Phaser.Class({
     // HIT QUESTION BLOCK FROM BELOW
     // ==========================================
     hitQuestion: function (player, block) {
-        // Only trigger when hitting from below: player must be moving upward
-        // and player's top must be near block's bottom
-        if (player.body.velocity.y >= 0) return; // Must be jumping upward
-        var playerTop = player.body.y;
-        var blockBottom = block.body.y + block.body.height;
-        var playerCenterX = player.body.x + player.body.width / 2;
-        var blockLeft = block.body.x;
-        var blockRight = block.body.x + block.body.width;
-
-        // Player's top should be near block's bottom (within 8px tolerance)
-        if (Math.abs(playerTop - blockBottom) > 8) return;
-        if (playerCenterX < blockLeft || playerCenterX > blockRight) return;
+        // Only trigger when hitting from below: player center must be below block center
+        // (velocity check doesn't work because Phaser resolves collision before callback)
+        var pcy = player.body.y + player.body.height / 2;
+        var bcy = block.body.y + block.body.height / 2;
+        if (pcy <= bcy) return;
         // Only trigger once per collision
         if (block._justHit) return;
         block._justHit = true;
@@ -608,21 +621,23 @@ var GameScene = new Phaser.Class({
         } else if (block.content === 'mushroom') {
             // Spawn mushroom
             var mush = this.mushrooms.create(block.x, block.y - 32, 'mushroom');
+            mush.setScale(0.25);
             mush.play('mushroom-idle');
             mush.setBounce(0.2);
             mush.setVelocityX(80);
-            mush.setSize(28, 28);
-            mush.setOffset(2, 4);
+            mush.setSize(112, 112);
+            mush.setOffset(8, 16);
             this.showEnglishPopup('mushroom');
         } else if (block.content === 'star') {
             // Spawn star
             var star = this.stars.create(block.x, block.y - 32, 'star');
+            star.setScale(0.25);
             star.play('star-flash');
             star.setBounce(0.8);
             star.setVelocityX(100);
             star.setVelocityY(-200);
-            star.setSize(28, 28);
-            star.setOffset(2, 2);
+            star.setSize(112, 112);
+            star.setOffset(8, 8);
         }
     },
 
@@ -639,8 +654,8 @@ var GameScene = new Phaser.Class({
         if (!this.isBig) {
             this.isBig = true;
             player.setTexture('mario-big');
-            player.setSize(24, 56);
-            player.setOffset(4, 8);
+            player.setSize(96, 224);
+            player.setOffset(16, 32);
             player.y -= 16; // Shift up so we don't clip into ground
             player.play('mario-big-idle');
         }
@@ -733,8 +748,8 @@ var GameScene = new Phaser.Class({
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
             this.player.setTexture('mario');
-            this.player.setSize(24, 30);
-            this.player.setOffset(4, 2);
+            this.player.setSize(96, 120);
+            this.player.setOffset(16, 8);
             this.player.play('mario-idle');
             this.isInvincible = true;
             this.invincibleTimer = 2000; // 2 seconds
@@ -991,7 +1006,7 @@ var GameScene = new Phaser.Class({
                 var cloud = this.add.image(cd.x, cd.y, 'cloud');
                 cloud.setDepth(-10);
                 cloud.setAlpha(0.8);
-                if (cd.scale) cloud.setScale(cd.scale);
+                cloud.setScale((cd.scale || 1) * 0.5);
                 cloud.setScrollFactor(0.3);
             }
         }
@@ -1003,7 +1018,7 @@ var GameScene = new Phaser.Class({
                 var hill = this.add.image(hd.x, hd.y, 'hill');
                 hill.setDepth(-8);
                 hill.setOrigin(0.5, 1);
-                if (hd.scale) hill.setScale(hd.scale);
+                hill.setScale((hd.scale || 1) * 0.5);
                 hill.setScrollFactor(0.5);
             }
         }
@@ -1015,7 +1030,7 @@ var GameScene = new Phaser.Class({
                 var bush = this.add.image(bd.x, bd.y, 'bush');
                 bush.setDepth(-6);
                 bush.setOrigin(0.5, 1);
-                if (bd.scale) bush.setScale(bd.scale);
+                bush.setScale((bd.scale || 1) * 0.5);
             }
         }
 
@@ -1026,7 +1041,7 @@ var GameScene = new Phaser.Class({
                 var fl = this.add.image(fd.x, fd.y, 'flower-deco');
                 fl.setDepth(-4);
                 fl.setOrigin(0.5, 1);
-                if (fd.scale) fl.setScale(fd.scale);
+                fl.setScale((fd.scale || 1) * 0.5);
                 if (fd.tint) fl.setTint(fd.tint);
             }
         }
@@ -1038,7 +1053,7 @@ var GameScene = new Phaser.Class({
                 var gr = this.add.image(gd.x, gd.y, 'grass-tuft');
                 gr.setDepth(-4);
                 gr.setOrigin(0.5, 1);
-                if (gd.scale) gr.setScale(gd.scale);
+                gr.setScale((gd.scale || 1) * 0.5);
             }
         }
 
@@ -1049,7 +1064,7 @@ var GameScene = new Phaser.Class({
                 var mu = this.add.image(md.x, md.y, 'mushroom-deco');
                 mu.setDepth(-4);
                 mu.setOrigin(0.5, 1);
-                if (md.scale) mu.setScale(md.scale);
+                mu.setScale((md.scale || 1) * 0.5);
             }
         }
 
@@ -1060,7 +1075,7 @@ var GameScene = new Phaser.Class({
                 var rk = this.add.image(rd.x, rd.y, 'rock-deco');
                 rk.setDepth(-6);
                 rk.setOrigin(0.5, 1);
-                if (rd.scale) rk.setScale(rd.scale);
+                rk.setScale((rd.scale || 1) * 0.5);
             }
         }
 
@@ -1071,7 +1086,7 @@ var GameScene = new Phaser.Class({
                 var fn = this.add.image(fnd.x, fnd.y, 'fence');
                 fn.setDepth(-6);
                 fn.setOrigin(0, 1);
-                if (fnd.scale) fn.setScale(fnd.scale);
+                fn.setScale((fnd.scale || 1) * 0.5);
             }
         }
     },
@@ -1080,15 +1095,9 @@ var GameScene = new Phaser.Class({
     // LEVEL DATA — hardcoded tilemaps
     // ==========================================
     getLevelData: function (level) {
-        if (level === 1) {
-            return this.getLevel1Data();
-        } else if (level === 2) {
-            return this.getLevel2Data();
-        } else if (level === 3) {
-            return this.getLevel3Data();
-        } else {
-            return this.getLevel4Data();
-        }
+        var fn = 'getLevel' + level + 'Data';
+        if (this[fn]) return this[fn]();
+        return this.getLevel1Data();
     },
 
     // ==========================================
@@ -1683,6 +1692,584 @@ var GameScene = new Phaser.Class({
                     { x: 3300, y: 544, scale: 1.0 },
                     { x: 3332, y: 544, scale: 1.0 },
                     { x: 3364, y: 544, scale: 1.0 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 5 — BEACH (easy, lots of coins, few enemies)
+    // ==========================================
+    getLevel5Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        // Row 11: coins above platforms
+        map[11] = this.makeRow(200, _);
+        map[11][20] = 50; map[11][21] = 50; map[11][22] = 50;
+        map[11][65] = 50; map[11][66] = 50;
+        map[11][100] = 50; map[11][101] = 50; map[11][102] = 50;
+        map[11][140] = 50; map[11][141] = 50;
+
+        // Row 12: floating platforms
+        map[12] = this.makeRow(200, _);
+        map[12][18] = 3; map[12][19] = 4; map[12][20] = 3; map[12][21] = 40; map[12][22] = 3; map[12][23] = 3;
+        map[12][45] = 3; map[12][46] = 3; map[12][47] = 4; map[12][48] = 3;
+        map[12][63] = 3; map[12][64] = 4; map[12][65] = 3; map[12][66] = 4; map[12][67] = 3;
+        map[12][85] = 3; map[12][86] = 41; map[12][87] = 3;
+        map[12][98] = 3; map[12][99] = 40; map[12][100] = 3; map[12][101] = 4; map[12][102] = 3;
+        map[12][120] = 3; map[12][121] = 4; map[12][122] = 3;
+        map[12][138] = 3; map[12][139] = 4; map[12][140] = 3; map[12][141] = 4; map[12][142] = 3;
+        map[12][160] = 3; map[12][161] = 40; map[12][162] = 3;
+
+        // Rows 13-16
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Pipes
+        map[15][35] = 6; map[15][36] = 7; map[16][35] = 8; map[16][36] = 9;
+        map[15][80] = 6; map[15][81] = 7; map[16][80] = 8; map[16][81] = 9;
+        map[15][130] = 6; map[15][131] = 7; map[16][130] = 8; map[16][131] = 9;
+
+        // Ground with islands (gaps for water)
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+        // Water gaps
+        var gaps = [[30,33], [55,58], [90,93], [125,128], [155,158]];
+        for (var gi = 0; gi < gaps.length; gi++) {
+            for (var gc = gaps[gi][0]; gc <= gaps[gi][1]; gc++) {
+                map[17][gc] = _; map[18][gc] = _;
+            }
+        }
+        // Safety bridges over gaps
+        map[12][30] = 3; map[12][31] = 3; map[12][32] = 3; map[12][33] = 3;
+        map[12][55] = 3; map[12][56] = 3; map[12][57] = 3; map[12][58] = 3;
+        map[12][90] = 3; map[12][91] = 3; map[12][92] = 3; map[12][93] = 3;
+        map[12][125] = 3; map[12][126] = 3; map[12][127] = 3; map[12][128] = 3;
+        map[12][155] = 3; map[12][156] = 3; map[12][157] = 3; map[12][158] = 3;
+
+        // Ensure flagpole area has ground
+        for (var fc = 185; fc < 195; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+        for (fc = 195; fc < 200; fc++) { map[17][fc] = _; map[18][fc] = _; }
+
+        // Coins at ground level
+        var coinCols = [8,9,10,11,12, 25,26,27, 40,41,42,43, 60,61,62, 75,76,77, 95,96,97, 110,111,112,113, 135,136,137, 150,151,152, 165,166,167,168];
+        for (var cci = 0; cci < coinCols.length; cci++) {
+            if (map[16][coinCols[cci]] === 0) map[16][coinCols[cci]] = 50;
+        }
+
+        // Enemies
+        map[16][45] = 60; map[16][100] = 60; map[16][140] = 61;
+
+        // Staircase near end
+        map[16][175] = 11;
+        map[16][176] = 11; map[15][176] = 11;
+        map[16][177] = 11; map[15][177] = 11; map[14][177] = 11;
+        map[16][178] = 11; map[15][178] = 11; map[14][178] = 11; map[13][178] = 11;
+        map[16][179] = 11; map[15][179] = 11; map[14][179] = 11; map[13][179] = 11; map[12][179] = 11;
+
+        // Flagpole
+        map[5][190] = 70;
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    {x:100,y:50,scale:1.2},{x:400,y:30,scale:0.8},{x:700,y:55,scale:1.0},
+                    {x:1100,y:40,scale:0.7},{x:1500,y:60,scale:1.3},{x:1900,y:35,scale:0.9},
+                    {x:2300,y:50,scale:1.1},{x:2800,y:25,scale:0.8},{x:3200,y:45,scale:1.0},
+                    {x:3700,y:55,scale:0.7},{x:4200,y:30,scale:1.2},{x:4700,y:50,scale:0.9},
+                    {x:5200,y:40,scale:1.1},{x:5700,y:60,scale:0.8},{x:6100,y:35,scale:1.0}
+                ],
+                hills: [
+                    {x:150,y:gY,scale:1.0},{x:500,y:gY,scale:0.7},{x:900,y:gY,scale:1.3},
+                    {x:1400,y:gY,scale:0.8},{x:1900,y:gY,scale:1.1},{x:2500,y:gY,scale:0.9},
+                    {x:3100,y:gY,scale:1.2},{x:3700,y:gY,scale:0.7},{x:4300,y:gY,scale:1.0},
+                    {x:4900,y:gY,scale:0.8},{x:5500,y:gY,scale:1.3},{x:6000,y:gY,scale:0.9}
+                ],
+                bushes: [
+                    {x:200,y:gY,scale:1.0},{x:600,y:gY,scale:0.8},{x:1000,y:gY,scale:1.1},
+                    {x:1600,y:gY,scale:0.9},{x:2200,y:gY,scale:1.0},{x:2800,y:gY,scale:0.8},
+                    {x:3400,y:gY,scale:1.1},{x:4000,y:gY,scale:0.9},{x:4600,y:gY,scale:1.0},
+                    {x:5200,y:gY,scale:0.8},{x:5800,y:gY,scale:1.1}
+                ],
+                flowers: [
+                    {x:250,y:gY,scale:1.2},{x:550,y:gY,scale:1.0,tint:0xFF88FF},
+                    {x:850,y:gY,scale:1.3},{x:1200,y:gY,scale:1.1,tint:0xFFFF44},
+                    {x:1700,y:gY,scale:1.0},{x:2100,y:gY,scale:1.2,tint:0xFF88FF},
+                    {x:2600,y:gY,scale:1.1},{x:3000,y:gY,scale:1.3,tint:0xFFFF44},
+                    {x:3500,y:gY,scale:1.0},{x:4000,y:gY,scale:1.2},
+                    {x:4500,y:gY,scale:1.1,tint:0xFF88FF},{x:5000,y:gY,scale:1.3},
+                    {x:5500,y:gY,scale:1.0,tint:0xFFFF44},{x:5900,y:gY,scale:1.2}
+                ],
+                grass: [
+                    {x:130,y:gY,scale:1.0},{x:350,y:gY,scale:0.8},{x:580,y:gY,scale:1.1},
+                    {x:780,y:gY,scale:0.9},{x:1050,y:gY,scale:1.0},{x:1350,y:gY,scale:0.8},
+                    {x:1600,y:gY,scale:1.2},{x:1850,y:gY,scale:1.0},{x:2100,y:gY,scale:0.9},
+                    {x:2400,y:gY,scale:1.1},{x:2700,y:gY,scale:1.0},{x:3000,y:gY,scale:0.8},
+                    {x:3300,y:gY,scale:1.2},{x:3600,y:gY,scale:1.0},{x:3900,y:gY,scale:0.9},
+                    {x:4200,y:gY,scale:1.1},{x:4500,y:gY,scale:1.0},{x:4800,y:gY,scale:0.8},
+                    {x:5100,y:gY,scale:1.2},{x:5400,y:gY,scale:1.0},{x:5700,y:gY,scale:0.9}
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 6 — FOREST (medium difficulty, dense platforms)
+    // ==========================================
+    getLevel6Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        // Row 11: coins
+        map[11] = this.makeRow(200, _);
+        map[11][25] = 50; map[11][26] = 50; map[11][27] = 50;
+        map[11][50] = 50; map[11][51] = 50;
+        map[11][75] = 50; map[11][76] = 50; map[11][77] = 50;
+        map[11][105] = 50; map[11][106] = 50;
+        map[11][135] = 50; map[11][136] = 50; map[11][137] = 50;
+        map[11][160] = 50; map[11][161] = 50;
+
+        // Row 12: dense platforms
+        map[12] = this.makeRow(200, _);
+        map[12][10] = 3; map[12][11] = 4; map[12][12] = 3;
+        map[12][23] = 3; map[12][24] = 40; map[12][25] = 3; map[12][26] = 4; map[12][27] = 3; map[12][28] = 3;
+        map[12][38] = 3; map[12][39] = 3; map[12][40] = 4; map[12][41] = 3;
+        map[12][48] = 3; map[12][49] = 4; map[12][50] = 3; map[12][51] = 4; map[12][52] = 3;
+        map[12][62] = 3; map[12][63] = 40; map[12][64] = 3;
+        map[12][73] = 3; map[12][74] = 4; map[12][75] = 3; map[12][76] = 41; map[12][77] = 3; map[12][78] = 3;
+        map[12][88] = 3; map[12][89] = 4; map[12][90] = 3;
+        map[12][100] = 3; map[12][101] = 4; map[12][102] = 40; map[12][103] = 3;
+        map[12][115] = 3; map[12][116] = 3; map[12][117] = 4; map[12][118] = 3;
+        map[12][133] = 3; map[12][134] = 4; map[12][135] = 3; map[12][136] = 4; map[12][137] = 3;
+        map[12][148] = 3; map[12][149] = 40; map[12][150] = 3;
+        map[12][158] = 3; map[12][159] = 4; map[12][160] = 3; map[12][161] = 4; map[12][162] = 3;
+
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Pipes
+        map[15][20] = 6; map[15][21] = 7; map[16][20] = 8; map[16][21] = 9;
+        map[14][55] = 6; map[14][56] = 7; map[15][55] = 8; map[15][56] = 9; map[16][55] = 8; map[16][56] = 9;
+        map[15][95] = 6; map[15][96] = 7; map[16][95] = 8; map[16][96] = 9;
+        map[15][145] = 6; map[15][146] = 7; map[16][145] = 8; map[16][146] = 9;
+
+        // Ground
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+        // Small gaps
+        map[17][42] = _; map[17][43] = _; map[17][44] = _;
+        map[18][42] = _; map[18][43] = _; map[18][44] = _;
+        map[17][110] = _; map[17][111] = _; map[17][112] = _;
+        map[18][110] = _; map[18][111] = _; map[18][112] = _;
+        // Safety bridges
+        map[12][42] = 3; map[12][43] = 3; map[12][44] = 3;
+        map[12][110] = 3; map[12][111] = 3; map[12][112] = 3;
+        // Flagpole area
+        for (var fc = 185; fc < 195; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+        for (fc = 195; fc < 200; fc++) { map[17][fc] = _; map[18][fc] = _; }
+
+        // Ground coins
+        var coinCols = [5,6,7, 15,16,17,18, 30,31,32, 45,46,47, 60,61,62,63, 82,83,84, 100,101,102, 120,121,122, 140,141,142, 155,156,157, 165,166,167,168];
+        for (var cci = 0; cci < coinCols.length; cci++) {
+            if (map[16][coinCols[cci]] === 0) map[16][coinCols[cci]] = 50;
+        }
+
+        // Enemies
+        map[16][30] = 60; map[16][65] = 60; map[16][90] = 61; map[16][130] = 60; map[16][160] = 61;
+
+        // Staircase
+        map[16][175] = 11;
+        map[16][176] = 11; map[15][176] = 11;
+        map[16][177] = 11; map[15][177] = 11; map[14][177] = 11;
+        map[16][178] = 11; map[15][178] = 11; map[14][178] = 11; map[13][178] = 11;
+        map[16][179] = 11; map[15][179] = 11; map[14][179] = 11; map[13][179] = 11; map[12][179] = 11;
+
+        map[5][190] = 70;
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                clouds: [],
+                hills: [
+                    {x:200,y:gY,scale:1.4},{x:600,y:gY,scale:1.0},{x:1000,y:gY,scale:1.6},
+                    {x:1500,y:gY,scale:1.2},{x:2000,y:gY,scale:1.4},{x:2500,y:gY,scale:1.0},
+                    {x:3000,y:gY,scale:1.6},{x:3500,y:gY,scale:1.2},{x:4000,y:gY,scale:1.4},
+                    {x:4500,y:gY,scale:1.0},{x:5000,y:gY,scale:1.6},{x:5500,y:gY,scale:1.2},
+                    {x:6000,y:gY,scale:1.4}
+                ],
+                bushes: [
+                    {x:100,y:gY,scale:1.2},{x:300,y:gY,scale:0.9},{x:500,y:gY,scale:1.1},
+                    {x:700,y:gY,scale:1.0},{x:900,y:gY,scale:1.3},{x:1200,y:gY,scale:0.8},
+                    {x:1500,y:gY,scale:1.1},{x:1800,y:gY,scale:1.2},{x:2100,y:gY,scale:0.9},
+                    {x:2400,y:gY,scale:1.0},{x:2700,y:gY,scale:1.3},{x:3000,y:gY,scale:0.8},
+                    {x:3300,y:gY,scale:1.1},{x:3600,y:gY,scale:1.2},{x:3900,y:gY,scale:0.9},
+                    {x:4200,y:gY,scale:1.0},{x:4500,y:gY,scale:1.3},{x:4800,y:gY,scale:0.8},
+                    {x:5100,y:gY,scale:1.1},{x:5400,y:gY,scale:1.2},{x:5700,y:gY,scale:0.9}
+                ],
+                mushrooms: [
+                    {x:250,y:gY,scale:1.1},{x:550,y:gY,scale:1.3},{x:850,y:gY,scale:0.9},
+                    {x:1150,y:gY,scale:1.2},{x:1450,y:gY,scale:1.0},{x:1750,y:gY,scale:1.3},
+                    {x:2050,y:gY,scale:0.9},{x:2350,y:gY,scale:1.1},{x:2650,y:gY,scale:1.2},
+                    {x:2950,y:gY,scale:1.0},{x:3250,y:gY,scale:1.3},{x:3550,y:gY,scale:0.9},
+                    {x:3850,y:gY,scale:1.1},{x:4150,y:gY,scale:1.2},{x:4450,y:gY,scale:1.0},
+                    {x:4750,y:gY,scale:1.3},{x:5050,y:gY,scale:0.9},{x:5350,y:gY,scale:1.1},
+                    {x:5650,y:gY,scale:1.2},{x:5950,y:gY,scale:1.0}
+                ],
+                flowers: [
+                    {x:180,y:gY,scale:1.0},{x:450,y:gY,scale:1.2,tint:0xFF88FF},
+                    {x:750,y:gY,scale:1.1},{x:1050,y:gY,scale:1.3,tint:0xFFFF44},
+                    {x:1350,y:gY,scale:1.0},{x:1650,y:gY,scale:1.2,tint:0xFF88FF},
+                    {x:1950,y:gY,scale:1.1},{x:2250,y:gY,scale:1.3},
+                    {x:2550,y:gY,scale:1.0,tint:0xFFFF44},{x:2850,y:gY,scale:1.2},
+                    {x:3150,y:gY,scale:1.1,tint:0xFF88FF},{x:3450,y:gY,scale:1.3},
+                    {x:3750,y:gY,scale:1.0},{x:4050,y:gY,scale:1.2,tint:0xFFFF44},
+                    {x:4350,y:gY,scale:1.1},{x:4650,y:gY,scale:1.3,tint:0xFF88FF},
+                    {x:4950,y:gY,scale:1.0},{x:5250,y:gY,scale:1.2},
+                    {x:5550,y:gY,scale:1.1,tint:0xFFFF44},{x:5850,y:gY,scale:1.3}
+                ],
+                grass: [
+                    {x:150,y:gY,scale:1.0},{x:400,y:gY,scale:0.8},{x:650,y:gY,scale:1.1},
+                    {x:900,y:gY,scale:0.9},{x:1100,y:gY,scale:1.0},{x:1400,y:gY,scale:0.8},
+                    {x:1700,y:gY,scale:1.2},{x:2000,y:gY,scale:1.0},{x:2300,y:gY,scale:0.9},
+                    {x:2600,y:gY,scale:1.1},{x:2900,y:gY,scale:1.0},{x:3200,y:gY,scale:0.8},
+                    {x:3500,y:gY,scale:1.2},{x:3800,y:gY,scale:1.0},{x:4100,y:gY,scale:0.9},
+                    {x:4400,y:gY,scale:1.1},{x:4700,y:gY,scale:1.0},{x:5000,y:gY,scale:0.8},
+                    {x:5300,y:gY,scale:1.2},{x:5600,y:gY,scale:1.0},{x:5900,y:gY,scale:0.9}
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 7 — DESERT (stone platforms, wider gaps, pyramids)
+    // ==========================================
+    getLevel7Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        map[11] = this.makeRow(200, _);
+        map[11][30] = 50; map[11][31] = 50;
+        map[11][70] = 50; map[11][71] = 50; map[11][72] = 50;
+        map[11][120] = 50; map[11][121] = 50;
+        map[11][155] = 50; map[11][156] = 50;
+
+        map[12] = this.makeRow(200, _);
+        // Stone platforms
+        map[12][15] = 11; map[12][16] = 11; map[12][17] = 11; map[12][18] = 4; map[12][19] = 11;
+        map[12][28] = 11; map[12][29] = 40; map[12][30] = 11; map[12][31] = 11;
+        map[12][45] = 11; map[12][46] = 11; map[12][47] = 4; map[12][48] = 11;
+        map[12][60] = 11; map[12][61] = 11; map[12][62] = 11;
+        map[12][68] = 11; map[12][69] = 4; map[12][70] = 11; map[12][71] = 41; map[12][72] = 11;
+        map[12][85] = 11; map[12][86] = 40; map[12][87] = 11;
+        map[12][100] = 11; map[12][101] = 4; map[12][102] = 11; map[12][103] = 11;
+        map[12][118] = 11; map[12][119] = 11; map[12][120] = 4; map[12][121] = 11;
+        map[12][135] = 11; map[12][136] = 40; map[12][137] = 11;
+        map[12][153] = 11; map[12][154] = 4; map[12][155] = 11; map[12][156] = 4; map[12][157] = 11;
+
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Ground
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+        // Wider gaps
+        var gaps = [[38,42], [75,79], [108,112], [142,146]];
+        for (var gi = 0; gi < gaps.length; gi++) {
+            for (var gc = gaps[gi][0]; gc <= gaps[gi][1]; gc++) {
+                map[17][gc] = _; map[18][gc] = _;
+            }
+        }
+        // Safety bridges
+        map[12][38] = 11; map[12][39] = 11; map[12][40] = 11; map[12][41] = 11; map[12][42] = 11;
+        map[12][75] = 11; map[12][76] = 11; map[12][77] = 11; map[12][78] = 11; map[12][79] = 11;
+        map[12][108] = 11; map[12][109] = 11; map[12][110] = 11; map[12][111] = 11; map[12][112] = 11;
+        map[12][142] = 11; map[12][143] = 11; map[12][144] = 11; map[12][145] = 11; map[12][146] = 11;
+
+        // Pyramidal staircases
+        // Pyramid 1 at col 50-54
+        map[16][50] = 11; map[16][51] = 11; map[16][52] = 11; map[16][53] = 11; map[16][54] = 11;
+        map[15][51] = 11; map[15][52] = 11; map[15][53] = 11;
+        map[14][52] = 11;
+        // Pyramid 2 at col 92-96
+        map[16][92] = 11; map[16][93] = 11; map[16][94] = 11; map[16][95] = 11; map[16][96] = 11;
+        map[15][93] = 11; map[15][94] = 11; map[15][95] = 11;
+        map[14][94] = 11;
+
+        // Flagpole area
+        for (var fc = 185; fc < 195; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+        for (fc = 195; fc < 200; fc++) { map[17][fc] = _; map[18][fc] = _; }
+
+        // End staircase
+        map[16][175] = 11;
+        map[16][176] = 11; map[15][176] = 11;
+        map[16][177] = 11; map[15][177] = 11; map[14][177] = 11;
+        map[16][178] = 11; map[15][178] = 11; map[14][178] = 11; map[13][178] = 11;
+        map[16][179] = 11; map[15][179] = 11; map[14][179] = 11; map[13][179] = 11; map[12][179] = 11;
+
+        // Ground coins
+        var coinCols = [5,6,7,8, 22,23,24, 35,36,37, 55,56,57, 65,66,67, 83,84,85, 97,98,99, 115,116,117, 130,131,132, 148,149,150, 165,166,167,168];
+        for (var cci = 0; cci < coinCols.length; cci++) {
+            if (map[16][coinCols[cci]] === 0) map[16][coinCols[cci]] = 50;
+        }
+
+        // Enemies
+        map[16][25] = 60; map[16][55] = 61; map[16][85] = 60; map[16][120] = 61; map[16][150] = 60;
+
+        map[5][190] = 70;
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    {x:200,y:50,scale:0.8},{x:500,y:30,scale:0.6},{x:900,y:55,scale:0.7},
+                    {x:1400,y:35,scale:0.5},{x:2000,y:50,scale:0.8},{x:2600,y:40,scale:0.6},
+                    {x:3200,y:55,scale:0.7},{x:3800,y:30,scale:0.5},{x:4400,y:50,scale:0.8},
+                    {x:5000,y:35,scale:0.6},{x:5600,y:55,scale:0.7}
+                ],
+                hills: [],
+                bushes: [],
+                rocks: [
+                    {x:200,y:gY,scale:1.0},{x:500,y:gY,scale:0.8},{x:800,y:gY,scale:1.2},
+                    {x:1200,y:gY,scale:0.9},{x:1600,y:gY,scale:1.1},{x:2000,y:gY,scale:1.0},
+                    {x:2400,y:gY,scale:0.8},{x:2800,y:gY,scale:1.2},{x:3200,y:gY,scale:0.9},
+                    {x:3600,y:gY,scale:1.1},{x:4000,y:gY,scale:1.0},{x:4400,y:gY,scale:0.8},
+                    {x:4800,y:gY,scale:1.2},{x:5200,y:gY,scale:0.9},{x:5600,y:gY,scale:1.1},
+                    {x:6000,y:gY,scale:1.0}
+                ],
+                grass: [
+                    {x:100,y:gY,scale:0.8},{x:350,y:gY,scale:1.0},{x:600,y:gY,scale:0.9},
+                    {x:1000,y:gY,scale:1.1},{x:1500,y:gY,scale:0.8},{x:2000,y:gY,scale:1.0},
+                    {x:2500,y:gY,scale:0.9},{x:3000,y:gY,scale:1.1},{x:3500,y:gY,scale:0.8},
+                    {x:4000,y:gY,scale:1.0},{x:4500,y:gY,scale:0.9},{x:5000,y:gY,scale:1.1},
+                    {x:5500,y:gY,scale:0.8},{x:6000,y:gY,scale:1.0}
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 8 — SNOW (elevated sections, mix of enemies)
+    // ==========================================
+    getLevel8Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        map[11] = this.makeRow(200, _);
+        map[11][20] = 50; map[11][21] = 50;
+        map[11][55] = 50; map[11][56] = 50; map[11][57] = 50;
+        map[11][90] = 50; map[11][91] = 50;
+        map[11][125] = 50; map[11][126] = 50; map[11][127] = 50;
+        map[11][160] = 50; map[11][161] = 50;
+
+        map[12] = this.makeRow(200, _);
+        map[12][18] = 11; map[12][19] = 4; map[12][20] = 11; map[12][21] = 4; map[12][22] = 11;
+        map[12][35] = 11; map[12][36] = 40; map[12][37] = 11;
+        map[12][50] = 11; map[12][51] = 11; map[12][52] = 4; map[12][53] = 11;
+        map[12][53] = 4; map[12][54] = 11; map[12][55] = 11; map[12][56] = 41; map[12][57] = 11;
+        map[12][70] = 11; map[12][71] = 4; map[12][72] = 11;
+        map[12][88] = 11; map[12][89] = 40; map[12][90] = 11; map[12][91] = 4; map[12][92] = 11;
+        map[12][105] = 11; map[12][106] = 11; map[12][107] = 4; map[12][108] = 11;
+        map[12][123] = 11; map[12][124] = 4; map[12][125] = 11; map[12][126] = 40; map[12][127] = 11;
+        map[12][140] = 11; map[12][141] = 4; map[12][142] = 11;
+        map[12][158] = 11; map[12][159] = 4; map[12][160] = 11; map[12][161] = 4; map[12][162] = 11;
+
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Pipes
+        map[15][30] = 6; map[15][31] = 7; map[16][30] = 8; map[16][31] = 9;
+        map[14][65] = 6; map[14][66] = 7; map[15][65] = 8; map[15][66] = 9; map[16][65] = 8; map[16][66] = 9;
+        map[15][115] = 6; map[15][116] = 7; map[16][115] = 8; map[16][116] = 9;
+        map[15][155] = 6; map[15][156] = 7; map[16][155] = 8; map[16][156] = 9;
+
+        // Ground with gaps
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+        var gaps = [[40,43], [80,83], [120,123], [148,151]];
+        for (var gi = 0; gi < gaps.length; gi++) {
+            for (var gc = gaps[gi][0]; gc <= gaps[gi][1]; gc++) {
+                map[17][gc] = _; map[18][gc] = _;
+            }
+        }
+        // Safety bridges
+        map[12][40] = 11; map[12][41] = 11; map[12][42] = 11; map[12][43] = 11;
+        map[12][80] = 11; map[12][81] = 11; map[12][82] = 11; map[12][83] = 11;
+        map[12][120] = 11; map[12][121] = 11; map[12][122] = 11; map[12][123] = 11;
+        map[12][148] = 11; map[12][149] = 11; map[12][150] = 11; map[12][151] = 11;
+
+        // Flagpole area
+        for (var fc = 185; fc < 195; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+        for (fc = 195; fc < 200; fc++) { map[17][fc] = _; map[18][fc] = _; }
+
+        // End staircase
+        map[16][175] = 11;
+        map[16][176] = 11; map[15][176] = 11;
+        map[16][177] = 11; map[15][177] = 11; map[14][177] = 11;
+        map[16][178] = 11; map[15][178] = 11; map[14][178] = 11; map[13][178] = 11;
+        map[16][179] = 11; map[15][179] = 11; map[14][179] = 11; map[13][179] = 11; map[12][179] = 11;
+
+        // Ground coins
+        var coinCols = [5,6,7, 15,16,17, 33,34,35, 48,49,50, 68,69,70, 85,86,87, 100,101,102, 128,129,130, 140,141,142, 165,166,167,168];
+        for (var cci = 0; cci < coinCols.length; cci++) {
+            if (map[16][coinCols[cci]] === 0) map[16][coinCols[cci]] = 50;
+        }
+
+        // Enemies
+        map[16][25] = 60; map[16][50] = 61; map[16][75] = 60; map[16][100] = 60; map[16][135] = 61; map[16][160] = 60;
+
+        map[5][190] = 70;
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    {x:100,y:50,scale:1.3},{x:350,y:30,scale:0.9},{x:600,y:55,scale:1.1},
+                    {x:900,y:35,scale:0.7},{x:1200,y:50,scale:1.4},{x:1500,y:40,scale:0.8},
+                    {x:1800,y:55,scale:1.0},{x:2200,y:30,scale:1.3},{x:2600,y:50,scale:0.9},
+                    {x:3000,y:35,scale:1.1},{x:3400,y:55,scale:0.7},{x:3800,y:40,scale:1.4},
+                    {x:4200,y:50,scale:0.8},{x:4600,y:30,scale:1.0},{x:5000,y:55,scale:1.3},
+                    {x:5400,y:35,scale:0.9},{x:5800,y:50,scale:1.1},{x:6200,y:40,scale:0.7}
+                ],
+                hills: [
+                    {x:200,y:gY,scale:1.0},{x:700,y:gY,scale:0.7},{x:1200,y:gY,scale:1.3},
+                    {x:1800,y:gY,scale:0.9},{x:2400,y:gY,scale:1.1},{x:3000,y:gY,scale:0.8},
+                    {x:3600,y:gY,scale:1.2},{x:4200,y:gY,scale:1.0},{x:4800,y:gY,scale:0.7},
+                    {x:5400,y:gY,scale:1.3},{x:6000,y:gY,scale:0.9}
+                ],
+                bushes: [],
+                rocks: [
+                    {x:300,y:gY,scale:0.9},{x:800,y:gY,scale:1.1},{x:1300,y:gY,scale:0.8},
+                    {x:1800,y:gY,scale:1.0},{x:2300,y:gY,scale:1.2},{x:2800,y:gY,scale:0.9},
+                    {x:3300,y:gY,scale:1.1},{x:3800,y:gY,scale:0.8},{x:4300,y:gY,scale:1.0},
+                    {x:4800,y:gY,scale:1.2},{x:5300,y:gY,scale:0.9},{x:5800,y:gY,scale:1.1}
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 9 — VOLCANO (hardest, many enemies, lava pits)
+    // ==========================================
+    getLevel9Data: function () {
+        var _ = 0;
+        var map = [];
+
+        // Ceiling (dark stone)
+        map[0] = this.makeRow(200, 11);
+        map[1] = this.makeRow(200, 11);
+
+        for (var r = 2; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        map[11] = this.makeRow(200, _);
+        map[11][25] = 50; map[11][26] = 50;
+        map[11][55] = 50; map[11][56] = 50;
+        map[11][85] = 50; map[11][86] = 50; map[11][87] = 50;
+        map[11][115] = 50; map[11][116] = 50;
+        map[11][145] = 50; map[11][146] = 50;
+
+        map[12] = this.makeRow(200, _);
+        // Platforms with power-ups
+        map[12][10] = 11; map[12][11] = 4; map[12][12] = 11;
+        map[12][23] = 11; map[12][24] = 40; map[12][25] = 11; map[12][26] = 4; map[12][27] = 11;
+        map[12][40] = 11; map[12][41] = 4; map[12][42] = 11;
+        map[12][53] = 11; map[12][54] = 4; map[12][55] = 11; map[12][56] = 41; map[12][57] = 11;
+        map[12][68] = 11; map[12][69] = 40; map[12][70] = 11;
+        map[12][83] = 11; map[12][84] = 4; map[12][85] = 11; map[12][86] = 4; map[12][87] = 11;
+        map[12][100] = 11; map[12][101] = 40; map[12][102] = 11;
+        map[12][113] = 11; map[12][114] = 4; map[12][115] = 11; map[12][116] = 4; map[12][117] = 11;
+        map[12][130] = 11; map[12][131] = 4; map[12][132] = 11;
+        map[12][143] = 11; map[12][144] = 40; map[12][145] = 11; map[12][146] = 4; map[12][147] = 11;
+        map[12][160] = 11; map[12][161] = 41; map[12][162] = 11;
+
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Ground (stone)
+        map[17] = this.makeRow(200, 11);
+        map[18] = this.makeRow(200, 11);
+
+        // Many lava gaps
+        var gaps = [[18,21], [32,35], [48,51], [62,65], [78,81], [95,98], [108,111], [125,128], [138,141], [152,155]];
+        for (var gi = 0; gi < gaps.length; gi++) {
+            for (var gc = gaps[gi][0]; gc <= gaps[gi][1]; gc++) {
+                map[17][gc] = _; map[18][gc] = _;
+            }
+        }
+        // Safety bridges over EVERY gap
+        for (gi = 0; gi < gaps.length; gi++) {
+            for (gc = gaps[gi][0]; gc <= gaps[gi][1]; gc++) {
+                map[12][gc] = 11;
+            }
+        }
+
+        // Flagpole area
+        for (var fc = 185; fc < 195; fc++) { map[17][fc] = 11; map[18][fc] = 11; }
+        for (fc = 195; fc < 200; fc++) { map[17][fc] = _; map[18][fc] = _; }
+
+        // End staircase
+        map[16][175] = 11;
+        map[16][176] = 11; map[15][176] = 11;
+        map[16][177] = 11; map[15][177] = 11; map[14][177] = 11;
+        map[16][178] = 11; map[15][178] = 11; map[14][178] = 11; map[13][178] = 11;
+        map[16][179] = 11; map[15][179] = 11; map[14][179] = 11; map[13][179] = 11; map[12][179] = 11;
+
+        // Ground coins
+        var coinCols = [5,6,7, 14,15,16, 25,26, 38,39, 53,54, 68,69, 84,85, 100,101, 114,115, 130,131, 145,146, 160,161, 165,166,167,168];
+        for (var cci = 0; cci < coinCols.length; cci++) {
+            if (map[16][coinCols[cci]] === 0) map[16][coinCols[cci]] = 50;
+        }
+
+        // Many enemies
+        map[16][15] = 60; map[16][28] = 60; map[16][42] = 61; map[16][58] = 60; map[16][72] = 61;
+        map[16][88] = 60; map[16][102] = 60; map[16][118] = 61; map[16][135] = 60; map[16][148] = 61; map[16][160] = 60;
+
+        map[5][190] = 70;
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                clouds: [],
+                hills: [],
+                bushes: [],
+                rocks: [
+                    {x:200,y:gY,scale:1.0},{x:500,y:gY,scale:0.8},{x:800,y:gY,scale:1.2},
+                    {x:1100,y:gY,scale:0.9},{x:1400,y:gY,scale:1.1},{x:1700,y:gY,scale:1.0},
+                    {x:2000,y:gY,scale:0.8},{x:2300,y:gY,scale:1.2},{x:2600,y:gY,scale:0.9},
+                    {x:2900,y:gY,scale:1.1},{x:3200,y:gY,scale:1.0},{x:3500,y:gY,scale:0.8},
+                    {x:3800,y:gY,scale:1.2},{x:4100,y:gY,scale:0.9},{x:4400,y:gY,scale:1.1},
+                    {x:4700,y:gY,scale:1.0},{x:5000,y:gY,scale:0.8},{x:5300,y:gY,scale:1.2},
+                    {x:5600,y:gY,scale:0.9},{x:5900,y:gY,scale:1.1}
+                ],
+                fences: [
+                    {x:250,y:gY,scale:1.0},{x:282,y:gY,scale:1.0},
+                    {x:750,y:gY,scale:1.0},{x:782,y:gY,scale:1.0},{x:814,y:gY,scale:1.0},
+                    {x:1500,y:gY,scale:1.0},{x:1532,y:gY,scale:1.0},
+                    {x:2200,y:gY,scale:1.0},{x:2232,y:gY,scale:1.0},{x:2264,y:gY,scale:1.0},
+                    {x:3000,y:gY,scale:1.0},{x:3032,y:gY,scale:1.0},
+                    {x:3800,y:gY,scale:1.0},{x:3832,y:gY,scale:1.0},{x:3864,y:gY,scale:1.0},
+                    {x:4500,y:gY,scale:1.0},{x:4532,y:gY,scale:1.0},
+                    {x:5200,y:gY,scale:1.0},{x:5232,y:gY,scale:1.0},{x:5264,y:gY,scale:1.0}
                 ]
             }
         };

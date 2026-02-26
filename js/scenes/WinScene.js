@@ -29,13 +29,14 @@ var WinScene = new Phaser.Class({
         this.confetti = [];
         this.stars = [];
         this.elapsed = 0;
+        this._transitioning = false;
 
         // Stop any game music
         if (window.AudioManager) {
             AudioManager.stopMusic();
         }
 
-        if (this.playerLevel >= 4) {
+        if (this.playerLevel >= 9) {
             this.createPrincessScreen();
         } else {
             this.createLevelCompleteScreen();
@@ -186,8 +187,10 @@ var WinScene = new Phaser.Class({
             color: '#FFFFFF'
         }).setOrigin(0.5);
 
-        // Make button interactive
-        var btnZone = this.add.zone(W / 2, btnY + 24, 210, 52).setInteractive();
+        // Make button interactive — use explicit rectangle hit area for reliability
+        var btnZone = this.add.zone(W / 2, btnY + 24, 220, 56)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, 220, 56), Phaser.Geom.Rectangle.Contains)
+            .setDepth(10);
         btnZone.on('pointerdown', function () {
             self.goToNextLevel();
         });
@@ -206,14 +209,23 @@ var WinScene = new Phaser.Class({
             self.goToNextLevel();
         });
 
-        // --- Auto-advance after 5 seconds ---
-        this.autoTimer = this.time.delayedCall(5000, function () {
-            self.goToNextLevel();
+        // Also allow clicking/tapping anywhere on screen after 2 seconds
+        this.time.delayedCall(2000, function () {
+            self.input.on('pointerdown', function (pointer) {
+                // Ignore if clicking the button zone area (already handled)
+                if (pointer.y > btnY - 10 && pointer.y < btnY + 60) return;
+                self.goToNextLevel();
+            });
         });
 
         // --- Play level complete sound ---
         if (window.AudioManager) {
             AudioManager.play('levelComplete');
+        }
+
+        // Save progress — unlock next level
+        if (window.GameProgress) {
+            window.GameProgress.unlockLevel(this.playerLevel + 1);
         }
 
         // --- Decorative stars ---
@@ -317,7 +329,7 @@ var WinScene = new Phaser.Class({
         var marioSprite = null;
         try {
             marioSprite = this.add.sprite(W / 2 - 80, groundY - 24, 'mario', 0);
-            marioSprite.setScale(3);
+            marioSprite.setScale(0.75);
             marioSprite.setOrigin(0.5, 1);
             marioSprite.play('mario-idle');
         } catch (e) {
@@ -329,8 +341,8 @@ var WinScene = new Phaser.Class({
         marioSprite.setScale(0);
         this.tweens.add({
             targets: marioSprite,
-            scaleX: 3,
-            scaleY: 3,
+            scaleX: 0.75,
+            scaleY: 0.75,
             ease: 'Back.easeOut',
             duration: 700,
             delay: 200
@@ -340,7 +352,7 @@ var WinScene = new Phaser.Class({
         var princessSprite = null;
         try {
             princessSprite = this.add.sprite(W / 2 + 80, groundY - 24, 'princess', 0);
-            princessSprite.setScale(3);
+            princessSprite.setScale(0.75);
             princessSprite.setOrigin(0.5, 1);
         } catch (e) {
             princessSprite = this.add.rectangle(W / 2 + 80, groundY - 32, 32, 56, 0xFF69B4);
@@ -350,8 +362,8 @@ var WinScene = new Phaser.Class({
         princessSprite.setScale(0);
         this.tweens.add({
             targets: princessSprite,
-            scaleX: 3,
-            scaleY: 3,
+            scaleX: 0.75,
+            scaleY: 0.75,
             ease: 'Back.easeOut',
             duration: 700,
             delay: 500
@@ -471,7 +483,9 @@ var WinScene = new Phaser.Class({
             color: '#FFFFFF'
         }).setOrigin(0.5);
 
-        var btnZone = this.add.zone(W / 2, btnY + 24, 214, 54).setInteractive();
+        var btnZone = this.add.zone(W / 2, btnY + 24, 220, 56)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, 220, 56), Phaser.Geom.Rectangle.Contains)
+            .setDepth(10);
         btnZone.on('pointerdown', function () {
             self.goToMenu();
         });
@@ -490,9 +504,22 @@ var WinScene = new Phaser.Class({
             self.goToMenu();
         });
 
+        // Also allow clicking/tapping anywhere after 2 seconds
+        this.time.delayedCall(2000, function () {
+            self.input.on('pointerdown', function (pointer) {
+                if (pointer.y > btnY - 10 && pointer.y < btnY + 60) return;
+                self.goToMenu();
+            });
+        });
+
         // --- Play level complete / victory sound ---
         if (window.AudioManager) {
             AudioManager.play('levelComplete');
+        }
+
+        // Save progress — all levels complete
+        if (window.GameProgress) {
+            window.GameProgress.unlockLevel(9);
         }
     },
 
@@ -633,7 +660,12 @@ var WinScene = new Phaser.Class({
             1: ['coin', 'mushroom', 'brick', 'jump'],
             2: ['star', 'run', 'turtle', 'life'],
             3: ['cloud', 'flag', 'score', 'castle'],
-            4: ['princess', 'hero', 'coin', 'star']
+            4: ['princess', 'hero', 'coin', 'star'],
+            5: ['beach', 'water', 'fish', 'sun'],
+            6: ['tree', 'forest', 'bird', 'leaf'],
+            7: ['sand', 'cactus', 'hot', 'dry'],
+            8: ['snow', 'cold', 'ice', 'white'],
+            9: ['fire', 'lava', 'dragon', 'victory']
         };
         var keys = levelVocab[level] || levelVocab[1];
         var words = [];
@@ -655,22 +687,37 @@ var WinScene = new Phaser.Class({
     // NAVIGATION
     // ========================================
     goToNextLevel: function () {
+        if (this._transitioning) {
+            console.log('[WinScene] goToNextLevel blocked — already transitioning');
+            return;
+        }
+        this._transitioning = true;
+        console.log('[WinScene] goToNextLevel — starting level', this.playerLevel + 1);
         if (this.autoTimer) {
             this.autoTimer.remove(false);
+            this.autoTimer = null;
         }
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 4) {
-            nextLevel = 1; // wrap around (should not happen -- level 4 uses princess screen)
+        if (nextLevel > 9) {
+            nextLevel = 1;
         }
-        this.scene.start('GameScene', {
-            level: nextLevel,
-            score: this.playerScore,
-            coins: this.playerCoins,
-            lives: this.playerLives
-        });
+        var self = this;
+        try {
+            this.scene.start('GameScene', {
+                level: nextLevel,
+                score: this.playerScore,
+                coins: this.playerCoins,
+                lives: this.playerLives
+            });
+        } catch (e) {
+            console.error('[WinScene] scene.start failed:', e);
+            self._transitioning = false;
+        }
     },
 
     goToMenu: function () {
+        if (this._transitioning) return;
+        this._transitioning = true;
         this.scene.start('MenuScene');
     },
 
