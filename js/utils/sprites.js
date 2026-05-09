@@ -2400,6 +2400,248 @@
     }
 
     // ========================================
+    // MATH CHALLENGE — GREEN MUSHROOM (answer mushroom)
+    // 32x32 logical, 128x128 canvas (4x), single frame
+    // Friendly green 1-Up style — distinct from red Goomba
+    // ========================================
+    // ========================================
+    // MATH CHALLENGE — ANSWER BLOCK
+    // 32x32 logical, 128x128 canvas (4x), 2 frames:
+    //   frame 0 — active green answer block (Mario hits this from below)
+    //   frame 1 — used / hit state (dim brown, like the regular used block)
+    // ========================================
+    function generateAnswerBlock(scene) {
+        var frameW = 128, frameH = 128;
+        var numFrames = 2;
+        var canvas = makeCanvas(frameW * numFrames, frameH);
+        var ctx = canvas.getContext('2d');
+
+        // ---- Frame 0: active green block ----
+        (function () {
+            ctx.save();
+            ctx.translate(0, 0);
+            ctx.scale(4, 4);
+
+            var T = 32;
+            var grad = ctx.createLinearGradient(0, 0, 0, T);
+            grad.addColorStop(0, '#A8E6A0');     // bright top
+            grad.addColorStop(0.15, '#7DDB6B');
+            grad.addColorStop(0.5, '#3FBF3F');
+            grad.addColorStop(0.85, '#1E8B1E');
+            grad.addColorStop(1, '#0E5A0E');     // dark bottom
+            ctx.fillStyle = grad;
+            roundRect(ctx, 0, 0, T, T, 3);
+            ctx.fill();
+
+            // Inner bevel — bright top-left
+            ctx.strokeStyle = 'rgba(220,255,200,0.7)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(2, T - 2);
+            ctx.lineTo(2, 2);
+            ctx.lineTo(T - 2, 2);
+            ctx.stroke();
+            // Inner bevel — dark bottom-right
+            ctx.strokeStyle = 'rgba(20,60,20,0.6)';
+            ctx.beginPath();
+            ctx.moveTo(T - 2, 2);
+            ctx.lineTo(T - 2, T - 2);
+            ctx.lineTo(2, T - 2);
+            ctx.stroke();
+
+            // Corner rivets
+            fillCircle(ctx, 5, 5, 2, '#D5FFC0');
+            fillCircle(ctx, 5, 5, 1, 'rgba(255,255,255,0.7)');
+            fillCircle(ctx, T - 5, 5, 2, '#D5FFC0');
+            fillCircle(ctx, T - 5, 5, 1, 'rgba(255,255,255,0.7)');
+            fillCircle(ctx, 5, T - 5, 2, '#0E5A0E');
+            fillCircle(ctx, T - 5, T - 5, 2, '#0E5A0E');
+
+            // Subtle "?" marker (faint — number medallion is the real visible answer)
+            ctx.font = 'bold 18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(20,60,20,0.45)';
+            ctx.fillText('?', T / 2 + 1, T / 2 + 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.fillText('?', T / 2, T / 2 + 1);
+
+            // Highlight shine
+            var shine = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            shine.addColorStop(0, 'rgba(255,255,255,0.55)');
+            shine.addColorStop(0.5, 'rgba(255,255,255,0.18)');
+            shine.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = shine;
+            ctx.fillRect(0, 0, T, T);
+
+            ctx.restore();
+        })();
+
+        // ---- Frame 1: used / hit state (dim brown — mirrors used ?-block) ----
+        (function () {
+            ctx.save();
+            ctx.translate(frameW, 0);
+            ctx.scale(4, 4);
+
+            var T = 32;
+            var grad = ctx.createLinearGradient(0, 0, 0, T);
+            grad.addColorStop(0, '#997755');
+            grad.addColorStop(0.5, '#775533');
+            grad.addColorStop(1, '#554422');
+            ctx.fillStyle = grad;
+            roundRect(ctx, 0, 0, T, T, 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#997755';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(1, T - 1); ctx.lineTo(1, 1); ctx.lineTo(T - 1, 1);
+            ctx.stroke();
+            ctx.strokeStyle = '#443322';
+            ctx.beginPath();
+            ctx.moveTo(T - 1, 1); ctx.lineTo(T - 1, T - 1); ctx.lineTo(1, T - 1);
+            ctx.stroke();
+
+            ctx.restore();
+        })();
+
+        scene.textures.addSpriteSheet('answer-block', canvas, {
+            frameWidth: frameW,
+            frameHeight: frameH
+        });
+    }
+
+    // ========================================
+    // MATH CHALLENGE — WOOD SIGN
+    // 224x56 logical, 896x224 canvas (4x), single frame
+    // Wooden sign on a post — for displaying "100 + 100 = ?"
+    // ========================================
+    function generateWoodSign(scene) {
+        var frameW = 896, frameH = 224;
+        var canvas = makeCanvas(frameW, frameH);
+        var ctx = canvas.getContext('2d');
+
+        ctx.save();
+        ctx.scale(4, 4);
+        // Logical area: 224x56
+
+        // Post (vertical pole) behind the sign
+        var postGrad = ctx.createLinearGradient(108, 40, 116, 40);
+        postGrad.addColorStop(0, '#5C3A1A');
+        postGrad.addColorStop(0.5, '#7B4F22');
+        postGrad.addColorStop(1, '#3D260F');
+        ctx.fillStyle = postGrad;
+        ctx.fillRect(108, 40, 8, 16);
+
+        // Sign board — main rectangle with gradient
+        var boardGrad = ctx.createLinearGradient(0, 4, 0, 44);
+        boardGrad.addColorStop(0, '#D2691E');
+        boardGrad.addColorStop(0.5, '#A0522D');
+        boardGrad.addColorStop(1, '#6B3410');
+        ctx.fillStyle = boardGrad;
+        roundRect(ctx, 8, 4, 208, 40, 5);
+        ctx.fill();
+
+        // Board outer frame (darker)
+        ctx.strokeStyle = '#3B2208';
+        ctx.lineWidth = 2;
+        roundRect(ctx, 8, 4, 208, 40, 5);
+        ctx.stroke();
+
+        // Wood grain (3 horizontal subtle lines)
+        ctx.strokeStyle = 'rgba(60, 30, 10, 0.35)';
+        ctx.lineWidth = 0.5;
+        for (var grain = 0; grain < 3; grain++) {
+            var gy = 14 + grain * 10;
+            ctx.beginPath();
+            ctx.moveTo(14, gy);
+            ctx.bezierCurveTo(60, gy - 1, 150, gy + 1, 210, gy);
+            ctx.stroke();
+        }
+
+        // Inner highlight
+        ctx.strokeStyle = 'rgba(255, 200, 140, 0.4)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, 11, 7, 202, 34, 4);
+        ctx.stroke();
+
+        // Four bolts in corners
+        var bolts = [[16, 10], [208, 10], [16, 38], [208, 38]];
+        for (var i = 0; i < bolts.length; i++) {
+            fillCircle(ctx, bolts[i][0], bolts[i][1], 1.8, '#3B2208');
+            fillCircle(ctx, bolts[i][0] - 0.4, bolts[i][1] - 0.4, 0.6, '#A87850');
+        }
+
+        ctx.restore();
+
+        scene.textures.addSpriteSheet('wood-sign', canvas, {
+            frameWidth: frameW,
+            frameHeight: frameH
+        });
+    }
+
+    // ========================================
+    // MATH CHALLENGE — ANSWER MEDALLION
+    // 48x48 logical, 192x192 canvas (4x), single frame
+    // Golden circular medallion — number drawn separately as text on top
+    // ========================================
+    function generateAnswerMedallion(scene) {
+        var frameW = 192, frameH = 192;
+        var canvas = makeCanvas(frameW, frameH);
+        var ctx = canvas.getContext('2d');
+
+        ctx.save();
+        ctx.scale(4, 4);
+        // Logical area: 48x48
+
+        // Outer ring (gold border)
+        fillCircle(ctx, 24, 24, 22, '#B8860B');
+
+        // Middle ring
+        fillCircle(ctx, 24, 24, 20, '#DAA520');
+
+        // Inner face (lighter gold gradient)
+        var faceGrad = ctx.createRadialGradient(20, 20, 2, 24, 24, 18);
+        faceGrad.addColorStop(0, '#FFFACD');
+        faceGrad.addColorStop(0.5, '#FFE066');
+        faceGrad.addColorStop(1, '#F0C040');
+        ctx.fillStyle = faceGrad;
+        ctx.beginPath();
+        ctx.arc(24, 24, 17, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer rim highlight (top-left arc)
+        ctx.strokeStyle = 'rgba(255, 250, 220, 0.7)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(24, 24, 21, Math.PI * 1.1, Math.PI * 1.7);
+        ctx.stroke();
+
+        // Outer rim shadow (bottom-right arc)
+        ctx.strokeStyle = 'rgba(80, 50, 0, 0.4)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(24, 24, 21, Math.PI * 0.1, Math.PI * 0.7);
+        ctx.stroke();
+
+        // Subtle highlight dot
+        var hiGrad = ctx.createRadialGradient(18, 18, 0, 18, 18, 6);
+        hiGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+        hiGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = hiGrad;
+        ctx.beginPath();
+        ctx.arc(18, 18, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        scene.textures.addSpriteSheet('answer-medallion', canvas, {
+            frameWidth: frameW,
+            frameHeight: frameH
+        });
+    }
+
+    // ========================================
     // MAIN: generateAll(scene)
     // ========================================
     var SpriteGenerator = {
@@ -2424,6 +2666,9 @@
             generateMushroomDeco(scene);
             generateRock(scene);
             generateFence(scene);
+            generateAnswerBlock(scene);
+            generateWoodSign(scene);
+            generateAnswerMedallion(scene);
 
             console.log('[SpriteGenerator] All sprites generated successfully.');
         }

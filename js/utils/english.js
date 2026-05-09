@@ -29,6 +29,17 @@ var EnglishWords = {
         rainbow:   { en: 'Rainbow',   lt: 'Vaivorykštė', icon: 'rainbow', category: 'nature' },
         mountain:  { en: 'Mountain',  lt: 'Kalnas',    icon: 'mountain', category: 'nature' },
         river:     { en: 'River',     lt: 'Upė',       icon: 'river',    category: 'nature' },
+        beach:     { en: 'Beach',     lt: 'Paplūdimys',icon: 'beach',    category: 'nature' },
+        water:     { en: 'Water',     lt: 'Vanduo',    icon: 'water',    category: 'nature' },
+        forest:    { en: 'Forest',    lt: 'Miškas',    icon: 'forest',   category: 'nature' },
+        leaf:      { en: 'Leaf',      lt: 'Lapas',     icon: 'leaf',     category: 'nature' },
+        sand:      { en: 'Sand',      lt: 'Smėlis',    icon: 'sand',     category: 'nature' },
+        cactus:    { en: 'Cactus',    lt: 'Kaktusas',  icon: 'cactus',   category: 'nature' },
+        hot:       { en: 'Hot',       lt: 'Karšta',    icon: 'hot',      category: 'nature' },
+        dry:       { en: 'Dry',       lt: 'Sausa',     icon: 'dry',      category: 'nature' },
+        snow:      { en: 'Snow',      lt: 'Sniegas',   icon: 'snow',     category: 'nature' },
+        cold:      { en: 'Cold',      lt: 'Šalta',     icon: 'cold',     category: 'nature' },
+        ice:       { en: 'Ice',       lt: 'Ledas',     icon: 'ice',      category: 'nature' },
 
         // === FRUITS ===
         apple:     { en: 'Apple',     lt: 'Obuolys',   icon: 'apple',    category: 'fruits' },
@@ -87,7 +98,11 @@ var EnglishWords = {
         score:     { en: 'Score',     lt: 'Taškai',    icon: 'score',    category: 'game' },
         castle:    { en: 'Castle',    lt: 'Pilis',     icon: 'castle',   category: 'game' },
         princess:  { en: 'Princess',  lt: 'Princesė',  icon: 'princess', category: 'game' },
-        hero:      { en: 'Hero',      lt: 'Didvyris',  icon: 'hero',     category: 'game' }
+        hero:      { en: 'Hero',      lt: 'Didvyris',  icon: 'hero',     category: 'game' },
+        fire:      { en: 'Fire',      lt: 'Ugnis',     icon: 'fire',     category: 'game' },
+        lava:      { en: 'Lava',      lt: 'Lava',      icon: 'lava',     category: 'game' },
+        dragon:    { en: 'Dragon',    lt: 'Drakonas',  icon: 'dragon',   category: 'game' },
+        victory:   { en: 'Victory',   lt: 'Pergalė',   icon: 'victory',  category: 'game' }
     },
 
     // Recently shown words — avoid repeats

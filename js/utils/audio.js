@@ -243,6 +243,23 @@ var AudioManager = (function () {
         playSweep(800, 200, 0.08, 'square', null, 0.2);
     };
 
+    /** Math correct -- cheerful arpeggio C5->E5->G5->C6->E6, 90ms each, square */
+    sounds.mathCorrect = function () {
+        var t = ctx.currentTime;
+        var notes = [NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6, NOTE.E6];
+        for (var i = 0; i < notes.length; i++) {
+            playTone(notes[i], 0.12, 'square', t + i * 0.09, 0.22);
+        }
+    };
+
+    /** Math wrong -- low descending error tone, sawtooth, 350ms */
+    sounds.mathWrong = function () {
+        var t = ctx.currentTime;
+        playTone(220, 0.18, 'sawtooth', t, 0.28);
+        playTone(180, 0.18, 'sawtooth', t + 0.18, 0.28);
+        playTone(110, 0.22, 'sawtooth', t + 0.36, 0.30);
+    };
+
     // ========================================
     // PLAY SOUND EFFECT
     // ========================================

@@ -42,10 +42,10 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // World bounds
         // ----------------------------------
-        var WORLD_W = 6400;
+        var WORLD_W = 9600;
         var WORLD_H = 600;
         var TILE = 32;
-        var COLS = 200; // 6400 / 32
+        var COLS = 300; // 9600 / 32 — levels are 50% longer than the original 200-col layout
         var ROWS = 19;  // 608 / 32 — we use 19 rows, bottom at y=608 but world is 600
 
         this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H + 64);
@@ -88,6 +88,13 @@ var GameScene = new Phaser.Class({
                 var tx = col * TILE + TILE / 2;
                 var ty = row * TILE + TILE / 2;
 
+                // Tile texture frames are 64x64 px. With setScale(0.5) the
+                // sprite renders at 32x32 world. Body size is in TEXTURE pixels,
+                // so to make the body match the visible 32x32 world block we
+                // use setSize(64, 64) — body becomes 64*0.5 = 32 world.
+                // (Previously: setSize(32,32) → 16x16 world body — half the
+                //  visible size, which made hits hard to land.)
+                var BODY = TILE * 2; // 64
                 if (tileId === 1 || tileId === 2) {
                     // Ground tiles (grass top or earth)
                     var gt = this.groundTiles.create(tx, ty, 'tiles', tileId);
@@ -219,7 +226,9 @@ var GameScene = new Phaser.Class({
 
         if (flagpolePos) {
             var flagBaseY = this.groundLevelY;
-            this.flagpole = this.physics.add.sprite(flagpolePos.x, flagBaseY - 128, 'flagpole');
+            // Sprite is 384px tall with origin 0.5,0.5. Position so bottom of sprite
+            // (the green base block) sits exactly on ground top — center = ground - half.
+            this.flagpole = this.physics.add.sprite(flagpolePos.x, flagBaseY - 192, 'flagpole');
             this.flagpole.setOrigin(0.5, 0.5);
             this.flagpole.body.setAllowGravity(false);
             this.flagpole.body.setImmovable(true);
@@ -299,10 +308,83 @@ var GameScene = new Phaser.Class({
         if (window.AudioManager) { AudioManager.init(); }
         var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle' };
         if (window.AudioManager) AudioManager.startMusic(musicMap[this.currentLevel] || 'overworld');
+
+        // ----------------------------------
+        // Math challenge spawner — periodic in-level math problems
+        // ----------------------------------
+        // Defensive: tear down any leftover spawner from a previous scene instance
+        if (this.mathSpawner) {
+            this.mathSpawner.destroy();
+            this.mathSpawner = null;
+        }
+        if (window.MathSpawner && window.MathSettings) {
+            this.mathSettings = window.MathSettings.load();
+            this.mathSpawner = new window.MathSpawner(this, this.mathSettings);
+        }
+
+        // Test hook for Playwright integration tests
+        if (typeof window !== 'undefined') {
+            window.__mario_test = window.__mario_test || {};
+            window.__mario_test.scene = this;
+        }
+    },
+
+    // ==========================================
+    // CLEANUP — internal helper, called from playerDeath / reachFlagpole / quitGame.
+    // (Does NOT override Phaser's `shutdown` lifecycle method, which we leave to Phaser.)
+    // ==========================================
+    cleanupMathSpawner: function () {
+        if (this.mathSpawner) {
+            this.mathSpawner.destroy();
+            this.mathSpawner = null;
+        }
+    },
+
+    // ==========================================
+    // Scan all bricks and ?-blocks whose bottom is at Mario's head level and
+    // horizontally overlap him; trigger their hit callbacks. Used as a
+    // "head-bump rescue" so adjacent blocks all register when bumped together.
+    // ==========================================
+    _scanHeadBump: function (player) {
+        var pTop = player.body.top;
+        var pLeft = player.body.left;
+        var pRight = player.body.right;
+
+        function withinHorizontal(b) {
+            return b.body && b.body.right > pLeft + 2 && b.body.left < pRight - 2;
+        }
+        function alignedAtHead(b) {
+            return b.body && Math.abs(b.body.bottom - pTop) < 8;
+        }
+
+        if (this.brickTiles && this.brickTiles.children) {
+            var bArr = this.brickTiles.children.entries;
+            for (var i = 0; i < bArr.length; i++) {
+                var br = bArr[i];
+                if (br && !br._justHit && alignedAtHead(br) && withinHorizontal(br)) {
+                    this.hitBrick(player, br);
+                }
+            }
+        }
+        if (this.questionTiles && this.questionTiles.children) {
+            var qArr = this.questionTiles.children.entries;
+            for (var j = 0; j < qArr.length; j++) {
+                var qb = qArr[j];
+                if (qb && !qb.isUsed && !qb._justHit && alignedAtHead(qb) && withinHorizontal(qb)) {
+                    this.hitQuestion(player, qb);
+                }
+            }
+        }
     },
 
     update: function (time, delta) {
         if (this.isDead || this.levelComplete) return;
+        // Defensive: a stale update can fire after scene.start() before create()
+        // re-instantiates the player. Skip until the new player is ready.
+        if (!this.player || !this.player.body) return;
+
+        // Math challenge spawner — runs every frame, decides when/where to spawn
+        if (this.mathSpawner) this.mathSpawner.update(time, delta);
 
         var player = this.player;
         var onGround = player.body.blocked.down || player.body.touching.down;
@@ -372,6 +454,20 @@ var GameScene = new Phaser.Class({
                        (window.TouchController && window.TouchController.jumpPressed);
         if (!jumpHeld && player.body.velocity.y < -200) {
             player.setVelocityY(-200);
+        }
+
+        // ----------------------------------
+        // Head-bump rescue: when Mario's head touches a ceiling, scan for any
+        // bricks / ?-blocks horizontally aligned with his head and trigger
+        // their hit handlers manually. This catches the case where Mario hits
+        // two adjacent blocks at once: Phaser separates one first and the
+        // other never has overlap, so its collider callback never fires.
+        if (player.body.touching.up && !this._headBumpProcessed) {
+            this._headBumpProcessed = true;
+            this._scanHeadBump(player);
+        }
+        if (!player.body.touching.up) {
+            this._headBumpProcessed = false;
         }
 
         // ----------------------------------
@@ -547,11 +643,17 @@ var GameScene = new Phaser.Class({
     // HIT BRICK FROM BELOW
     // ==========================================
     hitBrick: function (player, brick) {
-        // Only trigger when hitting from below: player center must be below block center
-        // (velocity check doesn't work because Phaser resolves collision before callback)
-        var pcy = player.body.y + player.body.height / 2;
-        var bcy = brick.body.y + brick.body.height / 2;
-        if (pcy <= bcy) return;
+        // From-below detection — accept either the Phaser native flag OR a
+        // position match (Mario's body top is at or just below the block's
+        // body bottom). The position fallback catches the case where Mario
+        // overlaps two adjacent blocks in the same row: Phaser separates one
+        // first, after which the second has zero vertical overlap and its
+        // touching.down never gets set, so center-y / touching alone misses
+        // the hit.
+        var alignedFromBelow = Math.abs(player.body.top - brick.body.bottom) < 8 &&
+                               player.body.right > brick.body.left + 4 &&
+                               player.body.left < brick.body.right - 4;
+        if (!brick.body.touching.down && !alignedFromBelow) return;
         // Only trigger once per collision
         if (brick._justHit) return;
         brick._justHit = true;
@@ -580,11 +682,11 @@ var GameScene = new Phaser.Class({
     // HIT QUESTION BLOCK FROM BELOW
     // ==========================================
     hitQuestion: function (player, block) {
-        // Only trigger when hitting from below: player center must be below block center
-        // (velocity check doesn't work because Phaser resolves collision before callback)
-        var pcy = player.body.y + player.body.height / 2;
-        var bcy = block.body.y + block.body.height / 2;
-        if (pcy <= bcy) return;
+        // See hitBrick — same touching.down + position fallback.
+        var alignedFromBelow = Math.abs(player.body.top - block.body.bottom) < 8 &&
+                               player.body.right > block.body.left + 4 &&
+                               player.body.left < block.body.right - 4;
+        if (!block.body.touching.down && !alignedFromBelow) return;
         // Only trigger once per collision
         if (block._justHit) return;
         block._justHit = true;
@@ -738,13 +840,26 @@ var GameScene = new Phaser.Class({
     },
 
     // ==========================================
-    // PLAYER HIT (take damage)
+    // PLAYER HIT (take damage from enemy — preserves original behavior)
     // ==========================================
     playerHit: function () {
+        this.loseOnePower({ source: 'enemy' });
+    },
+
+    // ==========================================
+    // LOSE ONE POWER — shared damage handler.
+    // source='enemy': big→small, small→death (original Mario rules)
+    // source='math':  big→small, small→knockback + score penalty (no death — kid-friendly)
+    // ==========================================
+    loseOnePower: function (opts) {
         if (this.isInvincible || this.isDead) return;
+        // Star power makes Mario immune to all damage including math mistakes
+        if (this.starPower) return;
+        opts = opts || {};
+        var source = opts.source || 'enemy';
 
         if (this.isBig) {
-            // Shrink to small Mario
+            // Big → small (same for any source)
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
             this.player.setTexture('mario');
@@ -752,11 +867,27 @@ var GameScene = new Phaser.Class({
             this.player.setOffset(16, 8);
             this.player.play('mario-idle');
             this.isInvincible = true;
-            this.invincibleTimer = 2000; // 2 seconds
-        } else {
-            // Small Mario — death
-            this.playerDeath();
+            this.invincibleTimer = 2000;
+            return;
         }
+
+        // Small Mario — depends on source
+        if (source === 'math') {
+            if (window.AudioManager) AudioManager.play('bump');
+            // Knockback away from challenge (Mario falls back, gets generous immunity).
+            // 2.5s gives a 6yo time to recover before nearby enemies can re-hit them.
+            this.player.setVelocityX(-200);
+            this.player.setVelocityY(-300);
+            this.score = Math.max(0, this.score - 50);
+            this.registry.set('score', this.score);
+            this.events.emit('scoreChange', this.score);
+            this.isInvincible = true;
+            this.invincibleTimer = 2500;
+            return;
+        }
+
+        // Default (enemy) — death
+        this.playerDeath();
     },
 
     // ==========================================
@@ -765,6 +896,12 @@ var GameScene = new Phaser.Class({
     playerDeath: function () {
         if (this.isDead) return;
         this.isDead = true;
+
+        // Cleanup any active math challenge before scene restart
+        if (this.mathSpawner) {
+            this.mathSpawner.destroy();
+            this.mathSpawner = null;
+        }
 
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('death'); }
 
@@ -821,6 +958,12 @@ var GameScene = new Phaser.Class({
     reachFlagpole: function (player, flagpole) {
         if (this.levelComplete) return;
         this.levelComplete = true;
+
+        // Cleanup any active math challenge before WinScene
+        if (this.mathSpawner) {
+            this.mathSpawner.destroy();
+            this.mathSpawner = null;
+        }
 
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('flagpole'); }
 
@@ -1096,14 +1239,51 @@ var GameScene = new Phaser.Class({
     // ==========================================
     getLevelData: function (level) {
         var fn = 'getLevel' + level + 'Data';
-        if (this[fn]) return this[fn]();
-        return this.getLevel1Data();
+        var data = this[fn] ? this[fn]() : this.getLevel1Data();
+        // Uniformly extend every level to 300 cols (50% longer than original).
+        // The variant flag (set by some levels — currently level 1) drives which
+        // filler pattern is added in the extended section.
+        if (data && data.map) {
+            this.extendMapTo300(data.map, data.variant || 'a');
+        }
+        return data;
     },
 
     // ==========================================
-    // LEVEL 1 — GRASSLAND (main level, detailed)
+    // LEVEL 1 — GRASSLAND
+    // Rotates through 4 variants (a/b/c/d) so a child replaying the level sees
+    // a fresh layout each time. Variant choice is persisted in localStorage so
+    // the rotation continues across page reloads.
     // ==========================================
     getLevel1Data: function () {
+        var variants = ['a', 'b', 'c', 'd'];
+        var key = 'app-mario:level1-variant-idx';
+        var lastIdx = -1;
+        try {
+            var stored = (typeof localStorage !== 'undefined') ? localStorage.getItem(key) : null;
+            if (stored !== null) lastIdx = parseInt(stored, 10);
+            if (isNaN(lastIdx)) lastIdx = -1;
+        } catch (e) {}
+        var idx = (lastIdx + 1) % variants.length;
+        try {
+            if (typeof localStorage !== 'undefined') localStorage.setItem(key, String(idx));
+        } catch (e) {}
+
+        var variant = variants[idx];
+        var data;
+        if (variant === 'b') data = this._getLevel1BData();
+        else if (variant === 'c') data = this._getLevel1CData();
+        else if (variant === 'd') data = this._getLevel1DData();
+        else data = this._getLevel1AData();
+
+        data.variant = variant;
+        return data;
+    },
+
+    // ==========================================
+    // LEVEL 1A — original detailed layout (gentle introduction)
+    // ==========================================
+    _getLevel1AData: function () {
         // Tile legend:
         //  0 = empty
         //  1 = grass top
@@ -1434,6 +1614,264 @@ var GameScene = new Phaser.Class({
         return {
             map: map,
             decorations: decorations
+        };
+    },
+
+    // ==========================================
+    // LEVEL 1B — pipe valley (more pipes, fewer enemies)
+    // ==========================================
+    _getLevel1BData: function () {
+        var _ = 0;
+        var map = [];
+        var r;
+        for (r = 0; r < 11; r++) map[r] = this.makeRow(200, _);
+
+        // Coins above ground
+        map[11] = this.makeRow(200, _);
+        for (var c11 = 0; c11 < 200; c11 += 12) map[11][c11] = 50;
+
+        // Sparse floating platforms
+        map[12] = this.makeRow(200, _);
+        var platCols = [22, 60, 100, 140, 175];
+        for (var pp = 0; pp < platCols.length; pp++) {
+            var pc = platCols[pp];
+            map[12][pc] = 3; map[12][pc + 1] = 4; map[12][pc + 2] = 3;
+        }
+
+        map[13] = this.makeRow(200, _);
+        map[14] = this.makeRow(200, _);
+        map[15] = this.makeRow(200, _);
+        map[16] = this.makeRow(200, _);
+
+        // Lots of pipes — different heights for jumping practice
+        var pipes = [
+            { col: 30, height: 2 },
+            { col: 55, height: 3 },
+            { col: 80, height: 2 },
+            { col: 110, height: 4 },
+            { col: 130, height: 2 },
+            { col: 160, height: 3 }
+        ];
+        for (var pi = 0; pi < pipes.length; pi++) {
+            var p = pipes[pi];
+            var topRow = 17 - p.height;
+            map[topRow][p.col] = 6; map[topRow][p.col + 1] = 7;
+            for (var br = topRow + 1; br < 17; br++) {
+                map[br][p.col] = 8; map[br][p.col + 1] = 9;
+            }
+        }
+
+        // Solid ground
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // One enemy only — gentle
+        map[16][95] = 60;
+
+        // Ground coins
+        var groundCoins = [5, 6, 7, 40, 41, 42, 70, 71, 90, 91, 120, 121, 145, 146, 170, 171];
+        for (var gc = 0; gc < groundCoins.length; gc++) {
+            if (map[16][groundCoins[gc]] === 0) map[16][groundCoins[gc]] = 50;
+        }
+
+        map[5][190] = 70; // flagpole
+
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    { x: 200, y: 50, scale: 0.9 },
+                    { x: 600, y: 30, scale: 0.7 },
+                    { x: 1100, y: 60, scale: 1 },
+                    { x: 1700, y: 40, scale: 0.8 },
+                    { x: 2300, y: 55, scale: 1.1 },
+                    { x: 2900, y: 35, scale: 0.9 },
+                    { x: 3500, y: 50, scale: 0.7 },
+                    { x: 4200, y: 65, scale: 1 },
+                    { x: 4800, y: 40, scale: 0.8 },
+                    { x: 5400, y: 55, scale: 0.9 }
+                ],
+                hills: [
+                    { x: 300, y: 544, scale: 1, tint: 0x30A030 },
+                    { x: 1500, y: 544, scale: 0.8, tint: 0x40B040 },
+                    { x: 3000, y: 544, scale: 1.1, tint: 0x30A030 },
+                    { x: 4500, y: 544, scale: 0.9, tint: 0x40B040 }
+                ],
+                bushes: [
+                    { x: 500, y: 528, scale: 0.5 },
+                    { x: 1200, y: 528, scale: 0.6 },
+                    { x: 2200, y: 528, scale: 0.5 },
+                    { x: 3300, y: 528, scale: 0.6 },
+                    { x: 4400, y: 528, scale: 0.5 },
+                    { x: 5400, y: 528, scale: 0.6 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 1C — sky platforms (more jumping, climbing focus)
+    // ==========================================
+    _getLevel1CData: function () {
+        var _ = 0;
+        var map = [];
+        var r;
+        for (r = 0; r < 19; r++) map[r] = this.makeRow(200, _);
+
+        // Coins on row 9 (high, reachable from upper platforms)
+        for (var c9 = 20; c9 < 180; c9 += 8) map[9][c9] = 50;
+
+        // Upper platforms at row 10
+        var upperPlats = [
+            [20, 23], [40, 43], [60, 63], [80, 83], [105, 108], [125, 128], [150, 153], [170, 173]
+        ];
+        for (var up = 0; up < upperPlats.length; up++) {
+            for (var uc = upperPlats[up][0]; uc <= upperPlats[up][1]; uc++) {
+                map[10][uc] = 3;
+            }
+        }
+
+        // Mid platforms at row 12 — full bricks (for climbing)
+        var midPlats = [
+            [10, 14], [30, 33], [50, 53], [70, 73], [95, 98], [115, 119], [140, 144], [160, 165]
+        ];
+        for (var mp = 0; mp < midPlats.length; mp++) {
+            for (var mc = midPlats[mp][0]; mc <= midPlats[mp][1]; mc++) {
+                map[12][mc] = 3;
+                if (mc === midPlats[mp][0] + 1) map[12][mc] = 4;
+            }
+        }
+
+        // Ground
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // Two small gaps
+        map[17][45] = _; map[17][46] = _;
+        map[18][45] = _; map[18][46] = _;
+        map[17][130] = _; map[17][131] = _;
+        map[18][130] = _; map[18][131] = _;
+
+        // Few ground coins
+        var gCoins = [5, 6, 25, 26, 65, 66, 88, 89, 110, 111, 155, 156];
+        for (var gc2 = 0; gc2 < gCoins.length; gc2++) {
+            if (map[16][gCoins[gc2]] === 0) map[16][gCoins[gc2]] = 50;
+        }
+
+        // 2 Goombas
+        map[16][35] = 60;
+        map[16][120] = 60;
+
+        map[5][190] = 70;
+
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    { x: 100, y: 30, scale: 1.2 },
+                    { x: 400, y: 60, scale: 0.8 },
+                    { x: 800, y: 25, scale: 1 },
+                    { x: 1200, y: 55, scale: 0.9 },
+                    { x: 1700, y: 35, scale: 1.1 },
+                    { x: 2200, y: 50, scale: 0.7 },
+                    { x: 2800, y: 30, scale: 1 },
+                    { x: 3400, y: 55, scale: 0.8 },
+                    { x: 4000, y: 40, scale: 1 },
+                    { x: 4600, y: 35, scale: 0.9 },
+                    { x: 5200, y: 60, scale: 1.1 },
+                    { x: 5700, y: 25, scale: 0.8 }
+                ],
+                hills: [
+                    { x: 600, y: 544, scale: 1.2, tint: 0x208020 },
+                    { x: 2400, y: 544, scale: 0.9, tint: 0x30A030 },
+                    { x: 4000, y: 544, scale: 1.1, tint: 0x208020 }
+                ],
+                bushes: []
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 1D — ground march (mostly flat, lots of coins, friendly)
+    // ==========================================
+    _getLevel1DData: function () {
+        var _ = 0;
+        var map = [];
+        var r;
+        for (r = 0; r < 19; r++) map[r] = this.makeRow(200, _);
+
+        // Coin trails on row 11
+        for (var t1 = 10; t1 < 50; t1 += 2) map[11][t1] = 50;
+        for (var t2 = 70; t2 < 110; t2 += 2) map[11][t2] = 50;
+        for (var t3 = 130; t3 < 180; t3 += 2) map[11][t3] = 50;
+
+        // Single ?-block clusters at row 12
+        var clusterCols = [25, 65, 90, 125, 155];
+        for (var ci = 0; ci < clusterCols.length; ci++) {
+            var ccol = clusterCols[ci];
+            map[12][ccol] = 4;
+            map[12][ccol + 1] = 3;
+            map[12][ccol + 2] = 4;
+        }
+
+        // Solid ground
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // Ground coins (many — friendly run)
+        for (var dc = 5; dc < 195; dc += 3) {
+            if (map[16][dc] === 0) map[16][dc] = 50;
+        }
+
+        // 2 small pipes (low jumping practice)
+        map[15][45] = 6; map[15][46] = 7;
+        map[16][45] = 8; map[16][46] = 9;
+        map[15][140] = 6; map[15][141] = 7;
+        map[16][140] = 8; map[16][141] = 9;
+
+        // 2 Goombas
+        map[16][70] = 60;
+        map[16][115] = 60;
+
+        // Mini-staircase near end
+        map[16][168] = 11;
+        map[16][169] = 11; map[15][169] = 11;
+        map[16][170] = 11; map[15][170] = 11; map[14][170] = 11;
+        map[16][171] = 11; map[15][171] = 11; map[14][171] = 11; map[13][171] = 11;
+
+        map[5][190] = 70;
+
+        return {
+            map: map,
+            decorations: {
+                clouds: [
+                    { x: 200, y: 40, scale: 0.9 },
+                    { x: 700, y: 60, scale: 1.1 },
+                    { x: 1400, y: 30, scale: 0.8 },
+                    { x: 2100, y: 50, scale: 1 },
+                    { x: 2900, y: 35, scale: 0.9 },
+                    { x: 3700, y: 60, scale: 1.2 },
+                    { x: 4500, y: 40, scale: 0.8 },
+                    { x: 5300, y: 55, scale: 1 }
+                ],
+                hills: [
+                    { x: 200, y: 544, scale: 1, tint: 0x30A030 },
+                    { x: 1500, y: 544, scale: 1.1, tint: 0x40B040 },
+                    { x: 2800, y: 544, scale: 0.9, tint: 0x30A030 },
+                    { x: 4100, y: 544, scale: 1.2, tint: 0x40B040 },
+                    { x: 5300, y: 544, scale: 1, tint: 0x30A030 }
+                ],
+                bushes: [
+                    { x: 400, y: 528, scale: 0.5 },
+                    { x: 900, y: 528, scale: 0.6 },
+                    { x: 1700, y: 528, scale: 0.5 },
+                    { x: 2400, y: 528, scale: 0.6 },
+                    { x: 3200, y: 528, scale: 0.5 },
+                    { x: 4000, y: 528, scale: 0.6 },
+                    { x: 4800, y: 528, scale: 0.5 },
+                    { x: 5500, y: 528, scale: 0.6 }
+                ]
+            }
         };
     },
 
@@ -2284,6 +2722,119 @@ var GameScene = new Phaser.Class({
             row[i] = value;
         }
         return row;
+    },
+
+    // ==========================================
+    // HELPER: pad an existing 200-col map out to 300 cols.
+    // Each level was originally authored for 200 cols + flagpole at col 190.
+    // We extend them uniformly: relocate the flagpole to col 290 and fill the
+    // 200-289 stretch with fresh content (pipes, gaps, enemies, coins) so the
+    // last third feels like more level rather than dead air.
+    //
+    // The variant param ('a', 'b', 'c'…) lets us produce different filler
+    // patterns from the same level data, so kids replaying level 1 see
+    // different challenges in the extended section even if the first half is
+    // identical (or nearly so).
+    // ==========================================
+    extendMapTo300: function (map, variant) {
+        var _ = 0;
+        variant = variant || 'a';
+        var TARGET_COLS = 300;
+        var origCols = (map[0] && map[0].length) || 200;
+
+        // Pad each row to TARGET_COLS, filling with the row's natural background
+        for (var r = 0; r < map.length; r++) {
+            var row = map[r];
+            var fillTile = _;
+            if (r === 17) fillTile = 1;       // grass continues
+            else if (r === 18) fillTile = 2;  // earth continues
+            while (row.length < TARGET_COLS) {
+                row.push(fillTile);
+            }
+        }
+
+        // Find and relocate flagpole. Old position was around col 190; new is col 290.
+        for (var rr = 0; rr < map.length; rr++) {
+            for (var cc = 0; cc < map[rr].length; cc++) {
+                if (map[rr][cc] === 70) {
+                    map[rr][cc] = _;
+                    map[5][290] = 70;
+                    break;
+                }
+            }
+        }
+
+        // Make sure ground exists under and around the new flagpole
+        for (var fc = 280; fc < 298; fc++) {
+            if (map[17]) map[17][fc] = 1;
+            if (map[18]) map[18][fc] = 2;
+        }
+
+        // Add filler content in cols 200-285. Patterns vary by variant so
+        // replays differ slightly.
+        var sectionStart = origCols;
+        var sectionEnd = 285;
+        this._addExtensionContent(map, sectionStart, sectionEnd, variant);
+
+        return map;
+    },
+
+    _addExtensionContent: function (map, startCol, endCol, variant) {
+        // Pipes — placed at offsets that vary by variant
+        var pipeOffsets = {
+            'a': [10, 35, 60],
+            'b': [15, 50, 75],
+            'c': [20, 40, 65],
+            'd': [12, 45, 70]
+        }[variant] || [10, 35, 60];
+
+        for (var p = 0; p < pipeOffsets.length; p++) {
+            var pcol = startCol + pipeOffsets[p];
+            if (pcol + 1 < endCol && map[15] && map[16]) {
+                map[15][pcol] = 6; map[15][pcol + 1] = 7;
+                map[16][pcol] = 8; map[16][pcol + 1] = 9;
+            }
+        }
+
+        // Floating brick + ?-block platforms at row 12 — every 12 cols
+        for (var bc = startCol + 6; bc < endCol - 5; bc += 14) {
+            if (map[12]) {
+                map[12][bc] = 3;
+                map[12][bc + 1] = 4;
+                map[12][bc + 2] = 3;
+            }
+        }
+
+        // Coins at ground level — sprinkled throughout
+        var coinSpacing = (variant === 'b') ? 4 : 5;
+        for (var cc = startCol + 4; cc < endCol; cc += coinSpacing) {
+            if (map[16] && map[16][cc] === 0) {
+                map[16][cc] = 50;
+            }
+        }
+
+        // Goombas — 2 in the extension
+        var goombaCols = (variant === 'c') ? [25, 55] : [22, 58];
+        for (var gi = 0; gi < goombaCols.length; gi++) {
+            var gc = startCol + goombaCols[gi];
+            if (gc < endCol - 5 && map[16] && map[16][gc] === 0) {
+                map[16][gc] = 60;
+            }
+        }
+
+        // Small gap — single 2-tile pit (kid can jump over)
+        var gapCol = startCol + ((variant === 'a') ? 30 : (variant === 'b') ? 55 : 40);
+        if (map[17] && gapCol + 1 < endCol - 8) {
+            map[17][gapCol] = 0; map[17][gapCol + 1] = 0;
+            map[18][gapCol] = 0; map[18][gapCol + 1] = 0;
+            // Safety bridge above the gap
+            if (map[12]) {
+                map[12][gapCol - 1] = 3;
+                map[12][gapCol] = 3;
+                map[12][gapCol + 1] = 3;
+                map[12][gapCol + 2] = 3;
+            }
+        }
     }
 });
 

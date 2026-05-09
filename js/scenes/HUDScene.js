@@ -15,6 +15,18 @@ var HUDScene = new Phaser.Class({
         var W = this.cameras.main.width;  // 800
         var H = this.cameras.main.height; // 600
 
+        // Defensive: clear any stale registry listeners from a previous instance.
+        // (Phaser's `shutdown` lifecycle method doesn't always fire reliably across
+        // scene.stop/start cycles, so we also bind explicitly via scene.events here
+        // to guarantee teardown.)
+        this.registry.events.off('changedata-score');
+        this.registry.events.off('changedata-coins');
+        this.registry.events.off('changedata-lives');
+        this.registry.events.off('changedata-level');
+
+        // Bind shutdown explicitly so listeners are removed on scene stop
+        this.events.on('shutdown', this._cleanupRegistryListeners, this);
+
         // ----------------------------------
         // Semi-transparent top bar
         // ----------------------------------
@@ -236,6 +248,13 @@ var HUDScene = new Phaser.Class({
         // Stop music
         if (window.AudioManager) AudioManager.stopMusic();
 
+        // Cleanup math challenge spawner before tearing down scenes
+        var gameScene = this.scene.get('GameScene');
+        if (gameScene && gameScene.mathSpawner) {
+            gameScene.mathSpawner.destroy();
+            gameScene.mathSpawner = null;
+        }
+
         // Stop both scenes and go to menu
         this.scene.stop('GameScene');
         this.scene.stop('HUDScene');
@@ -245,14 +264,16 @@ var HUDScene = new Phaser.Class({
     // ==========================================
     // SHUTDOWN — clean up registry listeners to prevent leaks
     // ==========================================
-    shutdown: function () {
-        // Clean up quit dialog if open
+    _cleanupRegistryListeners: function () {
         this.hideQuitDialog();
-
         this.registry.events.off('changedata-score');
         this.registry.events.off('changedata-coins');
         this.registry.events.off('changedata-lives');
         this.registry.events.off('changedata-level');
+    },
+
+    shutdown: function () {
+        this._cleanupRegistryListeners();
     },
 
     // ==========================================

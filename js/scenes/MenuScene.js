@@ -101,6 +101,38 @@ var MenuScene = new Phaser.Class({
         }).setOrigin(0.5);
 
         // ========================================
+        // 4b. SETTINGS BUTTON (top-right gear)
+        // ========================================
+        var settingsBtnX = W - 50;
+        var settingsBtnY = 50;
+        var settingsBg = this.add.graphics().setDepth(5);
+        settingsBg.fillStyle(0x000000, 0.6);
+        settingsBg.fillRoundedRect(settingsBtnX - 28, settingsBtnY - 28, 56, 56, 12);
+        settingsBg.lineStyle(3, 0xF8B800, 1);
+        settingsBg.strokeRoundedRect(settingsBtnX - 28, settingsBtnY - 28, 56, 56, 12);
+
+        var settingsLabel = this.add.text(settingsBtnX, settingsBtnY, '⚙', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '36px',
+            color: '#F8D830'
+        }).setOrigin(0.5).setDepth(6);
+
+        var settingsZone = this.add.zone(settingsBtnX, settingsBtnY, 56, 56)
+            .setDepth(7).setInteractive({ useHandCursor: true });
+
+        settingsZone.on('pointerover', function () { settingsLabel.setScale(1.15); });
+        settingsZone.on('pointerout',  function () { settingsLabel.setScale(1.0); });
+        settingsZone.on('pointerdown', function () {
+            self.scene.start('SettingsScene');
+        });
+
+        this.add.text(settingsBtnX, settingsBtnY + 36, 'NUSTATYMAI', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(6);
+
+        // ========================================
         // 5. LEVEL SELECTION — "Pasirink lygi"
         // ========================================
         this.add.text(W / 2, 148, 'PASIRINK LYGI:', {

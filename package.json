@@ -1,0 +1,23 @@
+{
+  "name": "app-mario",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test-game.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andriusgodeliauskas/app-mario.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/andriusgodeliauskas/app-mario/issues"
+  },
+  "homepage": "https://github.com/andriusgodeliauskas/app-mario#readme",
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}

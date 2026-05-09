@@ -9,8 +9,8 @@ var gameConfig = {
     height: 600,
     parent: 'game-container',
     backgroundColor: '#000000',
-    pixelArt: true,
-    roundPixels: true,
+    pixelArt: false,
+    roundPixels: false,
     physics: {
         default: 'arcade',
         arcade: {
@@ -22,7 +22,7 @@ var gameConfig = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, MenuScene, GameScene, HUDScene, WinScene]
+    scene: [BootScene, MenuScene, SettingsScene, GameScene, HUDScene, WinScene]
 };
 
 // Create the game instance
