@@ -2642,6 +2642,303 @@
     }
 
     // ========================================
+    // NEW-LEVEL DECORATIONS (levels 10-14)
+    // Drawn at logical w x h, canvas 2x, rendered in-game at scale*0.5.
+    // ========================================
+
+    // --- Cave: crystal cluster ---
+    function generateCrystalDeco(scene) {
+        var w = 24, h = 32;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        function gem(cx, baseY, gw, gh, c1, c2) {
+            var g = ctx.createLinearGradient(cx - gw, baseY - gh, cx + gw, baseY);
+            g.addColorStop(0, c1); g.addColorStop(1, c2);
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(cx, baseY - gh);
+            ctx.lineTo(cx + gw, baseY - gh * 0.55);
+            ctx.lineTo(cx + gw * 0.6, baseY);
+            ctx.lineTo(cx - gw * 0.6, baseY);
+            ctx.lineTo(cx - gw, baseY - gh * 0.55);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.moveTo(cx, baseY - gh);
+            ctx.lineTo(cx + gw * 0.4, baseY - gh * 0.5);
+            ctx.lineTo(cx, baseY);
+            ctx.closePath(); ctx.fill();
+        }
+        gem(7, h, 5, 20, '#9be7ff', '#2a6fb0');
+        gem(17, h, 6, 28, '#d9a7ff', '#7a2fb0');
+        gem(12, h, 4, 14, '#aef0ff', '#3a8fc0');
+        ctx.restore();
+        scene.textures.addSpriteSheet('crystal-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Cave: stone spire (stalagmite) ---
+    function generateStalactiteDeco(scene) {
+        var w = 20, h = 40;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#8a8090'); g.addColorStop(1, '#4a4452');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(w - 3, h);
+        ctx.lineTo(3, h);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(200,190,210,0.4)';
+        ctx.beginPath();
+        ctx.moveTo(10, 0); ctx.lineTo(10, h); ctx.lineTo(6, h); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#9be7ff';
+        ctx.beginPath(); ctx.arc(10, 6, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('stalactite-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Jungle: hanging vine ---
+    function generateVineDeco(scene) {
+        var w = 14, h = 44;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        ctx.strokeStyle = '#2e7d32'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(7, h);
+        ctx.quadraticCurveTo(2, h * 0.7, 8, h * 0.45);
+        ctx.quadraticCurveTo(13, h * 0.2, 6, 2);
+        ctx.stroke();
+        ctx.fillStyle = '#43a047';
+        function leaf(lx, ly, dir) {
+            ctx.save(); ctx.translate(lx, ly); ctx.rotate(dir);
+            ctx.beginPath(); ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+        leaf(3, h * 0.65, -0.6); leaf(11, h * 0.5, 0.6);
+        leaf(4, h * 0.3, -0.6); leaf(10, h * 0.15, 0.6);
+        ctx.restore();
+        scene.textures.addSpriteSheet('vine-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Jungle: palm tree ---
+    function generatePalmDeco(scene) {
+        var w = 36, h = 52;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var tg = ctx.createLinearGradient(0, 0, 0, h);
+        tg.addColorStop(0, '#b5793f'); tg.addColorStop(1, '#7c4a21');
+        ctx.fillStyle = tg;
+        ctx.beginPath();
+        ctx.moveTo(16, h); ctx.quadraticCurveTo(14, h * 0.5, 20, 16);
+        ctx.lineTo(24, 16); ctx.quadraticCurveTo(20, h * 0.5, 22, h);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#2e8b3d';
+        var cx = 21, cy = 14;
+        var angles = [-2.4, -1.7, -1.0, -0.4, 0.3];
+        for (var i = 0; i < angles.length; i++) {
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(angles[i]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(10, -3, 18, 2);
+            ctx.quadraticCurveTo(10, 2, 0, 3);
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+        ctx.fillStyle = '#5d3a1a';
+        ctx.beginPath(); ctx.arc(18, 16, 2.2, 0, Math.PI * 2); ctx.arc(24, 16, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('palm-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Jungle: big leaf ---
+    function generateLeafDeco(scene) {
+        var w = 26, h = 22;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        ctx.fillStyle = '#3aa84a';
+        ctx.beginPath();
+        ctx.moveTo(13, h);
+        ctx.quadraticCurveTo(0, h * 0.6, 5, 4);
+        ctx.quadraticCurveTo(13, -2, 21, 4);
+        ctx.quadraticCurveTo(26, h * 0.6, 13, h);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#2e7d32'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(13, h); ctx.lineTo(13, 3); ctx.stroke();
+        ctx.restore();
+        scene.textures.addSpriteSheet('leaf-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Ocean: wave ---
+    function generateWaveDeco(scene) {
+        var w = 36, h = 16;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#7fd4ff'); g.addColorStop(1, '#2e86c1');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        var x;
+        for (x = 0; x <= w; x += 6) { ctx.quadraticCurveTo(x + 3, h * 0.3, x + 6, h * 0.55); }
+        ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (x = 0; x <= w; x += 6) { if (x === 0) ctx.moveTo(0, h * 0.55); ctx.quadraticCurveTo(x + 3, h * 0.3, x + 6, h * 0.55); }
+        ctx.stroke();
+        ctx.restore();
+        scene.textures.addSpriteSheet('wave-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Ocean: coral ---
+    function generateCoralDeco(scene) {
+        var w = 26, h = 30;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        ctx.strokeStyle = '#ff7f6b'; ctx.lineCap = 'round';
+        function branch(x, y, len, ang, wdt) {
+            if (len < 3) return;
+            ctx.lineWidth = wdt;
+            var nx = x + Math.cos(ang) * len, ny = y + Math.sin(ang) * len;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(nx, ny); ctx.stroke();
+            branch(nx, ny, len * 0.6, ang - 0.5, wdt * 0.7);
+            branch(nx, ny, len * 0.6, ang + 0.5, wdt * 0.7);
+        }
+        branch(13, h, 10, -Math.PI / 2, 3);
+        ctx.fillStyle = '#ffb3a0';
+        ctx.beginPath(); ctx.arc(13, 6, 2, 0, Math.PI * 2); ctx.arc(7, 12, 1.5, 0, Math.PI * 2); ctx.arc(19, 12, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('coral-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Ocean: buoy ---
+    function generatePlankDeco(scene) {
+        var w = 30, h = 16;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var g = ctx.createRadialGradient(11, 8, 1, 11, 8, 9);
+        g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#c0392b');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(11, 9, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillRect(4, 8, 14, 2);
+        ctx.strokeStyle = '#7c4a21'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(11, 2); ctx.lineTo(11, 9); ctx.stroke();
+        ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.moveTo(11, 2); ctx.lineTo(19, 4); ctx.lineTo(11, 6); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('plank-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Space: ringed planet ---
+    function generatePlanetDeco(scene) {
+        var w = 30, h = 28;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        ctx.strokeStyle = 'rgba(220,200,255,0.7)'; ctx.lineWidth = 2;
+        ctx.save(); ctx.translate(15, 14); ctx.scale(1, 0.35);
+        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        var g = ctx.createRadialGradient(11, 10, 2, 15, 14, 11);
+        g.addColorStop(0, '#9b6bff'); g.addColorStop(1, '#4a2a8a');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(15, 14, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(15, 14, 9, 0.2, 1.2); ctx.stroke();
+        ctx.restore();
+        scene.textures.addSpriteSheet('planet-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Space: starfield cluster ---
+    function generateStarfieldDeco(scene) {
+        var w = 26, h = 26;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        function star(cx, cy, r, c) {
+            ctx.fillStyle = c; ctx.beginPath();
+            for (var i = 0; i < 5; i++) {
+                var a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+                ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+                var a2 = a + Math.PI / 5;
+                ctx.lineTo(cx + Math.cos(a2) * r * 0.45, cy + Math.sin(a2) * r * 0.45);
+            }
+            ctx.closePath(); ctx.fill();
+        }
+        star(7, 8, 4, '#fff59d'); star(18, 5, 3, '#ffffff');
+        star(20, 17, 3.5, '#b3e5ff'); star(9, 19, 2.5, '#ffffff');
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath(); ctx.arc(14, 12, 0.8, 0, 7); ctx.arc(3, 14, 0.8, 0, 7); ctx.arc(23, 10, 0.8, 0, 7); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('starfield-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Space: rocket ---
+    function generateRocketDeco(scene) {
+        var w = 18, h = 34;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var g = ctx.createLinearGradient(0, 0, w, 0);
+        g.addColorStop(0, '#e0e0e0'); g.addColorStop(0.5, '#ffffff'); g.addColorStop(1, '#b0b0b0');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(9, 2); ctx.quadraticCurveTo(14, 10, 13, 24); ctx.lineTo(5, 24); ctx.quadraticCurveTo(4, 10, 9, 2); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#4aa3ff'; ctx.beginPath(); ctx.arc(9, 12, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath(); ctx.moveTo(5, 20); ctx.lineTo(1, 28); ctx.lineTo(5, 24); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(13, 20); ctx.lineTo(17, 28); ctx.lineTo(13, 24); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffa726'; ctx.beginPath(); ctx.moveTo(6, 24); ctx.lineTo(9, 34); ctx.lineTo(12, 24); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.moveTo(7.5, 24); ctx.lineTo(9, 30); ctx.lineTo(10.5, 24); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('rocket-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Rainbow: arch ---
+    function generateRainbowArchDeco(scene) {
+        var w = 52, h = 30;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var cols = ['#ff5b5b', '#ffa726', '#ffeb3b', '#66bb6a', '#42a5f5', '#ab47bc'];
+        ctx.lineWidth = 2.5;
+        for (var i = 0; i < cols.length; i++) {
+            ctx.strokeStyle = cols[i];
+            ctx.beginPath();
+            ctx.arc(w / 2, h, 22 - i * 2.5, Math.PI, 0);
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(6, h, 5, 0, Math.PI * 2); ctx.arc(11, h, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(w - 6, h, 5, 0, Math.PI * 2); ctx.arc(w - 11, h, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('rainbow-arch-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // --- Rainbow: sparkle ---
+    function generateSparkleDeco(scene) {
+        var w = 16, h = 16;
+        var canvas = makeCanvas(w * 2, h * 2);
+        var ctx = canvas.getContext('2d');
+        ctx.save(); ctx.scale(2, 2);
+        var g = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#fff59d'); g.addColorStop(1, 'rgba(255,235,120,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(8, 0); ctx.quadraticCurveTo(9, 7, 16, 8);
+        ctx.quadraticCurveTo(9, 9, 8, 16); ctx.quadraticCurveTo(7, 9, 0, 8);
+        ctx.quadraticCurveTo(7, 7, 8, 0); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        scene.textures.addSpriteSheet('sparkle-deco', canvas, { frameWidth: w * 2, frameHeight: h * 2 });
+    }
+
+    // ========================================
     // MAIN: generateAll(scene)
     // ========================================
     var SpriteGenerator = {
@@ -2669,6 +2966,21 @@
             generateAnswerBlock(scene);
             generateWoodSign(scene);
             generateAnswerMedallion(scene);
+
+            // New-level decorations (levels 10-14)
+            generateCrystalDeco(scene);
+            generateStalactiteDeco(scene);
+            generateVineDeco(scene);
+            generatePalmDeco(scene);
+            generateLeafDeco(scene);
+            generateWaveDeco(scene);
+            generateCoralDeco(scene);
+            generatePlankDeco(scene);
+            generatePlanetDeco(scene);
+            generateStarfieldDeco(scene);
+            generateRocketDeco(scene);
+            generateRainbowArchDeco(scene);
+            generateSparkleDeco(scene);
 
             console.log('[SpriteGenerator] All sprites generated successfully.');
         }
