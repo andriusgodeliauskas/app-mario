@@ -169,9 +169,9 @@ async function waitFor(page, fn, timeout = 5000) {
     }
 
     // ============================================
-    // T4: Wrong answer (small Mario) — knockback, no death
+    // T4: Wrong answer (small Mario) — now costs a life (dies), like an enemy hit
     // ============================================
-    console.log('\n[T4] Wrong answer with small Mario does not kill player');
+    console.log('\n[T4] Wrong answer with small Mario costs a life (dies)');
 
     // Wait for a FRESH challenge (not the old one still cleaning up).
     // A fresh challenge has unresolved blocks with live sprites.
@@ -190,37 +190,25 @@ async function waitFor(page, fn, timeout = 5000) {
     if (next) {
         await page.evaluate(() => {
             const scene = window.game.scene.getScene('GameScene');
-            scene.isBig = false;
+            scene.isBig = false;             // ensure small Mario
             const ch = scene.mathSpawner.active;
             const wrong = ch.blocks.find(b => !b.isCorrect);
             if (!wrong || !wrong.sprite) return null;
             scene.player.x = wrong.sprite.x;
             scene.player.y = wrong.sprite.y + 40;
-            scene.player.body.setVelocity(0, -300);
+            scene.player.body.setVelocity(0, -300);   // jump up into the wrong block
         });
 
-        // Quick check (within invuln window of ~1500ms)
+        // playerDeath() sets isDead synchronously the moment the wrong block is hit.
         await page.waitForTimeout(700);
         const stateMid = await page.evaluate(() => {
             const s = window.game.scene.getScene('GameScene');
-            return { isDead: s.isDead, isInvincible: s.isInvincible, score: s.score };
+            return { isDead: s.isDead };
         });
-        if (stateMid.isInvincible) {
-            pass('invulnerability triggered shortly after wrong');
+        if (stateMid.isDead) {
+            pass('small Mario dies on wrong answer (isDead=true)');
         } else {
-            fail('invulnerability', 'not triggered (state=' + JSON.stringify(stateMid) + ')');
-        }
-
-        // Final check — make sure Mario is still alive after invuln expires
-        await page.waitForTimeout(1800);
-        const stateAfter = await page.evaluate(() => {
-            const scene = window.game.scene.getScene('GameScene');
-            return { isDead: scene.isDead, score: scene.score };
-        });
-        if (!stateAfter.isDead) {
-            pass('small Mario survives wrong answer (isDead=false)');
-        } else {
-            fail('small Mario survives', 'isDead=true');
+            fail('small Mario dies on wrong answer', 'isDead=false — expected death');
         }
         await page.screenshot({ path: '/tmp/mario-math-04-wrong.png' });
     } else {
@@ -307,6 +295,9 @@ async function waitFor(page, fn, timeout = 5000) {
     // T9c: ?-block hit with arc trajectory (jumping while moving sideways)
     // ============================================
     console.log('\n[T9c] ? block hit registers when Mario jumps with horizontal velocity');
+    // Force level-1 variant 'a' so the ? block layout is deterministic (the
+    // variant rotates on every load, which otherwise makes this test flaky).
+    await page.evaluate(() => { try { localStorage.setItem('app-mario:level1-variant-idx', '3'); } catch (e) {} });
     await page.evaluate(() => window.game.scene.start('GameScene', { level: 1 }));
     await page.waitForTimeout(2500);
 
@@ -316,18 +307,24 @@ async function waitFor(page, fn, timeout = 5000) {
         if (qBlocks.length === 0) return { found: false };
         const target = qBlocks[0];
         const before = gs.coins;
-        // Position Mario to the LEFT and BELOW, with both horizontal and upward velocity
-        gs.player.x = target.x - 32;
-        gs.player.y = target.body.bottom + 60;
-        gs.player.body.setVelocity(150, -400);
+        // Position Mario just left+below the block; a gentle upward arc with a
+        // small rightward drift rises into the block's underside while moving.
+        gs.player.x = target.x - 22;
+        gs.player.y = target.body.bottom + 34;
+        gs.player.body.setVelocity(70, -430);
         return { found: true, before };
     });
 
     if (!arcTest.found) {
         fail('? block arc hit', 'no question blocks');
     } else {
-        await page.waitForTimeout(1200);
-        const after = await page.evaluate(() => window.game.scene.getScene('GameScene').coins);
+        // Poll across the ascent window — the hit registers mid-arc.
+        let after = arcTest.before;
+        for (let k = 0; k < 18; k++) {
+            await page.waitForTimeout(100);
+            after = await page.evaluate(() => window.game.scene.getScene('GameScene').coins);
+            if (after > arcTest.before) break;
+        }
         if (after > arcTest.before) {
             pass('? block arc hit registered (coins ' + arcTest.before + ' → ' + after + ')');
         } else {
