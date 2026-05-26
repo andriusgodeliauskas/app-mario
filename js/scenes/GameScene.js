@@ -53,8 +53,18 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Sky background — per level
         // ----------------------------------
-        var bgColors = { 1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E', 5: '#87CEEB', 6: '#1A3A1A', 7: '#E8A050', 8: '#C0D8E8', 9: '#2A0808' };
+        var bgColors = {
+            1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E', 5: '#87CEEB',
+            6: '#1A3A1A', 7: '#E8A050', 8: '#C0D8E8', 9: '#2A0808',
+            10: '#1A1230', 11: '#0E3A1E', 12: '#2E86C1', 13: '#05050F', 14: '#FFB6E6'
+        };
         this.cameras.main.setBackgroundColor(bgColors[this.currentLevel] || '#6B8CFF');
+
+        // Per-level tile tint — gives new levels (10-14) a distinct themed look
+        // without changing tile geometry/physics. Applied to ground (1/2) and
+        // stone (11) tiles only; bricks/?-blocks/pipes stay original.
+        var tileTint = { 10: 0x9aa0c0, 11: 0x7bc47b, 12: 0x9ad6ff, 13: 0xc8ccd8, 14: 0xffd6f2 };
+        this._tileTint = tileTint[this.currentLevel] || null;
 
         // ----------------------------------
         // Get level data
@@ -99,6 +109,7 @@ var GameScene = new Phaser.Class({
                     // Ground tiles (grass top or earth)
                     var gt = this.groundTiles.create(tx, ty, 'tiles', tileId);
                     gt.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    if (this._tileTint) gt.setTint(this._tileTint);
                 } else if (tileId === 3) {
                     // Brick block
                     var bt = this.brickTiles.create(tx, ty, 'tiles', 3);
@@ -134,6 +145,7 @@ var GameScene = new Phaser.Class({
                     // Stone platform
                     var st = this.groundTiles.create(tx, ty, 'tiles', 11);
                     st.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    if (this._tileTint) st.setTint(this._tileTint);
                 } else if (tileId === 50) {
                     // Coin spawn marker
                     coinPositions.push({ x: tx, y: ty });
@@ -306,7 +318,7 @@ var GameScene = new Phaser.Class({
         // Audio — init and start level music
         // ----------------------------------
         if (window.AudioManager) { AudioManager.init(); }
-        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle' };
+        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle', 10: 'underground', 11: 'overworld', 12: 'overworld', 13: 'castle', 14: 'overworld' };
         if (window.AudioManager) AudioManager.startMusic(musicMap[this.currentLevel] || 'overworld');
 
         // ----------------------------------
@@ -1213,6 +1225,39 @@ var GameScene = new Phaser.Class({
                 fn.setDepth(-6);
                 fn.setOrigin(0, 1);
                 fn.setScale((fnd.scale || 1) * 0.5);
+            }
+        }
+
+        // New-level decorations (levels 10-14) — data-driven to avoid repetition.
+        // Ground-standing types use origin (0.5,1); sky/background types float
+        // with an origin of (0.5,0.5) and a parallax scrollFactor.
+        var newDeco = {
+            crystals:    { key: 'crystal-deco',      depth: -4,  origin: [0.5, 1] },
+            stalactites: { key: 'stalactite-deco',   depth: -6,  origin: [0.5, 1] },
+            vines:       { key: 'vine-deco',         depth: -6,  origin: [0.5, 1] },
+            palms:       { key: 'palm-deco',         depth: -8,  origin: [0.5, 1] },
+            leaves:      { key: 'leaf-deco',         depth: -4,  origin: [0.5, 1] },
+            waves:       { key: 'wave-deco',         depth: -6,  origin: [0.5, 1] },
+            corals:      { key: 'coral-deco',        depth: -6,  origin: [0.5, 1] },
+            planks:      { key: 'plank-deco',        depth: -6,  origin: [0.5, 1] },
+            planets:     { key: 'planet-deco',       depth: -10, origin: [0.5, 0.5], scroll: 0.3 },
+            starfields:  { key: 'starfield-deco',    depth: -10, origin: [0.5, 0.5], scroll: 0.3 },
+            rockets:     { key: 'rocket-deco',       depth: -9,  origin: [0.5, 0.5], scroll: 0.4 },
+            rainbows:    { key: 'rainbow-arch-deco', depth: -8,  origin: [0.5, 1] },
+            sparkles:    { key: 'sparkle-deco',      depth: -4,  origin: [0.5, 0.5] }
+        };
+        for (var key in newDeco) {
+            if (!decorations[key]) continue;
+            var cfg = newDeco[key];
+            var list = decorations[key];
+            for (var di = 0; di < list.length; di++) {
+                var d = list[di];
+                var img = this.add.image(d.x, d.y, cfg.key);
+                img.setDepth(cfg.depth);
+                img.setOrigin(cfg.origin[0], cfg.origin[1]);
+                img.setScale((d.scale || 1) * 0.5);
+                if (cfg.scroll) img.setScrollFactor(cfg.scroll);
+                if (d.tint) img.setTint(d.tint);
             }
         }
     },
