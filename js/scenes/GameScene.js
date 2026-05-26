@@ -90,6 +90,7 @@ var GameScene = new Phaser.Class({
         var flagpolePos = null;
 
         var map = levelData.map;
+        this.levelMap = map;   // retained for dev validation (window.validateLevelMap)
         for (var row = 0; row < map.length; row++) {
             for (var col = 0; col < map[row].length; col++) {
                 var tileId = map[row][col];
