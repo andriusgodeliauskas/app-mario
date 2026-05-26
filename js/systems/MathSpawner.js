@@ -19,7 +19,7 @@ var MathSpawner = function (scene, settings) {
     this.settings = settings || (window.MathSettings ? window.MathSettings.load() : null);
 
     this.TILE = 32;
-    this.SPAWN_INTERVAL = 6000;
+    this.SPAWN_INTERVAL = 5400;   // 10% more frequent than the previous 6000ms
     this.PENDING_TIMEOUT = 5000;
     this.LOOK_AHEAD_MIN = 400;
     this.LOOK_AHEAD_MAX = 900;

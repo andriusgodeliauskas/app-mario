@@ -848,18 +848,16 @@ var GameScene = new Phaser.Class({
 
     // ==========================================
     // LOSE ONE POWER — shared damage handler.
-    // source='enemy': big→small, small→death (original Mario rules)
-    // source='math':  big→small, small→knockback + score penalty (no death — kid-friendly)
+    // All sources (enemy hits AND wrong math answers): big→small, small→death.
     // ==========================================
     loseOnePower: function (opts) {
         if (this.isInvincible || this.isDead) return;
         // Star power makes Mario immune to all damage including math mistakes
         if (this.starPower) return;
         opts = opts || {};
-        var source = opts.source || 'enemy';
 
         if (this.isBig) {
-            // Big → small (same for any source)
+            // Big → small
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
             this.player.setTexture('mario');
@@ -871,22 +869,7 @@ var GameScene = new Phaser.Class({
             return;
         }
 
-        // Small Mario — depends on source
-        if (source === 'math') {
-            if (window.AudioManager) AudioManager.play('bump');
-            // Knockback away from challenge (Mario falls back, gets generous immunity).
-            // 2.5s gives a 6yo time to recover before nearby enemies can re-hit them.
-            this.player.setVelocityX(-200);
-            this.player.setVelocityY(-300);
-            this.score = Math.max(0, this.score - 50);
-            this.registry.set('score', this.score);
-            this.events.emit('scoreChange', this.score);
-            this.isInvincible = true;
-            this.invincibleTimer = 2500;
-            return;
-        }
-
-        // Default (enemy) — death
+        // Small Mario — death (loses a life)
         this.playerDeath();
     },
 
