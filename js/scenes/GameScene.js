@@ -2743,6 +2743,307 @@ var GameScene = new Phaser.Class({
     },
 
     // ==========================================
+    // LEVEL 10 — CAVE (vertical climbing, narrow ledges, small pits)
+    // ==========================================
+    getLevel10Data: function () {
+        var _ = 0;
+        var map = [];
+        map[0] = this.makeRow(200, 11);   // stone ceiling
+        map[1] = this.makeRow(200, 11);
+        for (var r = 2; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 11);  // stone ground
+        map[18] = this.makeRow(200, 11);
+
+        // Narrow stone ledges at varying heights [col, row, width] — optional climb for coins
+        var ledges = [
+            [14, 15, 3], [20, 13, 3], [27, 11, 3], [34, 13, 3], [41, 15, 3],
+            [50, 14, 2], [56, 12, 2], [62, 10, 3], [70, 12, 2], [76, 14, 3],
+            [86, 15, 3], [92, 13, 2], [98, 11, 3], [106, 13, 2], [112, 15, 3],
+            [122, 14, 3], [129, 12, 3], [137, 10, 3], [145, 12, 2], [152, 14, 3],
+            [162, 15, 3], [169, 13, 3], [176, 15, 3]
+        ];
+        for (var i = 0; i < ledges.length; i++) {
+            for (var c = ledges[i][0]; c < ledges[i][0] + ledges[i][2]; c++) map[ledges[i][1]][c] = 11;
+        }
+
+        // Small ground pits (3 wide) — jumpable
+        var pits = [[24, 26], [44, 46], [80, 82], [116, 118], [156, 158]];
+        for (var p = 0; p < pits.length; p++) {
+            for (var gc = pits[p][0]; gc <= pits[p][1]; gc++) { map[17][gc] = _; map[18][gc] = _; }
+        }
+
+        // Power-up blocks tucked into ledges
+        map[11][28] = 40;   // mushroom
+        map[10][63] = 41;   // star
+        map[10][137] = 4;   // coin block
+
+        // Coins
+        var coins = [6, 7, 8, 15, 16, 21, 28, 29, 57, 63, 64, 93, 99, 100, 130, 138, 139, 170, 171, 182, 183, 184];
+        for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
+
+        // Enemies (~12) on ground, away from pits & spawn
+        var en = [[18, 60], [33, 61], [48, 60], [60, 60], [72, 61], [88, 60], [104, 61], [120, 60], [134, 61], [148, 60], [164, 61], [178, 60]];
+        for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
+
+        // Flagpole + solid run-up
+        map[5][190] = 70;
+        for (var fc = 180; fc < 200; fc++) { map[17][fc] = 11; map[18][fc] = 11; }
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                crystals: [
+                    { x: 160, y: gY, scale: 1.0 }, { x: 600, y: gY, scale: 0.8 }, { x: 1100, y: gY, scale: 1.2 },
+                    { x: 1700, y: gY, scale: 0.9 }, { x: 2300, y: gY, scale: 1.1 }, { x: 2900, y: gY, scale: 1.0 },
+                    { x: 3500, y: gY, scale: 1.2 }, { x: 4200, y: gY, scale: 0.9 }, { x: 4900, y: gY, scale: 1.1 }
+                ],
+                stalactites: [
+                    { x: 400, y: gY, scale: 1.0 }, { x: 900, y: gY, scale: 0.8 }, { x: 1500, y: gY, scale: 1.1 },
+                    { x: 2100, y: gY, scale: 0.9 }, { x: 2700, y: gY, scale: 1.0 }, { x: 3300, y: gY, scale: 1.2 },
+                    { x: 4000, y: gY, scale: 0.9 }, { x: 4700, y: gY, scale: 1.0 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 11 — JUNGLE (dense enemies + platform-hopping)
+    // ==========================================
+    getLevel11Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // Floating platforms [col, row, width, tile]
+        var plats = [
+            [16, 12, 3, 3], [22, 12, 1, 4], [30, 11, 3, 3], [44, 13, 3, 3], [52, 12, 3, 3],
+            [64, 11, 3, 3], [72, 13, 1, 4], [84, 12, 3, 3], [96, 11, 3, 3], [108, 13, 3, 3],
+            [120, 12, 3, 3], [140, 12, 3, 3], [152, 13, 3, 3], [164, 12, 3, 3], [172, 11, 3, 3]
+        ];
+        for (var i = 0; i < plats.length; i++) {
+            for (var c = plats[i][0]; c < plats[i][0] + plats[i][2]; c++) map[plats[i][1]][c] = plats[i][3];
+        }
+
+        // Pits — small, with stepping stones over the wider ones
+        var pits = [[26, 28], [58, 60], [78, 81], [100, 102], [124, 127], [146, 148], [166, 168]];
+        for (var p = 0; p < pits.length; p++) {
+            for (var gc = pits[p][0]; gc <= pits[p][1]; gc++) { map[17][gc] = _; map[18][gc] = _; }
+        }
+        map[14][79] = 11; map[14][80] = 11;     // bridge over 78-81
+        map[14][125] = 11; map[14][126] = 11;   // bridge over 124-127
+
+        // Power-ups
+        map[11][30] = 40; map[10][64] = 41;
+
+        // Coins
+        var coins = [6, 7, 8, 17, 18, 31, 32, 45, 53, 65, 85, 97, 109, 121, 141, 153, 165, 173, 183, 184, 185];
+        for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
+
+        // Enemies (~15)
+        var en = [[14, 60], [24, 61], [34, 60], [42, 60], [50, 61], [62, 60], [70, 61], [88, 60], [98, 60], [110, 61], [122, 60], [138, 61], [150, 60], [162, 61], [176, 60]];
+        for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
+
+        map[5][190] = 70;
+        for (var fc = 180; fc < 200; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                palms: [
+                    { x: 200, y: gY, scale: 1.1 }, { x: 700, y: gY, scale: 0.9 }, { x: 1300, y: gY, scale: 1.2 },
+                    { x: 1900, y: gY, scale: 1.0 }, { x: 2500, y: gY, scale: 1.1 }, { x: 3100, y: gY, scale: 0.9 },
+                    { x: 3700, y: gY, scale: 1.2 }, { x: 4300, y: gY, scale: 1.0 }, { x: 4900, y: gY, scale: 1.1 }
+                ],
+                vines: [
+                    { x: 400, y: gY, scale: 1.0 }, { x: 1000, y: gY, scale: 0.9 }, { x: 1600, y: gY, scale: 1.1 },
+                    { x: 2200, y: gY, scale: 1.0 }, { x: 2800, y: gY, scale: 0.9 }, { x: 3400, y: gY, scale: 1.1 },
+                    { x: 4000, y: gY, scale: 1.0 }, { x: 4600, y: gY, scale: 0.9 }
+                ],
+                leaves: [
+                    { x: 300, y: gY, scale: 1.0 }, { x: 900, y: gY, scale: 1.1 }, { x: 1500, y: gY, scale: 0.9 },
+                    { x: 2100, y: gY, scale: 1.0 }, { x: 2700, y: gY, scale: 1.1 }, { x: 3300, y: gY, scale: 0.9 },
+                    { x: 3900, y: gY, scale: 1.0 }, { x: 4500, y: gY, scale: 1.1 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 12 — OCEAN (wide water gaps, stepping stones)
+    // ==========================================
+    getLevel12Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // Water gaps with stone stepping stones poking out (row 16, every 2 cols)
+        var gaps = [[24, 28], [40, 45], [58, 62], [76, 81], [94, 99], [112, 116], [130, 135], [148, 153], [166, 170]];
+        for (var i = 0; i < gaps.length; i++) {
+            var g = gaps[i];
+            for (var c = g[0]; c <= g[1]; c++) { map[17][c] = _; map[18][c] = _; }
+            for (var s = g[0] + 1; s < g[1]; s += 2) map[16][s] = 11;
+        }
+
+        // Power-ups on safe segments
+        map[12][34] = 40; map[12][104] = 41; map[12][160] = 4;
+
+        // Coins
+        var coins = [6, 7, 8, 33, 51, 52, 68, 69, 86, 87, 103, 122, 123, 140, 141, 158, 159, 182, 183, 184];
+        for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
+
+        // Enemies (~15) on solid segments
+        var en = [[15, 60], [33, 61], [36, 60], [50, 60], [68, 61], [72, 61], [86, 60], [103, 61], [108, 60], [120, 60], [122, 60], [140, 61], [144, 60], [158, 60], [175, 61]];
+        for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
+
+        map[5][190] = 70;
+        for (var fc = 178; fc < 200; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+
+        var gY = 544;
+        return {
+            map: map,
+            decorations: {
+                waves: [
+                    { x: 800, y: gY, scale: 1.2 }, { x: 1300, y: gY, scale: 1.0 }, { x: 1900, y: gY, scale: 1.1 },
+                    { x: 2500, y: gY, scale: 1.2 }, { x: 3100, y: gY, scale: 1.0 }, { x: 3800, y: gY, scale: 1.1 },
+                    { x: 4400, y: gY, scale: 1.2 }, { x: 5000, y: gY, scale: 1.0 }
+                ],
+                corals: [
+                    { x: 300, y: gY, scale: 1.0 }, { x: 1100, y: gY, scale: 0.9 }, { x: 1700, y: gY, scale: 1.1 },
+                    { x: 2300, y: gY, scale: 1.0 }, { x: 2900, y: gY, scale: 0.9 }, { x: 3500, y: gY, scale: 1.1 },
+                    { x: 4100, y: gY, scale: 1.0 }, { x: 4700, y: gY, scale: 0.9 }
+                ],
+                planks: [
+                    { x: 600, y: gY, scale: 1.0 }, { x: 1500, y: gY, scale: 1.0 }, { x: 2100, y: gY, scale: 1.0 },
+                    { x: 2700, y: gY, scale: 1.0 }, { x: 3300, y: gY, scale: 1.0 }, { x: 4000, y: gY, scale: 1.0 },
+                    { x: 4600, y: gY, scale: 1.0 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 13 — SPACE (precision over voids, narrow platforms)
+    // ==========================================
+    getLevel13Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 11);  // stone ground
+        map[18] = this.makeRow(200, 11);
+
+        // Frequent pits; the 4-wide ones get stepping stones at row 16
+        var pits = [[20, 22], [30, 32], [42, 45], [54, 56], [66, 69], [78, 80], [90, 93], [102, 104], [114, 117], [126, 128], [138, 141], [150, 152], [162, 165]];
+        for (var i = 0; i < pits.length; i++) {
+            var g = pits[i];
+            for (var c = g[0]; c <= g[1]; c++) { map[17][c] = _; map[18][c] = _; }
+            if (g[1] - g[0] >= 3) { map[16][g[0] + 1] = 11; map[16][g[1] - 1] = 11; }
+        }
+
+        // Narrow floating platforms (precision hops for coins)
+        var plats = [[24, 13, 2], [36, 12, 1], [48, 13, 2], [60, 12, 1], [72, 13, 2], [84, 12, 1], [96, 13, 2], [108, 12, 1], [120, 13, 2], [132, 12, 1], [144, 13, 2], [156, 12, 1], [168, 13, 2]];
+        for (var j = 0; j < plats.length; j++) {
+            for (var c2 = plats[j][0]; c2 < plats[j][0] + plats[j][2]; c2++) map[plats[j][1]][c2] = 11;
+            map[plats[j][1] - 1][plats[j][0]] = 50;   // coin above each
+        }
+
+        // Power-ups
+        map[12][24] = 40; map[11][96] = 41;
+
+        // Enemies (~17)
+        var en = [[16, 60], [26, 61], [38, 60], [50, 61], [58, 60], [64, 60], [74, 61], [86, 60], [96, 61], [108, 60], [110, 60], [120, 61], [132, 60], [144, 61], [156, 60], [168, 61], [176, 60]];
+        for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
+
+        map[5][190] = 70;
+        for (var fc = 178; fc < 200; fc++) { map[17][fc] = 11; map[18][fc] = 11; }
+
+        return {
+            map: map,
+            decorations: {
+                planets: [
+                    { x: 300, y: 120, scale: 1.2 }, { x: 1200, y: 90, scale: 0.9 }, { x: 2400, y: 140, scale: 1.1 },
+                    { x: 3600, y: 100, scale: 1.0 }, { x: 4800, y: 130, scale: 1.2 }
+                ],
+                starfields: [
+                    { x: 150, y: 80, scale: 1.0 }, { x: 800, y: 60, scale: 0.9 }, { x: 1600, y: 100, scale: 1.1 },
+                    { x: 2200, y: 70, scale: 1.0 }, { x: 3000, y: 90, scale: 0.9 }, { x: 3800, y: 60, scale: 1.1 },
+                    { x: 4400, y: 100, scale: 1.0 }, { x: 5200, y: 80, scale: 1.0 }
+                ],
+                rockets: [
+                    { x: 600, y: 160, scale: 1.0 }, { x: 2000, y: 130, scale: 1.1 }, { x: 3400, y: 150, scale: 0.9 },
+                    { x: 4600, y: 140, scale: 1.0 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
+    // LEVEL 14 — RAINBOW (finale — climbs + gaps + narrow platforms)
+    // ==========================================
+    getLevel14Data: function () {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        // Early: climbing ledges
+        var ledges = [[12, 15, 3], [18, 13, 3], [24, 11, 3], [30, 13, 3], [36, 15, 3]];
+        for (var i = 0; i < ledges.length; i++) {
+            for (var c = ledges[i][0]; c < ledges[i][0] + ledges[i][2]; c++) map[ledges[i][1]][c] = 11;
+        }
+
+        // Mid: gaps with stepping stones
+        var gaps = [[48, 52], [62, 66], [76, 80], [90, 95], [104, 108], [118, 122]];
+        for (var g = 0; g < gaps.length; g++) {
+            var G = gaps[g];
+            for (var c2 = G[0]; c2 <= G[1]; c2++) { map[17][c2] = _; map[18][c2] = _; }
+            for (var s = G[0] + 1; s < G[1]; s += 2) map[16][s] = 11;
+        }
+
+        // Late: narrow platforms
+        var plats = [[132, 13, 2], [140, 12, 2], [150, 13, 2], [160, 12, 2], [170, 14, 3]];
+        for (var j = 0; j < plats.length; j++) {
+            for (var c3 = plats[j][0]; c3 < plats[j][0] + plats[j][2]; c3++) map[plats[j][1]][c3] = 11;
+        }
+
+        // Power-ups for the finale
+        map[11][25] = 40; map[12][84] = 41; map[11][155] = 40; map[12][165] = 4;
+
+        // Generous coins
+        var coins = [6, 7, 8, 13, 14, 19, 20, 31, 49, 51, 63, 65, 77, 79, 91, 93, 105, 107, 119, 133, 141, 151, 161, 171, 182, 183, 184, 185, 186];
+        for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
+
+        // Enemies (~18)
+        var en = [[14, 60], [22, 61], [30, 60], [40, 61], [44, 60], [56, 61], [68, 60], [72, 60], [84, 61], [98, 60], [112, 61], [116, 60], [126, 61], [136, 60], [146, 61], [156, 60], [164, 61], [176, 60]];
+        for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
+
+        map[5][190] = 70;
+        for (var fc = 178; fc < 200; fc++) { map[17][fc] = 1; map[18][fc] = 2; }
+
+        return {
+            map: map,
+            decorations: {
+                rainbows: [
+                    { x: 500, y: 544, scale: 1.2 }, { x: 1500, y: 544, scale: 1.0 }, { x: 2600, y: 544, scale: 1.1 },
+                    { x: 3700, y: 544, scale: 1.0 }, { x: 4800, y: 544, scale: 1.2 }
+                ],
+                sparkles: [
+                    { x: 200, y: 120, scale: 1.0 }, { x: 700, y: 90, scale: 0.8 }, { x: 1100, y: 140, scale: 1.1 },
+                    { x: 1800, y: 80, scale: 1.0 }, { x: 2300, y: 120, scale: 0.9 }, { x: 2900, y: 100, scale: 1.1 },
+                    { x: 3400, y: 90, scale: 1.0 }, { x: 4000, y: 130, scale: 0.9 }, { x: 4500, y: 100, scale: 1.1 },
+                    { x: 5100, y: 90, scale: 1.0 }
+                ]
+            }
+        };
+    },
+
+    // ==========================================
     // HELPER: make a row filled with a value
     // ==========================================
     makeRow: function (length, value) {
