@@ -9,13 +9,16 @@ window.TouchController = {
     rightPressed: false,
     jumpPressed: false,
     jumpJustPressed: false,
+    firePressed: false,
+    fireJustPressed: false,
     enabled: false,
 
     // Track active touches per button so multi-touch works correctly
     _activeTouches: {
         left: {},
         right: {},
-        jump: {}
+        jump: {},
+        fire: {}
     },
 
     init: function () {
@@ -33,6 +36,7 @@ window.TouchController = {
         var leftBtn = document.getElementById('touch-left');
         var rightBtn = document.getElementById('touch-right');
         var jumpBtn = document.getElementById('touch-jump');
+        var fireBtn = document.getElementById('touch-fire');
 
         if (!leftBtn || !rightBtn || !jumpBtn) return;
 
@@ -74,6 +78,7 @@ window.TouchController = {
         bindButton(leftBtn, 'left');
         bindButton(rightBtn, 'right');
         bindButton(jumpBtn, 'jump');
+        if (fireBtn) bindButton(fireBtn, 'fire');
 
         // Prevent all default touch behaviors on the entire controls overlay
         controlsEl.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
@@ -95,6 +100,11 @@ window.TouchController = {
                 // Set "just pressed" flag — will be consumed in one game frame
                 this.jumpJustPressed = true;
             }
+        } else if (key === 'fire') {
+            this.firePressed = pressed;
+            if (pressed) {
+                this.fireJustPressed = true;
+            }
         }
     },
 
@@ -111,6 +121,14 @@ window.TouchController = {
         }
         if (this.jumpJustPressed) {
             this._jumpConsumed = true;
+        }
+        // Same two-frame consume pattern for the fire button
+        if (this._fireConsumed) {
+            this.fireJustPressed = false;
+            this._fireConsumed = false;
+        }
+        if (this.fireJustPressed) {
+            this._fireConsumed = true;
         }
     }
 };

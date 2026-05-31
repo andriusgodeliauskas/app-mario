@@ -1414,6 +1414,61 @@
     }
 
     // ========================================
+    // 6b. FIRE FLOWER (128x128, 1 frame) — power-up: grants fireballs
+    // ========================================
+    function generateFireFlower(scene) {
+        var frameW = 128, frameH = 128;
+        var canvas = makeCanvas(frameW, frameH);
+        var ctx = canvas.getContext('2d');
+
+        ctx.save();
+        ctx.scale(4, 4);
+
+        // Green stem
+        ctx.fillStyle = '#2E9E3E';
+        ctx.fillRect(15, 18, 2, 12);
+        // Two leaves
+        ctx.fillStyle = '#3FBF50';
+        ctx.beginPath();
+        ctx.ellipse(12, 24, 4, 2, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(20, 26, 4, 2, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Flower head — orange/red petals around a white face
+        var petalColors = ['#FF8C00', '#FF5A1F', '#FF8C00', '#FF5A1F',
+                           '#FF8C00', '#FF5A1F', '#FF8C00', '#FF5A1F'];
+        for (var p = 0; p < 8; p++) {
+            var ang = (p / 8) * Math.PI * 2;
+            var px = 16 + Math.cos(ang) * 7;
+            var py = 11 + Math.sin(ang) * 7;
+            fillCircle(ctx, px, py, 3.5, petalColors[p]);
+        }
+        // White face
+        fillCircle(ctx, 16, 11, 5, '#FFF4E0');
+        // Eyes
+        fillCircle(ctx, 14, 10, 1, '#222');
+        fillCircle(ctx, 18, 10, 1, '#222');
+        // Little flame on top
+        ctx.fillStyle = '#FFD23F';
+        ctx.beginPath();
+        ctx.moveTo(16, 1);
+        ctx.lineTo(18, 5);
+        ctx.lineTo(14, 5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+        addOutline(ctx, 0, 0, frameW, frameH);
+
+        scene.textures.addSpriteSheet('fireflower', canvas, {
+            frameWidth: frameW,
+            frameHeight: frameH
+        });
+    }
+
+    // ========================================
     // 7. STAR (32x32, 4 frames)
     // ========================================
     function generateStar(scene) {
@@ -2950,6 +3005,7 @@
             generateGoomba(scene);
             generateKoopa(scene);
             generateMushroom(scene);
+            generateFireFlower(scene);
             generateStar(scene);
             generateFlagpole(scene);
             generatePrincess(scene);

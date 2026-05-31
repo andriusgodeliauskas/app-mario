@@ -107,6 +107,27 @@ html, body {
     border-color: rgba(255, 255, 255, 0.7);
 }
 
+/* Right-side action cluster: fire + jump */
+#touch-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+/* Fire button (flame, orange) */
+#touch-fire {
+    width: 64px;
+    height: 64px;
+    background-color: rgba(255, 120, 40, 0.35);
+    border-color: rgba(255, 160, 80, 0.7);
+    font-size: 28px;
+}
+#touch-fire:active {
+    background-color: rgba(255, 120, 40, 0.6);
+}
+
 /* Jump button (bottom-right, bigger, red) */
 #touch-jump {
     width: 80px;

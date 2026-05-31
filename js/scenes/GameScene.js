@@ -17,6 +17,8 @@ var GameScene = new Phaser.Class({
         this.coins = (data && data.coins !== undefined) ? data.coins : 0;
         this.lives = (data && data.lives !== undefined) ? data.lives : 3;
         this.isBig = false;
+        this.isFire = false;        // Fire Mario — can shoot fireballs
+        this.fireCooldown = 0;      // ms until next shot allowed
         this.isInvincible = false;
         this.isDead = false;
         this.levelComplete = false;
@@ -138,6 +140,13 @@ var GameScene = new Phaser.Class({
                     qs.tileType = 'question';
                     qs.isUsed = false;
                     qs.content = 'star';
+                } else if (tileId === 42) {
+                    // Question block with fire flower
+                    var qf = this.questionTiles.create(tx, ty, 'tiles', 4);
+                    qf.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    qf.tileType = 'question';
+                    qf.isUsed = false;
+                    qf.content = 'fireflower';
                 } else if (tileId === 6 || tileId === 7 || tileId === 8 || tileId === 9) {
                     // Pipe tiles
                     var pt = this.pipeTiles.create(tx, ty, 'tiles', tileId);
@@ -232,6 +241,10 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         this.stars = this.physics.add.group();
 
+        // Fire flower power-ups (spawned from ? blocks) and Mario's fireballs
+        this.fireflowers = this.physics.add.group();
+        this.fireballs = this.physics.add.group();
+
         // ----------------------------------
         // Flagpole
         // ----------------------------------
@@ -270,12 +283,20 @@ var GameScene = new Phaser.Class({
         this.physics.add.collider(this.mushrooms, this.pipeTiles);
         this.physics.add.collider(this.stars, this.groundTiles);
         this.physics.add.collider(this.stars, this.pipeTiles);
+        this.physics.add.collider(this.fireflowers, this.groundTiles);
+        this.physics.add.collider(this.fireflowers, this.pipeTiles);
+        // Fireballs bounce off the ground/pipes; enemy hit destroys them.
+        this.physics.add.collider(this.fireballs, this.groundTiles);
+        this.physics.add.collider(this.fireballs, this.pipeTiles);
+        this.physics.add.collider(this.fireballs, this.brickTiles);
+        this.physics.add.overlap(this.fireballs, this.enemies, this.fireballHitEnemy, null, this);
 
         // Overlaps
         this.physics.add.overlap(this.player, this.coinGroup, this.collectCoin, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.handleEnemyCollision, null, this);
         this.physics.add.overlap(this.player, this.mushrooms, this.collectMushroom, null, this);
         this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
+        this.physics.add.overlap(this.player, this.fireflowers, this.collectFireFlower, null, this);
         if (this.flagpole) {
             this.physics.add.overlap(this.player, this.flagpole, this.reachFlagpole, null, this);
         }
@@ -295,6 +316,7 @@ var GameScene = new Phaser.Class({
         this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
         this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
         this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
         // ----------------------------------
         // Launch HUD overlay (only if not already running)
@@ -430,6 +452,17 @@ var GameScene = new Phaser.Class({
         if (this.jumpBufferTimer > 0) {
             this.jumpBufferTimer -= delta;
         }
+
+        // ----------------------------------
+        // Shooting fireballs (Fire Mario)
+        // ----------------------------------
+        if (this.fireCooldown > 0) this.fireCooldown -= delta;
+        var touchFire = (window.TouchController && window.TouchController.fireJustPressed);
+        var firePressed = Phaser.Input.Keyboard.JustDown(this.keyFire) || touchFire;
+        if (firePressed) {
+            this.shootFireball();
+        }
+        window.Fireball.update(this, this.fireballs);
 
         // ----------------------------------
         // Horizontal movement
@@ -615,6 +648,7 @@ var GameScene = new Phaser.Class({
                 this.starPower = false;
                 this.starTimer = 0;
                 player.clearTint();
+                this.applyMarioTint(); // restore fire tint if Mario is fire
             }
         }
 
@@ -753,6 +787,15 @@ var GameScene = new Phaser.Class({
             star.setVelocityY(-200);
             star.setSize(112, 112);
             star.setOffset(8, 8);
+        } else if (block.content === 'fireflower') {
+            // Spawn fire flower power-up (stays put, gentle hop on emerge)
+            var flower = this.fireflowers.create(block.x, block.y - 32, 'fireflower');
+            flower.setScale(0.25);
+            flower.setBounce(0.2);
+            flower.setVelocityX(0);
+            flower.setVelocityY(-120);
+            flower.setSize(112, 112);
+            flower.setOffset(8, 8);
         }
     },
 
@@ -790,6 +833,70 @@ var GameScene = new Phaser.Class({
         this.starPower = true;
         this.starTimer = 10000; // 10 seconds
         this.showEnglishPopup('star');
+    },
+
+    // ==========================================
+    // COLLECT FIRE FLOWER (Power-up → Fire Mario)
+    // ==========================================
+    collectFireFlower: function (player, flower) {
+        flower.destroy();
+        if (window.AudioManager) AudioManager.play('powerup');
+        this.score += 1000;
+        this.registry.set('score', this.score);
+        this.events.emit('scoreChange', this.score);
+
+        // Fire flower always makes Mario big (if small) and grants fire power.
+        if (!this.isBig) {
+            this.isBig = true;
+            player.setTexture('mario-big');
+            player.setSize(96, 224);
+            player.setOffset(16, 32);
+            player.y -= 16;
+            player.play('mario-big-idle');
+        }
+        this.isFire = true;
+        this.applyMarioTint();
+        this.showEnglishPopup('mushroom');
+    },
+
+    // Re-apply the warm fire tint when Mario is in fire state (unless star power
+    // is currently overriding the tint with its rainbow flash).
+    applyMarioTint: function () {
+        if (!this.player) return;
+        if (this.starPower) return;       // star flash handles tint
+        if (this.isFire) {
+            this.player.setTint(0xFFD9A0);
+        } else {
+            this.player.clearTint();
+        }
+    },
+
+    // ==========================================
+    // SHOOT FIREBALL (Fire Mario only)
+    // ==========================================
+    shootFireball: function () {
+        if (!this.isFire || this.isDead || this.levelComplete) return;
+        if (this.fireCooldown > 0) return;
+        // Cap simultaneous fireballs so the screen stays readable.
+        if (this.fireballs.countActive(true) >= 2) return;
+
+        var dir = (this.player.flipX ? -1 : 1);
+        var bx = this.player.x + dir * 24;
+        var by = this.player.y - 8;
+        window.Fireball.spawn(this, this.fireballs, bx, by, dir);
+        this.fireCooldown = 350;
+        if (window.AudioManager) AudioManager.play('fireShoot');
+    },
+
+    // Fireball destroys a normal enemy on contact (boss handled separately).
+    fireballHitEnemy: function (fireball, enemy) {
+        if (!enemy.active || enemy.isSquished) return;
+        if (!fireball.active) return;
+        window.Fireball.burst(this, fireball);
+        this.squishEnemy(enemy);
+        this.score += 100;
+        this.registry.set('score', this.score);
+        this.events.emit('scoreChange', this.score);
     },
 
     // ==========================================
@@ -868,6 +975,16 @@ var GameScene = new Phaser.Class({
         // Star power makes Mario immune to all damage including math mistakes
         if (this.starPower) return;
         opts = opts || {};
+
+        if (this.isFire) {
+            // Fire → big (lose only the fire power, stay big)
+            if (window.AudioManager) AudioManager.play('bump');
+            this.isFire = false;
+            this.applyMarioTint();
+            this.isInvincible = true;
+            this.invincibleTimer = 2000;
+            return;
+        }
 
         if (this.isBig) {
             // Big → small

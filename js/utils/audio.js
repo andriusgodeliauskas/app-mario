@@ -169,6 +169,40 @@ var AudioManager = (function () {
         playSweep(200, 600, 0.15, 'square', null, 0.25);
     };
 
+    /** Fireball shoot -- quick descending zap 700->250Hz, 110ms, sawtooth */
+    sounds.fireShoot = function () {
+        playSweep(700, 250, 0.11, 'sawtooth', null, 0.18);
+    };
+
+    /** Boss hit -- harsh descending 300->80Hz, 180ms, square */
+    sounds.bossHit = function () {
+        playSweep(300, 80, 0.18, 'square', null, 0.3);
+    };
+
+    /** Boss defeat -- long falling rumble then rising fanfare */
+    sounds.bossDefeat = function () {
+        var t = ctx.currentTime;
+        playSweep(220, 50, 0.5, 'sawtooth', t, 0.3);
+        var notes = [NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6];
+        for (var i = 0; i < notes.length; i++) {
+            playTone(notes[i], 0.18, 'square', t + 0.5 + i * 0.14, 0.25);
+        }
+    };
+
+    /** 1-UP -- cheerful rising jingle */
+    sounds.oneUp = function () {
+        var t = ctx.currentTime;
+        var notes = [NOTE.E5, NOTE.G5, NOTE.E6, NOTE.C6, NOTE.D6, NOTE.G6];
+        for (var i = 0; i < notes.length; i++) {
+            playTone(notes[i], 0.13, 'square', t + i * 0.1, 0.22);
+        }
+    };
+
+    /** Kick (shell) -- short sharp 500->150Hz, 90ms, square */
+    sounds.kick = function () {
+        playSweep(500, 150, 0.09, 'square', null, 0.25);
+    };
+
     /** Coin -- two quick high notes E6, G6, 80ms each, square */
     sounds.coin = function () {
         var t = ctx.currentTime;
