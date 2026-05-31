@@ -1324,10 +1324,14 @@ var GameScene = new Phaser.Class({
         // ----- Koopa shell interactions -----
         if (enemy.isShell) {
             if (enemy.shellMoving) {
-                // A moving shell can be stomped to stop it; otherwise it hurts.
-                var stompMoving = player.body.velocity.y > 0 &&
-                                  (player.body.bottom - enemy.body.top) < 18;
-                if (stompMoving) {
+                // Grace window: a shell you JUST kicked can't immediately hurt you.
+                // (Right after a kick the player is bouncing up and still overlaps
+                //  the now-moving shell, which would otherwise read as a side hit.)
+                if (this.time.now < (enemy._kickGraceUntil || 0)) return;
+                // Landing on a moving shell from above stops it; a side hit hurts.
+                var fromAbove = (player.body.bottom - enemy.body.top) < 20 &&
+                                player.body.velocity.y > -40;
+                if (fromAbove) {
                     enemy.shellMoving = false;
                     enemy.shellDir = 0;
                     enemy.body.setVelocityX(0);
@@ -1343,6 +1347,7 @@ var GameScene = new Phaser.Class({
                 enemy.shellDir = kdir;
                 enemy.body.setVelocityX(kdir * SHELL_SPEED);
                 enemy.setFlipX(kdir > 0);
+                enemy._kickGraceUntil = this.time.now + 300; // immunity for the kicker
                 if (window.AudioManager) AudioManager.play('kick');
                 player.setVelocityY(-150);
             }

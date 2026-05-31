@@ -62,11 +62,35 @@ const BASE_URL = process.env.MARIO_URL || 'http://localhost:8765';
     });
     console.log('  kick flow →', JSON.stringify(kickResult));
 
+    // Jumping on a shell must NOT kill you: right after kicking it, the player
+    // bounces up while still overlapping the now-moving shell — a kick-grace
+    // window prevents that re-collision from registering as a lethal side hit.
+    const graceResult = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        s.isDead = false; s.isBig = false; s.isFire = false; s.isInvincible = false; s.starPower = false; s.lives = 3;
+        s.enemies.clear(true, true);
+        const k = s.enemies.create(s.player.x, s.player.y + 30, 'koopa'); k.enemyType = 'koopa';
+        s.squishEnemy(k);
+        s.player.body.velocity.y = 200; s.player.y = k.y - 30;
+        s.handleEnemyCollision(s.player, k);          // kick → player bounces up
+        const livesBefore = s.lives;
+        s.handleEnemyCollision(s.player, k);          // immediate re-collision (moving up)
+        const survivedKick = !s.isDead && s.lives === livesBefore;
+        // After the grace window, a real side hit by the moving shell still hurts.
+        s.time.now = (s.time.now || 0) + 1000;
+        s.player.body.velocity.y = 0;
+        s.handleEnemyCollision(s.player, k);
+        const stillDangerousAfterGrace = s.isDead || s.lives < livesBefore;
+        return { survivedKick, stillDangerousAfterGrace };
+    });
+    console.log('  jump-on-shell →', JSON.stringify(graceResult));
+
     console.log('  console/page errors:', errors.length ? errors.slice(0,3).join(' | ') : 'none');
     await browser.close();
 
     const ok = loopResult.ok && loopResult.goombaSquished &&
                kickResult.wasStationary && kickResult.nowMoving && !kickResult.threw &&
+               graceResult.survivedKick && graceResult.stillDangerousAfterGrace &&
                errors.length === 0;
     console.log(ok ? '\nRESULT: OK (no freeze, shell works)' : '\nRESULT: BUG STILL PRESENT');
     process.exit(ok ? 0 : 1);
