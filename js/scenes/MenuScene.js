@@ -155,17 +155,22 @@ var MenuScene = new Phaser.Class({
             { num: 11, name: 'JUNGLE',     lt: 'Dziungles',    color: 0x1B7A1B, icon: 'hill' },
             { num: 12, name: 'OCEAN',      lt: 'Vandenynas',   color: 0x2E86C1, icon: 'cloud' },
             { num: 13, name: 'SPACE',      lt: 'Kosmosas',     color: 0x202840, icon: 'tiles' },
-            { num: 14, name: 'RAINBOW',    lt: 'Vaivorykste',  color: 0xFF6FB5, icon: 'cloud' }
+            { num: 14, name: 'RAINBOW',    lt: 'Vaivorykste',  color: 0xFF6FB5, icon: 'cloud' },
+            { num: 15, name: 'VOLCANO',    lt: 'Ugnikalnis*',  color: 0xC0392B, icon: 'tiles' },
+            { num: 16, name: 'SWAMP',      lt: 'Pelke',        color: 0x4A7A2A, icon: 'hill' },
+            { num: 17, name: 'CLOUD CITY', lt: 'Debesys',      color: 0x7FB3FF, icon: 'cloud' },
+            { num: 18, name: 'CANDY',      lt: 'Saldainiai',   color: 0xFF7FD0, icon: 'cloud' },
+            { num: 19, name: 'FINAL',      lt: 'Finalas*',     color: 0x2C2C44, icon: 'tiles' }
         ];
 
-        // 14 levels laid out in a 5-column grid (3 rows). 5*130 + 4*15 = 710 < 800.
+        // 19 levels in a 5-column grid (4 rows). 5*130 + 4*15 = 710 < 800.
         var cardW = 130;
-        var cardH = 95;
+        var cardH = 85;
         var gapX = 15;
-        var gapY = 10;
+        var gapY = 8;
         var COLS = 5;
         var startX = W / 2 - (cardW * COLS + gapX * (COLS - 1)) / 2;
-        var startY = 165;
+        var startY = 158;
 
         for (var i = 0; i < levels.length; i++) {
             var lv = levels[i];

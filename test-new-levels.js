@@ -28,7 +28,7 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     await page.waitForFunction(() => window.game && window.game.scene && window.game.textures.exists('crystal-deco'), null, { timeout: 15000 });
     ok('game boots and new decoration textures generated');
 
-    for (const lvl of [10, 11, 12, 13, 14]) {
+    for (const lvl of [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]) {
         consoleErrors.length = 0;
         await page.evaluate((n) => {
             window.game.scene.stop('GameScene');

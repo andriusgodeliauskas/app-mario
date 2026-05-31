@@ -36,7 +36,7 @@ var WinScene = new Phaser.Class({
             AudioManager.stopMusic();
         }
 
-        if (this.playerLevel >= 14) {
+        if (this.playerLevel >= 19) {
             this.createPrincessScreen();
         } else {
             this.createLevelCompleteScreen();
@@ -519,7 +519,7 @@ var WinScene = new Phaser.Class({
 
         // Save progress — all levels complete
         if (window.GameProgress) {
-            window.GameProgress.unlockLevel(14);
+            window.GameProgress.unlockLevel(19);
         }
     },
 
@@ -698,7 +698,7 @@ var WinScene = new Phaser.Class({
             this.autoTimer = null;
         }
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 14) {
+        if (nextLevel > 19) {
             nextLevel = 1;
         }
         var self = this;

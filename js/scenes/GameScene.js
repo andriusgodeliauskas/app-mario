@@ -61,14 +61,16 @@ var GameScene = new Phaser.Class({
         var bgColors = {
             1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E', 5: '#87CEEB',
             6: '#1A3A1A', 7: '#E8A050', 8: '#C0D8E8', 9: '#2A0808',
-            10: '#1A1230', 11: '#0E3A1E', 12: '#2E86C1', 13: '#05050F', 14: '#FFB6E6'
+            10: '#1A1230', 11: '#0E3A1E', 12: '#2E86C1', 13: '#05050F', 14: '#FFB6E6',
+            15: '#2A0A0A', 16: '#10240F', 17: '#BFE3FF', 18: '#FFD9F0', 19: '#0A0A14'
         };
         this.cameras.main.setBackgroundColor(bgColors[this.currentLevel] || '#6B8CFF');
 
         // Per-level tile tint — gives new levels (10-14) a distinct themed look
         // without changing tile geometry/physics. Applied to ground (1/2) and
         // stone (11) tiles only; bricks/?-blocks/pipes stay original.
-        var tileTint = { 10: 0x9aa0c0, 11: 0x7bc47b, 12: 0x9ad6ff, 13: 0xc8ccd8, 14: 0xffd6f2 };
+        var tileTint = { 10: 0x9aa0c0, 11: 0x7bc47b, 12: 0x9ad6ff, 13: 0xc8ccd8, 14: 0xffd6f2,
+            15: 0xff8866, 16: 0x88aa66, 17: 0xddeeff, 18: 0xffc0e0, 19: 0xb0b0c0 };
         this._tileTint = tileTint[this.currentLevel] || null;
 
         // ----------------------------------
@@ -410,7 +412,7 @@ var GameScene = new Phaser.Class({
         // Audio — init and start level music
         // ----------------------------------
         if (window.AudioManager) { AudioManager.init(); }
-        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle', 10: 'underground', 11: 'overworld', 12: 'overworld', 13: 'castle', 14: 'overworld' };
+        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle', 10: 'underground', 11: 'overworld', 12: 'overworld', 13: 'castle', 14: 'overworld', 15: 'castle', 16: 'underground', 17: 'overworld', 18: 'overworld', 19: 'castle' };
         if (window.AudioManager) AudioManager.startMusic(musicMap[this.currentLevel] || 'overworld');
 
         // ----------------------------------
@@ -3629,6 +3631,119 @@ var GameScene = new Phaser.Class({
                 ]
             }
         };
+    },
+
+    // ==========================================
+    // THEMED LEVEL BUILDER (levels 15-19)
+    // Full ground (always reachable) + configurable platforms, power-ups,
+    // pipes, moving platforms, enemies, coins. Flagpole fixed at col 190.
+    // ==========================================
+    makeThemedLevel: function (cfg) {
+        var _ = 0;
+        var map = [];
+        for (var r = 0; r < 17; r++) map[r] = this.makeRow(200, _);
+        map[17] = this.makeRow(200, 1);
+        map[18] = this.makeRow(200, 2);
+
+        (cfg.platforms || []).forEach(function (p) {
+            for (var c = p[0]; c < p[0] + p[2]; c++) map[p[1]][c] = 11;
+        });
+        (cfg.powerups || []).forEach(function (pu) { map[pu[1]][pu[0]] = pu[2]; });
+        (cfg.pipes || []).forEach(function (col) {
+            map[15][col] = 6; map[15][col + 1] = 7;
+            map[16][col] = 8; map[16][col + 1] = 9;
+        });
+        (cfg.movers || []).forEach(function (m) { map[m[1]][m[0]] = 12; });
+        (cfg.coins || []).forEach(function (c) { if (map[16][c] === _) map[16][c] = 50; });
+        (cfg.enemies || []).forEach(function (e) { if (map[16][e[0]] === _) map[16][e[0]] = e[1]; });
+
+        map[5][190] = 70; // flagpole
+        return { map: map, decorations: cfg.decorations || {} };
+    },
+
+    // LEVEL 15 — VOLCANO (mini-boss)
+    getLevel15Data: function () {
+        return this.makeThemedLevel({
+            platforms: [[20,13,3],[30,12,2],[44,13,3],[60,11,2],[78,13,3],[96,12,3],[120,13,2],[140,12,3]],
+            powerups: [[22,12,42],[46,12,4],[80,12,40],[122,12,41]],
+            pipes: [36,70,110],
+            movers: [[52,13],[88,12]],
+            enemies: [[16,60],[28,61],[42,60],[58,61],[74,60],[92,61],[108,60],[126,61],[150,60]],
+            coins: [10,11,21,31,45,46,61,79,80,97,121,141,142,168,169,170],
+            decorations: {
+                rocks: [{x:300,y:544,scale:1.1},{x:900,y:544,scale:0.9},{x:1600,y:544,scale:1.2},{x:2400,y:544,scale:1.0},{x:3200,y:544,scale:1.1},{x:4000,y:544,scale:0.9},{x:4800,y:544,scale:1.2}],
+                crystals: [{x:500,y:544,scale:1.0},{x:1400,y:544,scale:1.2},{x:2600,y:544,scale:0.9},{x:3600,y:544,scale:1.1},{x:4600,y:544,scale:1.0}],
+                stalactites: [{x:400,y:0,scale:1.0},{x:1000,y:0,scale:1.2},{x:1800,y:0,scale:0.9},{x:2800,y:0,scale:1.1},{x:3800,y:0,scale:1.0},{x:4800,y:0,scale:1.2}]
+            }
+        });
+    },
+
+    // LEVEL 16 — SWAMP
+    getLevel16Data: function () {
+        return this.makeThemedLevel({
+            platforms: [[16,13,3],[34,12,2],[50,13,3],[68,12,3],[90,13,2],[110,12,3],[134,13,3],[158,12,2]],
+            powerups: [[18,12,40],[52,12,42],[92,12,4],[136,12,43]],
+            pipes: [28,82,150],
+            movers: [[64,12],[118,13]],
+            enemies: [[14,61],[26,60],[40,61],[56,60],[72,61],[88,60],[104,61],[124,60],[144,61],[162,60]],
+            coins: [8,9,17,35,51,69,91,111,135,159,160,176,177],
+            decorations: {
+                vines: [{x:300,y:0,scale:1.0},{x:1000,y:0,scale:1.2},{x:1800,y:0,scale:0.9},{x:2700,y:0,scale:1.1},{x:3600,y:0,scale:1.0},{x:4500,y:0,scale:1.2}],
+                leaves: [{x:500,y:544,scale:1.0},{x:1300,y:544,scale:1.2},{x:2200,y:544,scale:0.9},{x:3100,y:544,scale:1.1},{x:4000,y:544,scale:1.0},{x:4900,y:544,scale:1.1}],
+                mushrooms: [{x:700,y:544,scale:1.0},{x:1600,y:544,scale:1.1},{x:2500,y:544,scale:0.9},{x:3400,y:544,scale:1.2},{x:4300,y:544,scale:1.0}]
+            }
+        });
+    },
+
+    // LEVEL 17 — CLOUD CITY (lots of moving platforms)
+    getLevel17Data: function () {
+        return this.makeThemedLevel({
+            platforms: [[18,12,3],[40,11,2],[62,12,3],[100,12,3],[140,11,2],[166,12,3]],
+            powerups: [[20,11,42],[64,11,41],[102,11,4],[168,11,40]],
+            pipes: [84,124],
+            movers: [[34,13],[54,12],[78,11],[114,12],[152,13]],
+            enemies: [[16,60],[44,61],[70,60],[96,61],[120,60],[148,61],[172,60]],
+            coins: [10,11,19,41,63,101,141,167,168,182,183,184],
+            decorations: {
+                clouds: [{x:200,y:60,scale:1.3},{x:600,y:40,scale:1.0},{x:1100,y:70,scale:1.2},{x:1700,y:45,scale:0.9},{x:2300,y:65,scale:1.1},{x:3000,y:40,scale:1.3},{x:3700,y:60,scale:1.0},{x:4400,y:45,scale:1.2},{x:5100,y:65,scale:0.9}],
+                sparkles: [{x:300,y:120,scale:1.0},{x:900,y:90,scale:0.8},{x:1500,y:130,scale:1.1},{x:2200,y:100,scale:1.0},{x:2900,y:120,scale:0.9},{x:3600,y:90,scale:1.1},{x:4300,y:110,scale:1.0}],
+                rainbows: [{x:800,y:544,scale:1.1},{x:2000,y:544,scale:1.0},{x:3300,y:544,scale:1.2},{x:4600,y:544,scale:1.0}]
+            }
+        });
+    },
+
+    // LEVEL 18 — CANDY LAND
+    getLevel18Data: function () {
+        return this.makeThemedLevel({
+            platforms: [[16,13,3],[32,12,3],[54,13,2],[72,12,3],[96,13,3],[120,12,2],[144,13,3],[164,12,3]],
+            powerups: [[18,12,43],[56,12,42],[98,12,41],[146,12,4]],
+            pipes: [44,108,156],
+            movers: [[64,12],[132,13]],
+            enemies: [[14,60],[28,61],[40,60],[60,61],[80,60],[100,61],[124,60],[140,61],[160,60]],
+            coins: [8,9,17,33,55,73,97,121,145,165,166,178,179],
+            decorations: {
+                sparkles: [{x:250,y:110,scale:1.0},{x:800,y:90,scale:1.1},{x:1400,y:120,scale:0.9},{x:2100,y:100,scale:1.0},{x:2800,y:110,scale:1.1},{x:3500,y:90,scale:1.0},{x:4200,y:120,scale:0.9},{x:4900,y:100,scale:1.1}],
+                flowers: [{x:400,y:544,scale:1.0},{x:1100,y:544,scale:1.1},{x:1900,y:544,scale:0.9},{x:2700,y:544,scale:1.2},{x:3500,y:544,scale:1.0},{x:4300,y:544,scale:1.1}],
+                rainbows: [{x:600,y:544,scale:1.1},{x:1800,y:544,scale:1.0},{x:3100,y:544,scale:1.2},{x:4400,y:544,scale:1.0}]
+            }
+        });
+    },
+
+    // LEVEL 19 — FINAL CASTLE (final boss)
+    getLevel19Data: function () {
+        return this.makeThemedLevel({
+            platforms: [[18,13,3],[34,12,2],[50,13,3],[70,12,3],[94,13,2],[114,12,3],[138,13,3]],
+            powerups: [[20,12,42],[52,12,40],[72,11,41],[116,12,4]],
+            pipes: [44,86,128],
+            movers: [[60,12],[104,13]],
+            enemies: [[16,61],[30,60],[46,61],[64,60],[82,61],[100,60],[118,61],[136,60],[152,61]],
+            coins: [10,11,19,35,51,71,95,115,139,168,169,170],
+            decorations: {
+                stalactites: [{x:300,y:0,scale:1.1},{x:900,y:0,scale:1.3},{x:1600,y:0,scale:1.0},{x:2400,y:0,scale:1.2},{x:3200,y:0,scale:0.9},{x:4000,y:0,scale:1.1},{x:4800,y:0,scale:1.2}],
+                crystals: [{x:500,y:544,scale:1.0},{x:1300,y:544,scale:1.1},{x:2100,y:544,scale:0.9},{x:2900,y:544,scale:1.2},{x:3700,y:544,scale:1.0},{x:4500,y:544,scale:1.1}],
+                planks: [{x:700,y:544,scale:1.0},{x:1900,y:544,scale:1.1},{x:3100,y:544,scale:1.0},{x:4300,y:544,scale:1.1}]
+            }
+        });
     },
 
     // ==========================================
