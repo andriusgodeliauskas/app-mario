@@ -23,7 +23,9 @@
             divide:   { enabled: false, max: 10 },
             // "Find x" mode (e.g. 8 - x = 3). Off by default. Top-level boolean
             // so the per-op validation loop below ignores it.
-            missingOperand: false
+            missingOperand: false,
+            // Unlock every level in the menu (for testing/free play). Off by default.
+            unlockAll: false
         };
     }
 
@@ -70,8 +72,9 @@
             if (!valid) return defaults();
             // Defensive: ensure at least one is enabled
             if (!isAnyEnabled(parsed)) parsed.add.enabled = true;
-            // Coerce optional "find x" flag (absent in older saves → false)
+            // Coerce optional flags (absent in older saves → false)
             parsed.missingOperand = parsed.missingOperand === true;
+            parsed.unlockAll = parsed.unlockAll === true;
             return parsed;
         } catch (e) {
             return defaults();

@@ -241,7 +241,9 @@ var MenuScene = new Phaser.Class({
     createLevelCard: function (cx, cy, w, h, levelInfo) {
         var self = this;
         var maxLevel = window.GameProgress.getMaxLevel();
-        var isLocked = levelInfo.num > maxLevel;
+        // "Visi lygiai" setting unlocks every level for free play / testing.
+        var unlockAll = window.MathSettings && window.MathSettings.load().unlockAll === true;
+        var isLocked = !unlockAll && levelInfo.num > maxLevel;
         var g = this.add.graphics();
 
         // Card shadow

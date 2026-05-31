@@ -28,9 +28,12 @@ var SettingsScene = new Phaser.Class({
             ? JSON.parse(JSON.stringify(window.MathSettings.load()))
             : { add:{enabled:true,max:10}, subtract:{enabled:false,max:10},
                 multiply:{enabled:false,max:10}, divide:{enabled:false,max:10},
-                missingOperand:false };
+                missingOperand:false, unlockAll:false };
         if (typeof this.workingSettings.missingOperand !== 'boolean') {
             this.workingSettings.missingOperand = false;
+        }
+        if (typeof this.workingSettings.unlockAll !== 'boolean') {
+            this.workingSettings.unlockAll = false;
         }
 
         // ========================================
@@ -216,37 +219,45 @@ var SettingsScene = new Phaser.Class({
     },
 
     // ==========================================
-    // "FIND X" TOGGLE ROW (8 - x = 3)
+    // BOTTOM TOGGLE ROW — two checkboxes: "Rasti X" + "Visi lygiai"
     // ==========================================
     _buildMissingToggle: function (y, x, width) {
-        var self = this;
         var rowH = 46;
-        var color = 0xE84393;
+        var cy = y + rowH / 2;
 
         var bg = this.add.graphics();
         bg.fillStyle(0x222244, 0.6);
         bg.fillRoundedRect(x, y, width, rowH, 10);
-        bg.lineStyle(2, color, 0.8);
+        bg.lineStyle(2, 0xE84393, 0.8);
         bg.strokeRoundedRect(x, y, width, rowH, 10);
 
-        var toggleX = x + 30;
-        var toggleY = y + rowH / 2;
+        // Left checkbox: missing-operand "find x" mode
+        this._buildCheckbox(x + 24, cy, 'missingOperand', 'RASTI X (8-x=3)', 0xE84393);
+        // Right checkbox: unlock all levels (free play / testing)
+        this._buildCheckbox(x + width / 2 + 8, cy, 'unlockAll', 'VISI LYGIAI', 0x2ECC71);
+    },
 
-        this.missingToggleBg = this.add.graphics();
-        this._drawToggle(this.missingToggleBg, toggleX, toggleY, 30, this.workingSettings.missingOperand, color);
+    // One checkbox toggle bound to a boolean key on workingSettings.
+    _buildCheckbox: function (boxX, boxY, key, label, color) {
+        var self = this;
+        var on = this.workingSettings[key] === true;
 
-        this.missingLabel = this.add.text(toggleX + 50, toggleY, 'RASTI X   (8 - x = 3)', {
+        var box = this.add.graphics();
+        this._drawToggle(box, boxX, boxY, 30, on, color);
+
+        var txt = this.add.text(boxX + 26, boxY, label, {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
-            color: this.workingSettings.missingOperand ? '#FFFFFF' : '#888888'
+            fontSize: '12px',
+            color: on ? '#FFFFFF' : '#888888'
         }).setOrigin(0, 0.5);
 
-        var zone = this.add.zone(toggleX + 110, toggleY, 320, 40)
+        var zoneW = 60 + txt.width;
+        var zone = this.add.zone(boxX + zoneW / 2 - 15, boxY, zoneW, 40)
             .setInteractive({ useHandCursor: true });
         zone.on('pointerdown', function () {
-            self.workingSettings.missingOperand = !self.workingSettings.missingOperand;
-            self._drawToggle(self.missingToggleBg, toggleX, toggleY, 30, self.workingSettings.missingOperand, color);
-            self.missingLabel.setColor(self.workingSettings.missingOperand ? '#FFFFFF' : '#888888');
+            self.workingSettings[key] = !self.workingSettings[key];
+            self._drawToggle(box, boxX, boxY, 30, self.workingSettings[key], color);
+            txt.setColor(self.workingSettings[key] ? '#FFFFFF' : '#888888');
         });
     },
 
