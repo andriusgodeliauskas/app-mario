@@ -151,6 +151,78 @@ test('symbol matches operation', () => {
 });
 
 // =========================================================
+// MISSING-OPERAND ("find x") MODE
+// =========================================================
+function settingsMissing(op, max) {
+    const s = settingsOnly(op, max);
+    s.missingOperand = true;
+    return s;
+}
+
+test('missing-operand: produces missing form when enabled (eventually)', () => {
+    const s = settingsMissing('subtract', 10);
+    let sawMissing = false, sawStandard = false;
+    for (let i = 0; i < 500; i++) {
+        const p = MathGen.next(s, []);
+        if (p.form === 'missing') sawMissing = true;
+        if (p.form === 'standard') sawStandard = true;
+    }
+    assert(sawMissing, 'at least one missing-operand problem generated');
+    assert(sawStandard, 'standard problems still appear (~60%)');
+});
+
+test('missing-operand: never generated when flag off', () => {
+    const s = settingsOnly('subtract', 10); // no missingOperand flag
+    for (let i = 0; i < 300; i++) {
+        const p = MathGen.next(s, []);
+        assert(p.form !== 'missing', 'no missing form when flag absent');
+    }
+});
+
+test('missing-operand: x (answer) is among options and satisfies the equation', () => {
+    const ops = ['add', 'subtract', 'multiply', 'divide'];
+    ops.forEach(op => {
+        const s = settingsMissing(op, 20);
+        for (let i = 0; i < 400; i++) {
+            const p = MathGen.next(s, []);
+            if (p.form !== 'missing') continue;
+            assert(p.options.indexOf(p.answer) !== -1, op + ': answer among options');
+            assert(p.options.length === 3, op + ': exactly 3 options');
+            assert(p.answer >= 0, op + ': x is non-negative (' + p.answer + ')');
+            assert(p.options.filter(o => o === p.answer).length === 1, op + ': exactly one correct option');
+            // Plug x back into the hidden slot — equation must hold
+            const a = p.hideA ? p.answer : p.a;
+            const b = p.hideA ? p.b : p.answer;
+            let res;
+            if (op === 'add') res = a + b;
+            else if (op === 'subtract') res = a - b;
+            else if (op === 'multiply') res = a * b;
+            else res = a / b;
+            assert(res === p.result, op + ': x satisfies ' + a + p.symbol + b + '=' + res + ' want ' + p.result);
+        }
+    });
+});
+
+test('missing-operand: display contains x and a result; solvedText fully solved', () => {
+    const s = settingsMissing('add', 20);
+    for (let i = 0; i < 200; i++) {
+        const p = MathGen.next(s, []);
+        if (p.form !== 'missing') continue;
+        assert(/x/.test(p.display), 'display contains x: ' + p.display);
+        assert(/= \d+$/.test(p.display), 'display ends with = <result>: ' + p.display);
+        assert(/= \d+$/.test(p.solvedText), 'solvedText solved: ' + p.solvedText);
+    }
+});
+
+test('standard form: display and solvedText present', () => {
+    const s = settingsOnly('add', 10);
+    const p = MathGen.next(s, []);
+    assert(p.form === 'standard', 'form is standard');
+    assert(/= \?$/.test(p.display), 'standard display ends with = ?: ' + p.display);
+    assert(/= \d+$/.test(p.solvedText), 'standard solvedText solved: ' + p.solvedText);
+});
+
+// =========================================================
 console.log('\n========================================');
 console.log('PASSED: ' + passed + '   FAILED: ' + failed);
 console.log('========================================');

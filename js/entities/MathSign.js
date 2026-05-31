@@ -13,7 +13,10 @@ var MathSign = function (scene, x, y, problem) {
         .setScale(0.25)
         .setDepth(20);
 
-    var problemText = problem.a + ' ' + problem.symbol + ' ' + problem.b + ' = ?';
+    // problem.display covers both standard ("2 + 3 = ?") and missing-operand
+    // ("8 - x = 3") forms. Fall back to the legacy build for safety.
+    var problemText = problem.display ||
+        (problem.a + ' ' + problem.symbol + ' ' + problem.b + ' = ?');
     this.text = scene.add.text(x, y - 4, problemText, {
         fontFamily: '"Press Start 2P", "Arial Black", sans-serif',
         fontSize: '14px',

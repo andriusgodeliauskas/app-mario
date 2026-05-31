@@ -27,7 +27,11 @@ var SettingsScene = new Phaser.Class({
         this.workingSettings = window.MathSettings
             ? JSON.parse(JSON.stringify(window.MathSettings.load()))
             : { add:{enabled:true,max:10}, subtract:{enabled:false,max:10},
-                multiply:{enabled:false,max:10}, divide:{enabled:false,max:10} };
+                multiply:{enabled:false,max:10}, divide:{enabled:false,max:10},
+                missingOperand:false };
+        if (typeof this.workingSettings.missingOperand !== 'boolean') {
+            this.workingSettings.missingOperand = false;
+        }
 
         // ========================================
         // BACKGROUND
@@ -83,8 +87,8 @@ var SettingsScene = new Phaser.Class({
             { key: 'divide',   label: 'DALYBA',   symbol: '/', color: 0x8E44AD }
         ];
 
-        var rowStartY = 95;
-        var rowHeight = 100;
+        var rowStartY = 90;
+        var rowHeight = 92;
         var rowMarginX = 40;
         var rowWidth = W - rowMarginX * 2;
 
@@ -92,6 +96,9 @@ var SettingsScene = new Phaser.Class({
         for (var i = 0; i < opConfig.length; i++) {
             this._buildOpRow(opConfig[i], rowStartY + i * rowHeight, rowMarginX, rowWidth);
         }
+
+        // "Find x" toggle row (single full-width toggle, no range buttons)
+        this._buildMissingToggle(rowStartY + opConfig.length * rowHeight + 2, rowMarginX, rowWidth);
 
         // ========================================
         // SAVE BUTTON
@@ -206,6 +213,41 @@ var SettingsScene = new Phaser.Class({
         }
 
         this._refreshOpRow(op);
+    },
+
+    // ==========================================
+    // "FIND X" TOGGLE ROW (8 - x = 3)
+    // ==========================================
+    _buildMissingToggle: function (y, x, width) {
+        var self = this;
+        var rowH = 46;
+        var color = 0xE84393;
+
+        var bg = this.add.graphics();
+        bg.fillStyle(0x222244, 0.6);
+        bg.fillRoundedRect(x, y, width, rowH, 10);
+        bg.lineStyle(2, color, 0.8);
+        bg.strokeRoundedRect(x, y, width, rowH, 10);
+
+        var toggleX = x + 30;
+        var toggleY = y + rowH / 2;
+
+        this.missingToggleBg = this.add.graphics();
+        this._drawToggle(this.missingToggleBg, toggleX, toggleY, 30, this.workingSettings.missingOperand, color);
+
+        this.missingLabel = this.add.text(toggleX + 50, toggleY, 'RASTI X   (8 - x = 3)', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: this.workingSettings.missingOperand ? '#FFFFFF' : '#888888'
+        }).setOrigin(0, 0.5);
+
+        var zone = this.add.zone(toggleX + 110, toggleY, 320, 40)
+            .setInteractive({ useHandCursor: true });
+        zone.on('pointerdown', function () {
+            self.workingSettings.missingOperand = !self.workingSettings.missingOperand;
+            self._drawToggle(self.missingToggleBg, toggleX, toggleY, 30, self.workingSettings.missingOperand, color);
+            self.missingLabel.setColor(self.workingSettings.missingOperand ? '#FFFFFF' : '#888888');
+        });
     },
 
     // ==========================================

@@ -157,8 +157,10 @@ MathChallenge.prototype._handleWrong = function (player, block) {
 MathChallenge.prototype._showPopup = function (isCorrect) {
     var scene = this.scene;
     var p = this.problem;
-    var text = (isCorrect ? 'TEISINGAI!' : '✗ KLAIDA') +
-               '\n' + p.a + ' ' + p.symbol + ' ' + p.b + ' = ' + p.answer;
+    // solvedText shows the fully solved equation (works for both standard and
+    // missing-operand forms, e.g. "8 - 5 = 3"). Legacy fallback for safety.
+    var solved = p.solvedText || (p.a + ' ' + p.symbol + ' ' + p.b + ' = ' + p.answer);
+    var text = (isCorrect ? 'TEISINGAI!' : '✗ KLAIDA') + '\n' + solved;
 
     var popupX = scene.player.x;
     var popupY = scene.player.y - 90;

@@ -53,6 +53,55 @@
         return { a: 1, b: 1, answer: op === 'subtract' ? 0 : (op === 'divide' ? 1 : op === 'multiply' ? 1 : 2) };
     }
 
+    // Distractors for a "find the unknown operand" (x) problem.
+    // unknown is the value the answer blocks must match; keep candidates >= 0,
+    // <= ceiling, != unknown, and distinct.
+    function generateUnknownDistractors(unknown, ceiling) {
+        var d1 = null, d2 = null;
+        function valid(n) { return n >= 0 && n <= ceiling && n !== unknown; }
+        var cands = [unknown + 1, unknown - 1, unknown + 2, unknown - 2, unknown + 3];
+        for (var i = 0; i < cands.length; i++) {
+            if (valid(cands[i]) && d1 === null) { d1 = cands[i]; continue; }
+            if (valid(cands[i]) && cands[i] !== d1 && d2 === null) { d2 = cands[i]; }
+        }
+        if (d1 === null) d1 = (unknown === 0 ? 1 : 0);
+        if (d2 === null) {
+            for (var n = 0; n <= ceiling; n++) {
+                if (n !== unknown && n !== d1) { d2 = n; break; }
+            }
+            if (d2 === null) d2 = unknown + 4;
+        }
+        return [d1, d2];
+    }
+
+    // Build a "find x" problem from a solved triple (a op b = result).
+    // Hides one operand and exposes it as the answer the blocks must match.
+    function buildMissingProblem(op, a, b, result, max) {
+        var hideA = Math.random() < 0.5;
+        var unknown = hideA ? a : b;
+        var symbol = SYMBOLS[op];
+        var display = hideA
+            ? ('x ' + symbol + ' ' + b + ' = ' + result)
+            : (a + ' ' + symbol + ' x = ' + result);
+        var solvedText = a + ' ' + symbol + ' ' + b + ' = ' + result;
+        var ceiling = (op === 'divide') ? max * 2 : max;
+        if (unknown > ceiling) ceiling = unknown + 2;
+        var distractors = generateUnknownDistractors(unknown, ceiling);
+        return {
+            operation: op,
+            form: 'missing',
+            a: a, b: b, symbol: symbol,
+            answer: unknown,
+            result: result,
+            hideA: hideA,
+            distractors: distractors,
+            options: shuffle([unknown, distractors[0], distractors[1]]),
+            display: display,
+            solvedText: solvedText,
+            key: 'missing:' + op + ':' + a + ':' + b + ':' + (hideA ? 'a' : 'b')
+        };
+    }
+
     function generateDistractors(op, a, b, answer, max) {
         var d1, d2;
         // Ceiling: stay close to max for add/subtract; allow up to max*2 for ×/÷
@@ -114,12 +163,16 @@
                 throw new Error('No operations enabled');
             }
 
+            // "Find x" mode: when enabled, ~40% of challenges hide an operand
+            // (e.g. "8 - x = 3") instead of asking for the result.
+            var useMissing = (settings.missingOperand === true) && (Math.random() < 0.4);
+
             var problem = null;
             for (var attempt = 0; attempt < 10; attempt++) {
                 var op = enabled[Math.floor(Math.random() * enabled.length)];
                 var max = settings[op].max;
                 var ops = generateOperands(op, max);
-                var k = key(op, ops.a, ops.b);
+                var k = (useMissing ? 'missing:' : '') + key(op, ops.a, ops.b);
 
                 if (history.indexOf(k) === -1) {
                     problem = { op: op, a: ops.a, b: ops.b, answer: ops.answer, max: max };
@@ -131,17 +184,24 @@
                 }
             }
 
+            if (useMissing) {
+                return buildMissingProblem(problem.op, problem.a, problem.b, problem.answer, problem.max);
+            }
+
             var distractors = generateDistractors(problem.op, problem.a, problem.b, problem.answer, problem.max);
             var options = shuffle([problem.answer, distractors[0], distractors[1]]);
 
             return {
                 operation: problem.op,
+                form: 'standard',
                 a: problem.a,
                 b: problem.b,
                 symbol: SYMBOLS[problem.op],
                 answer: problem.answer,
                 distractors: distractors,
                 options: options,
+                display: problem.a + ' ' + SYMBOLS[problem.op] + ' ' + problem.b + ' = ?',
+                solvedText: problem.a + ' ' + SYMBOLS[problem.op] + ' ' + problem.b + ' = ' + problem.answer,
                 key: key(problem.op, problem.a, problem.b)
             };
         }

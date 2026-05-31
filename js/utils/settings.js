@@ -20,7 +20,10 @@
             add:      { enabled: true,  max: 10 },
             subtract: { enabled: false, max: 10 },
             multiply: { enabled: false, max: 10 },
-            divide:   { enabled: false, max: 10 }
+            divide:   { enabled: false, max: 10 },
+            // "Find x" mode (e.g. 8 - x = 3). Off by default. Top-level boolean
+            // so the per-op validation loop below ignores it.
+            missingOperand: false
         };
     }
 
@@ -67,6 +70,8 @@
             if (!valid) return defaults();
             // Defensive: ensure at least one is enabled
             if (!isAnyEnabled(parsed)) parsed.add.enabled = true;
+            // Coerce optional "find x" flag (absent in older saves → false)
+            parsed.missingOperand = parsed.missingOperand === true;
             return parsed;
         } catch (e) {
             return defaults();
