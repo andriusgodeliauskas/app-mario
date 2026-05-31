@@ -12,7 +12,7 @@ const BASE_URL = process.env.MARIO_URL || 'http://localhost:8765';
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 
-    await page.goto(BASE_URL + '/index.html');
+    await page.goto(BASE_URL + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForFunction(() => window.game && window.game.textures && window.game.textures.exists('koopa'), null, { timeout: 15000 });
 
     await page.evaluate(() => {

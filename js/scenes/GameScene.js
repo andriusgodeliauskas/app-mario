@@ -1014,17 +1014,46 @@ var GameScene = new Phaser.Class({
         this.physics.add.overlap(this.fireballs, this.boss.sprite, this.fireballHitBoss, null, this);
         this.physics.add.overlap(this.player, this.boss.sprite, this.playerHitBoss, null, this);
 
-        // HP bar (fixed to camera)
-        this.bossHpBg = this.add.rectangle(400, 92, 320, 22, 0x000000, 0.6).setScrollFactor(0).setDepth(40);
-        this.bossHpFill = this.add.rectangle(242, 92, 316, 16, 0xE74C3C).setOrigin(0, 0.5).setScrollFactor(0).setDepth(41);
+        // HP bar (fixed to camera) — hidden until the player reaches the arena.
+        this.bossHpBg = this.add.rectangle(400, 92, 320, 22, 0x000000, 0.6).setScrollFactor(0).setDepth(40).setVisible(false);
+        this.bossHpFill = this.add.rectangle(242, 92, 316, 16, 0xE74C3C).setOrigin(0, 0.5).setScrollFactor(0).setDepth(41).setVisible(false);
         this.bossHpLabel = this.add.text(400, 70, 'BOSAS', {
             fontFamily: '"Press Start 2P", monospace', fontSize: '12px',
             color: '#FFD23F', stroke: '#000', strokeThickness: 3
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(41);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(41).setVisible(false);
 
-        // The fight is won with math: solve a challenge to damage the boss.
+        // The fight begins only when the player approaches the boss (see
+        // updateBoss → startBossFight). Until then the boss idles quietly so the
+        // encounter is an unmistakable event, not a stray math sign far away.
         this.bossMathPending = false;
-        this.scheduleBossMath(1500);
+        this._bossFightStarted = false;
+    },
+
+    // Begin the boss fight once the player reaches the arena: announce it,
+    // reveal the HP bar, and start the math gate.
+    startBossFight: function () {
+        if (this._bossFightStarted) return;
+        this._bossFightStarted = true;
+        if (this.bossHpBg) this.bossHpBg.setVisible(true);
+        if (this.bossHpFill) this.bossHpFill.setVisible(true);
+        if (this.bossHpLabel) this.bossHpLabel.setVisible(true);
+        this.announceBoss();
+        this.scheduleBossMath(900);
+    },
+
+    // Big "BOSAS!" banner that zooms in and fades — makes the fight obvious.
+    announceBoss: function () {
+        if (window.AudioManager) AudioManager.play('bossHit');
+        var W = this.cameras.main.width;
+        var banner = this.add.text(W / 2, 220, 'BOSAS!', {
+            fontFamily: '"Press Start 2P", monospace', fontSize: '40px',
+            color: '#FF3B30', stroke: '#000', strokeThickness: 8
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(60).setScale(0.3).setAlpha(0);
+        this.tweens.add({ targets: banner, scale: 1, alpha: 1, duration: 350, ease: 'Back.Out' });
+        this.tweens.add({
+            targets: banner, alpha: 0, scale: 1.3, duration: 500, delay: 1400,
+            ease: 'Cubic.In', onComplete: function () { banner.destroy(); }
+        });
     },
 
     scheduleBossMath: function (delay) {
@@ -1105,6 +1134,17 @@ var GameScene = new Phaser.Class({
 
     updateBoss: function (delta) {
         if (!this.bossActive || !this.boss) return;
+
+        // The boss idles until the player reaches the arena; then the fight
+        // begins with an announcement so it's an unmistakable event.
+        if (!this._bossFightStarted) {
+            if (this.player.x > this.boss.minX - 360) {
+                this.startBossFight();
+            } else {
+                return;
+            }
+        }
+
         this.boss.update(delta, this.player.x);
 
         if (this.boss.attackReady) {

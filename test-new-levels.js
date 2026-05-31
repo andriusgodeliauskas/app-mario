@@ -23,7 +23,7 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
     page.on('pageerror', e => consoleErrors.push('PAGEERROR: ' + e.message));
 
-    await page.goto(BASE_URL + '/index.html');
+    await page.goto(BASE_URL + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
     // Wait for the game + sprite generation (BootScene) to finish.
     await page.waitForFunction(() => window.game && window.game.scene && window.game.textures.exists('crystal-deco'), null, { timeout: 15000 });
     ok('game boots and new decoration textures generated');

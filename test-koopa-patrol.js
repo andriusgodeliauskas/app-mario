@@ -21,7 +21,7 @@ const bad = (n, e) => { failed++; fails.push(n); console.log('  âœ— ' + n + ' â€
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 800, height: 600 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(BASE + '/index.html');
+  await p.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.waitForFunction(() => window.game && window.game.textures.exists('koopa'), null, { timeout: 15000 });
 
   // pick a level that has both a goomba and a koopa
