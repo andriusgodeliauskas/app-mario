@@ -82,6 +82,33 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
         ok('missing-operand problem: ' + mo.display + '  (x=' + mo.answer + ')');
     } else { bad('missing-operand', JSON.stringify(mo)); }
 
+    // Koopa shell: stomping a koopa turns it into a shell, not instant death
+    const shell = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        const k = s.enemies.create(400, 300, 'koopa');
+        k.enemyType = 'koopa';
+        s.squishEnemy(k);
+        return { isShell: !!k.isShell, active: k.active };
+    });
+    (shell.isShell && shell.active) ? ok('koopa stomp → kickable shell') : bad('koopa shell', JSON.stringify(shell));
+
+    // 1-UP via 100 coins milestone (handled in update loop)
+    const oneUp = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        s.coins = 100; s.lifeMilestone = 0; const before = s.lives;
+        s.update(0, 16);
+        return { gained: s.lives - before };
+    });
+    (oneUp.gained >= 1) ? ok('100 coins → +1 life') : bad('1up milestone', JSON.stringify(oneUp));
+
+    // Methods exist
+    const methods = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        return ['collectFireFlower','collectOneUp','updateMovingPlatforms','shootFireball','fireballHitEnemy']
+            .every(m => typeof s[m] === 'function');
+    });
+    methods ? ok('all new GameScene methods present') : bad('methods', 'missing');
+
     if (consoleErrors.length) bad('no console errors', consoleErrors.slice(0, 5).join(' | '));
     else ok('no console errors');
 

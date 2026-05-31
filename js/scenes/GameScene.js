@@ -28,6 +28,9 @@ var GameScene = new Phaser.Class({
         this.starPower = false;
         this.starTimer = 0;
         this.invincibleTimer = 0;
+        // Award an extra life for every 100 coins. Seed the milestone from the
+        // carried-over coin count so we don't re-award on level transitions.
+        this.lifeMilestone = Math.floor(this.coins / 100);
     },
 
     create: function () {
@@ -89,6 +92,7 @@ var GameScene = new Phaser.Class({
         // Coin positions and enemy spawn points collected from tilemap
         var coinPositions = [];
         var enemySpawns = [];
+        var platformSpecs = [];
         var flagpolePos = null;
 
         var map = levelData.map;
@@ -147,6 +151,13 @@ var GameScene = new Phaser.Class({
                     qf.tileType = 'question';
                     qf.isUsed = false;
                     qf.content = 'fireflower';
+                } else if (tileId === 43) {
+                    // Question block with 1-UP green mushroom
+                    var q1 = this.questionTiles.create(tx, ty, 'tiles', 4);
+                    q1.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    q1.tileType = 'question';
+                    q1.isUsed = false;
+                    q1.content = '1up';
                 } else if (tileId === 6 || tileId === 7 || tileId === 8 || tileId === 9) {
                     // Pipe tiles
                     var pt = this.pipeTiles.create(tx, ty, 'tiles', tileId);
@@ -165,6 +176,12 @@ var GameScene = new Phaser.Class({
                 } else if (tileId === 61) {
                     // Koopa spawn
                     enemySpawns.push({ x: tx, y: ty, type: 'koopa' });
+                } else if (tileId === 12) {
+                    // Horizontal moving platform marker
+                    platformSpecs.push({ x: tx, y: ty, axis: 'h' });
+                } else if (tileId === 13) {
+                    // Vertical moving platform / moving pipe marker
+                    platformSpecs.push({ x: tx, y: ty, axis: 'v' });
                 } else if (tileId === 70) {
                     // Flagpole position
                     flagpolePos = { x: tx, y: ty };
@@ -245,6 +262,29 @@ var GameScene = new Phaser.Class({
         this.fireflowers = this.physics.add.group();
         this.fireballs = this.physics.add.group();
 
+        // 1-UP green mushrooms (extra lives)
+        this.oneUps = this.physics.add.group();
+
+        // Moving platforms / moving pipes (kinematic: no gravity, immovable)
+        this.movingPlatforms = this.physics.add.group({ allowGravity: false, immovable: true });
+        for (var pi = 0; pi < platformSpecs.length; pi++) {
+            var spec = platformSpecs[pi];
+            var plat = this.movingPlatforms.create(spec.x, spec.y, 'tiles', 11);
+            plat.setScale(0.5).setSize(TILE, TILE).refreshBody();
+            plat.body.setAllowGravity(false);
+            plat.body.setImmovable(true);
+            plat.setTint(0xE0A030);          // distinct golden platform look
+            plat._axis = spec.axis;
+            plat._home = { x: spec.x, y: spec.y };
+            plat._range = 96;                // travel ±96px from home
+            plat._dir = 1;
+            plat._speed = 60;
+            plat._prevX = spec.x;
+            plat._prevY = spec.y;
+            if (spec.axis === 'h') plat.body.setVelocityX(plat._speed);
+            else plat.body.setVelocityY(plat._speed);
+        }
+
         // ----------------------------------
         // Flagpole
         // ----------------------------------
@@ -285,6 +325,10 @@ var GameScene = new Phaser.Class({
         this.physics.add.collider(this.stars, this.pipeTiles);
         this.physics.add.collider(this.fireflowers, this.groundTiles);
         this.physics.add.collider(this.fireflowers, this.pipeTiles);
+        this.physics.add.collider(this.oneUps, this.groundTiles);
+        this.physics.add.collider(this.oneUps, this.pipeTiles);
+        this.physics.add.collider(this.player, this.movingPlatforms);
+        this.physics.add.collider(this.enemies, this.movingPlatforms);
         // Fireballs bounce off the ground/pipes; enemy hit destroys them.
         this.physics.add.collider(this.fireballs, this.groundTiles);
         this.physics.add.collider(this.fireballs, this.pipeTiles);
@@ -297,6 +341,7 @@ var GameScene = new Phaser.Class({
         this.physics.add.overlap(this.player, this.mushrooms, this.collectMushroom, null, this);
         this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
         this.physics.add.overlap(this.player, this.fireflowers, this.collectFireFlower, null, this);
+        this.physics.add.overlap(this.player, this.oneUps, this.collectOneUp, null, this);
         if (this.flagpole) {
             this.physics.add.overlap(this.player, this.flagpole, this.reachFlagpole, null, this);
         }
@@ -547,9 +592,27 @@ var GameScene = new Phaser.Class({
         // Enemy patrol AI
         // ----------------------------------
         var enemies = this.enemies.getChildren();
+        var SHELL_SPEED = 280;
         for (var i = 0; i < enemies.length; i++) {
             var e = enemies[i];
-            if (!e.active || e.isSquished) continue;
+            if (!e.active) continue;
+
+            // Moving Koopa shell: bounce off walls, mow down other enemies.
+            if (e.isShell && e.shellMoving) {
+                if (e.body.blocked.left) { e.shellDir = 1; e.setFlipX(true); }
+                else if (e.body.blocked.right) { e.shellDir = -1; e.setFlipX(false); }
+                e.body.setVelocityX(e.shellDir * SHELL_SPEED);
+                for (var s = 0; s < enemies.length; s++) {
+                    var o = enemies[s];
+                    if (o === e || !o.active || o.isShell || o.isSquished) continue;
+                    if (Phaser.Geom.Intersects.RectangleToRectangle(e.body.getBounds(), o.body.getBounds())) {
+                        this.squishEnemy(o, true);
+                    }
+                }
+                continue;
+            }
+
+            if (e.isSquished) continue;
 
             // Initialize tracking vars
             if (e._lastX === undefined) { e._lastX = e.x; e._stuckTime = 0; e._turnCooldown = 0; }
@@ -651,6 +714,24 @@ var GameScene = new Phaser.Class({
                 this.applyMarioTint(); // restore fire tint if Mario is fire
             }
         }
+
+        // ----------------------------------
+        // Extra life every 100 coins
+        // ----------------------------------
+        var milestone = Math.floor(this.coins / 100);
+        if (milestone > this.lifeMilestone) {
+            this.lives += (milestone - this.lifeMilestone);
+            this.lifeMilestone = milestone;
+            this.registry.set('lives', this.lives);
+            this.events.emit('livesChange', this.lives);
+            if (window.AudioManager) AudioManager.play('oneUp');
+            this.showFloatingText('1-UP!', 0x33DD55);
+        }
+
+        // ----------------------------------
+        // Moving platforms
+        // ----------------------------------
+        this.updateMovingPlatforms(delta);
 
         // ----------------------------------
         // Touch controller frame update
@@ -796,6 +877,85 @@ var GameScene = new Phaser.Class({
             flower.setVelocityY(-120);
             flower.setSize(112, 112);
             flower.setOffset(8, 8);
+        } else if (block.content === '1up') {
+            // Spawn a green 1-UP mushroom (mushroom texture, green tint)
+            var oneUp = this.oneUps.create(block.x, block.y - 32, 'mushroom');
+            oneUp.setScale(0.25);
+            oneUp.play('mushroom-idle');
+            oneUp.setTint(0x33DD55);
+            oneUp.setBounce(0.2);
+            oneUp.setVelocityX(80);
+            oneUp.setSize(112, 112);
+            oneUp.setOffset(8, 16);
+        }
+    },
+
+    // ==========================================
+    // COLLECT 1-UP (extra life)
+    // ==========================================
+    collectOneUp: function (player, oneUp) {
+        oneUp.destroy();
+        if (window.AudioManager) AudioManager.play('oneUp');
+        this.lives += 1;
+        this.registry.set('lives', this.lives);
+        this.events.emit('livesChange', this.lives);
+        this.showFloatingText('1-UP!', 0x33DD55);
+    },
+
+    // ==========================================
+    // FLOATING TEXT — small reward popup above Mario
+    // ==========================================
+    showFloatingText: function (msg, color) {
+        var t = this.add.text(this.player.x, this.player.y - 70, msg, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '16px',
+            color: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5).setDepth(60);
+        if (color !== undefined) t.setTint(color);
+        this.tweens.add({
+            targets: t, y: t.y - 40, alpha: 0, duration: 1000,
+            ease: 'Cubic.Out', onComplete: function () { t.destroy(); }
+        });
+    },
+
+    // ==========================================
+    // MOVING PLATFORMS — reverse at range ends; carry a rider horizontally.
+    // ==========================================
+    updateMovingPlatforms: function (delta) {
+        if (!this.movingPlatforms) return;
+        var plats = this.movingPlatforms.getChildren();
+        var player = this.player;
+        for (var i = 0; i < plats.length; i++) {
+            var p = plats[i];
+            if (!p.active) continue;
+
+            // Reverse direction at the ends of the travel range.
+            if (p._axis === 'h') {
+                if (p.x >= p._home.x + p._range && p._dir > 0) { p._dir = -1; p.body.setVelocityX(-p._speed); }
+                else if (p.x <= p._home.x - p._range && p._dir < 0) { p._dir = 1; p.body.setVelocityX(p._speed); }
+            } else {
+                if (p.y >= p._home.y + p._range && p._dir > 0) { p._dir = -1; p.body.setVelocityY(-p._speed); }
+                else if (p.y <= p._home.y - p._range && p._dir < 0) { p._dir = 1; p.body.setVelocityY(p._speed); }
+            }
+
+            // Carry the player when standing on top of this platform.
+            var dx = p.x - p._prevX;
+            var dy = p.y - p._prevY;
+            if (player && player.body) {
+                var onTop = player.body.bottom <= p.body.top + 12 &&
+                            player.body.bottom >= p.body.top - 12 &&
+                            player.body.right > p.body.left + 2 &&
+                            player.body.left < p.body.right - 2 &&
+                            player.body.velocity.y >= -10;
+                if (onTop) {
+                    player.x += dx;
+                    if (dy < 0) player.y += dy; // ride a platform rising
+                }
+            }
+            p._prevX = p.x;
+            p._prevY = p.y;
         }
     },
 
@@ -892,8 +1052,9 @@ var GameScene = new Phaser.Class({
     fireballHitEnemy: function (fireball, enemy) {
         if (!enemy.active || enemy.isSquished) return;
         if (!fireball.active) return;
+        if (enemy.isShell) return; // shells aren't damaged by fireballs
         window.Fireball.burst(this, fireball);
-        this.squishEnemy(enemy);
+        this.squishEnemy(enemy, true);
         this.score += 100;
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
@@ -903,11 +1064,42 @@ var GameScene = new Phaser.Class({
     // ENEMY COLLISION
     // ==========================================
     handleEnemyCollision: function (player, enemy) {
-        if (!enemy.active || enemy.isSquished) return;
+        if (!enemy.active) return;
+        var SHELL_SPEED = 280;
+
+        // ----- Koopa shell interactions -----
+        if (enemy.isShell) {
+            if (enemy.shellMoving) {
+                // A moving shell can be stomped to stop it; otherwise it hurts.
+                var stompMoving = player.body.velocity.y > 0 &&
+                                  (player.body.bottom - enemy.body.top) < 18;
+                if (stompMoving) {
+                    enemy.shellMoving = false;
+                    enemy.shellDir = 0;
+                    enemy.body.setVelocityX(0);
+                    player.setVelocityY(-250);
+                } else {
+                    if (this.isInvincible || this.starPower) return;
+                    this.playerHit();
+                }
+            } else {
+                // Stationary shell — kick it away from the player (no damage).
+                var kdir = (player.x < enemy.x) ? 1 : -1;
+                enemy.shellMoving = true;
+                enemy.shellDir = kdir;
+                enemy.body.setVelocityX(kdir * SHELL_SPEED);
+                enemy.setFlipX(kdir > 0);
+                if (window.AudioManager) AudioManager.play('kick');
+                player.setVelocityY(-150);
+            }
+            return;
+        }
+
+        if (enemy.isSquished) return;
 
         // Star power — kill enemy on contact
         if (this.starPower) {
-            this.squishEnemy(enemy);
+            this.squishEnemy(enemy, true);
             return;
         }
 
@@ -917,9 +1109,8 @@ var GameScene = new Phaser.Class({
         var isStomping = player.body.velocity.y > 0 && (playerBottom - enemyTop) < 16;
 
         if (isStomping) {
-            // Stomp the enemy
+            // Stomp the enemy (Koopa becomes a kickable shell)
             this.squishEnemy(enemy);
-            // Bounce player up
             player.setVelocityY(-250);
         } else {
             // Player takes damage
@@ -930,32 +1121,41 @@ var GameScene = new Phaser.Class({
 
     // ==========================================
     // SQUISH ENEMY
+    //   forceKill: when true, a Koopa is destroyed outright instead of
+    //   turning into a shell (used by star power and fireballs).
     // ==========================================
-    squishEnemy: function (enemy) {
+    squishEnemy: function (enemy, forceKill) {
         if (window.AudioManager) AudioManager.play('stomp');
         enemy.isSquished = true;
+
+        // Koopa → kickable shell (stays alive on the ground).
+        if (enemy.enemyType === 'koopa' && !forceKill && !enemy.isShell) {
+            enemy.isShell = true;
+            enemy.shellMoving = false;
+            enemy.shellDir = 0;
+            enemy.body.setVelocity(0, 0);
+            enemy.body.setAllowGravity(true);
+            enemy.play('koopa-shell');
+            this.score += 100;
+            this.registry.set('score', this.score);
+            this.events.emit('scoreChange', this.score);
+            this.showEnglishPopup();
+            return;
+        }
+
+        // Goomba (or force-killed enemy): disable and remove.
         enemy.body.setVelocity(0, 0);
         enemy.body.setAllowGravity(false);
         enemy.body.setEnable(false);
-
-        if (enemy.enemyType === 'goomba') {
-            enemy.play('goomba-squish');
-            this.score += 100;
-        } else if (enemy.enemyType === 'koopa') {
-            enemy.play('koopa-shell');
-            this.score += 100;
-        }
-
+        if (enemy.enemyType === 'goomba') enemy.play('goomba-squish');
+        else if (enemy.enemyType === 'koopa') enemy.play('koopa-shell');
+        this.score += 100;
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
-        this.showEnglishPopup(); // random word
+        this.showEnglishPopup();
 
-        // Remove after short delay
-        var self = this;
         this.time.delayedCall(500, function () {
-            if (enemy && enemy.active) {
-                enemy.destroy();
-            }
+            if (enemy && enemy.active) enemy.destroy();
         });
     },
 
