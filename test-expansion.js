@@ -136,6 +136,35 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     });
     (!exited.bonusActive && exited.gameActive) ? ok('exit returns to level') : bad('exit room', JSON.stringify(exited));
 
+    // Boss fight on level 5
+    await page.evaluate(() => {
+        window.game.scene.stop('BonusRoomScene');
+        window.game.scene.stop('GameScene');
+        window.game.scene.start('GameScene', { level: 5 });
+    });
+    await page.waitForFunction(() => {
+        const s = window.game.scene.getScene('GameScene');
+        return s && s.boss && s.bossActive;
+    }, null, { timeout: 10000 });
+    ok('level 5 spawns a boss');
+
+    const bossHp = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        const before = s.boss.hp;
+        s.boss.takeDamage();
+        return { before, after: s.boss.hp, max: s.boss.maxHp };
+    });
+    (bossHp.after === bossHp.before - 1) ? ok('boss takes damage (hp ' + bossHp.before + '→' + bossHp.after + ')') : bad('boss damage', JSON.stringify(bossHp));
+
+    const defeated = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        let guard = 0;
+        while (s.boss && !s.boss.defeated && guard++ < 20) { s.boss.invuln = 0; s.boss.takeDamage(); }
+        s.updateBoss(16);
+        return { defeated: s.boss ? s.boss.defeated : true, wallGone: !s.bossWall, bossActive: s.bossActive };
+    });
+    (defeated.defeated && defeated.wallGone && !defeated.bossActive) ? ok('boss defeat removes wall + ends fight') : bad('boss defeat', JSON.stringify(defeated));
+
     if (consoleErrors.length) bad('no console errors', consoleErrors.slice(0, 5).join(' | '));
     else ok('no console errors');
 

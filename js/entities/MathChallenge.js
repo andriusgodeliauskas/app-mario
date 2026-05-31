@@ -94,6 +94,7 @@ MathChallenge.prototype._onCollision = function (player, blockSprite) {
 MathChallenge.prototype._handleCorrect = function (player, block) {
     var scene = this.scene;
     if (window.AudioManager) AudioManager.play('mathCorrect');
+    this.wasCorrect = true;   // read by boss fights in onResolved
 
     scene.score = (scene.score || 0) + 50;
     scene.coins = (scene.coins || 0) + 1;
@@ -130,6 +131,7 @@ MathChallenge.prototype._handleCorrect = function (player, block) {
 MathChallenge.prototype._handleWrong = function (player, block) {
     var scene = this.scene;
     if (window.AudioManager) AudioManager.play('mathWrong');
+    this.wasCorrect = false;   // read by boss fights in onResolved
 
     this._showPopup(false);
 

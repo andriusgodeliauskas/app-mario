@@ -426,6 +426,11 @@ var GameScene = new Phaser.Class({
             this.mathSpawner = new window.MathSpawner(this, this.mathSettings);
         }
 
+        // ----------------------------------
+        // Boss encounter (levels 5, 10, 15 + final 19)
+        // ----------------------------------
+        this.setupBoss();
+
         // Test hook for Playwright integration tests
         if (typeof window !== 'undefined') {
             window.__mario_test = window.__mario_test || {};
@@ -758,6 +763,11 @@ var GameScene = new Phaser.Class({
         this.updateMovingPlatforms(delta);
 
         // ----------------------------------
+        // Boss encounter
+        // ----------------------------------
+        this.updateBoss(delta);
+
+        // ----------------------------------
         // Enter a bonus pipe (stand on it + press DOWN)
         // ----------------------------------
         if (this._enterPipes && onGround && !this.levelComplete && !this.isDead) {
@@ -958,6 +968,166 @@ var GameScene = new Phaser.Class({
             targets: t, y: t.y - 40, alpha: 0, duration: 1000,
             ease: 'Cubic.Out', onComplete: function () { t.destroy(); }
         });
+    },
+
+    // ==========================================
+    // BOSS ENCOUNTER
+    // ==========================================
+    setupBoss: function () {
+        var BOSS_HP = { 5: 3, 10: 4, 15: 4, 19: 6 };
+        var hp = BOSS_HP[this.currentLevel];
+        if (!hp || !window.Boss || !this.flagpole) return;
+
+        var groundTop = this.groundLevelY;          // 544
+        var bossX = this.flagpole.x - 360;
+        var bossY = groundTop - 56;
+
+        // On boss levels the boss math gate replaces the periodic spawner so
+        // two challenges never overlap.
+        if (this.mathSpawner) { this.mathSpawner.destroy(); this.mathSpawner = null; }
+
+        this.boss = new window.Boss(this, bossX, bossY, {
+            hp: hp, minX: bossX - 130, maxX: bossX + 130,
+            scale: this.currentLevel === 19 ? 0.5 : 0.4
+        });
+        this.bossActive = true;
+        this.physics.add.collider(this.boss.sprite, this.groundTiles);
+        this.physics.add.collider(this.boss.sprite, this.pipeTiles);
+
+        // Containment wall just before the flagpole — removed on victory.
+        this.bossWall = this.add.rectangle(this.flagpole.x - 120, groundTop - 150, 16, 320, 0xff0000, 0);
+        this.physics.add.existing(this.bossWall, true);
+        this.physics.add.collider(this.player, this.bossWall);
+
+        // Boss projectiles
+        this.bossProjectiles = this.physics.add.group({ allowGravity: false });
+        this.physics.add.overlap(this.player, this.bossProjectiles, this.bossProjectileHit, null, this);
+        this.physics.add.overlap(this.fireballs, this.boss.sprite, this.fireballHitBoss, null, this);
+        this.physics.add.overlap(this.player, this.boss.sprite, this.playerHitBoss, null, this);
+
+        // HP bar (fixed to camera)
+        this.bossHpBg = this.add.rectangle(400, 92, 320, 22, 0x000000, 0.6).setScrollFactor(0).setDepth(40);
+        this.bossHpFill = this.add.rectangle(242, 92, 316, 16, 0xE74C3C).setOrigin(0, 0.5).setScrollFactor(0).setDepth(41);
+        this.bossHpLabel = this.add.text(400, 70, 'BOSAS', {
+            fontFamily: '"Press Start 2P", monospace', fontSize: '12px',
+            color: '#FFD23F', stroke: '#000', strokeThickness: 3
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(41);
+
+        // The fight is won with math: solve a challenge to damage the boss.
+        this.bossMathPending = false;
+        this.scheduleBossMath(1500);
+    },
+
+    scheduleBossMath: function (delay) {
+        if (!this.bossActive) return;
+        var self = this;
+        this.time.delayedCall(delay, function () {
+            if (!self.bossActive || self.isDead || self.levelComplete) return;
+            if (self.bossMathPending) { self.scheduleBossMath(1000); return; }
+            self.spawnBossMath();
+        });
+    },
+
+    spawnBossMath: function () {
+        if (!window.MathChallenge || !window.MathSettings) return;
+        this.bossMathPending = true;
+        var self = this;
+        var settings = this.mathSettings || window.MathSettings.load();
+        this._bossMathHistory = this._bossMathHistory || [];
+        // Place the challenge near Mario on the arena floor.
+        var spotX = Phaser.Math.Clamp(this.player.x, this.boss.minX, this.boss.maxX);
+        var challenge = new window.MathChallenge(
+            this, settings, this._bossMathHistory, spotX, this.groundLevelY,
+            function () {
+                self.bossMathPending = false;
+                if (!self.bossActive) return;
+                if (challenge.wasCorrect) {
+                    if (self.boss) self.boss.takeDamage();
+                    self.showFloatingText('BAM! -1', 0xFFD23F);
+                } else {
+                    // Wrong → boss immediately retaliates with a projectile.
+                    self.fireBossProjectile();
+                }
+                self.scheduleBossMath(2200);
+            }
+        );
+        this.bossChallenge = challenge;
+    },
+
+    fireBossProjectile: function () {
+        if (!this.boss || !this.boss.sprite || !this.bossActive) return;
+        var b = this.boss.sprite;
+        var proj = this.bossProjectiles.create(b.x, b.y - 10, 'fireball');
+        proj.setScale(0.3).setDepth(8);
+        if (this.anims.exists('fireball-spin')) proj.play('fireball-spin');
+        proj.setTint(0x9B59B6);
+        proj.setSize(40, 40).setOffset(12, 12);
+        var dir = (this.player.x < b.x) ? -1 : 1;
+        proj.setVelocity(dir * 240, -40);
+        proj.body.setAllowGravity(false);
+        var self = this;
+        this.time.delayedCall(3000, function () { if (proj && proj.active) proj.destroy(); });
+    },
+
+    bossProjectileHit: function (player, proj) {
+        if (proj && proj.active) proj.destroy();
+        if (this.isInvincible || this.starPower) return;
+        this.loseOnePower({ source: 'enemy' });
+    },
+
+    fireballHitBoss: function (fireball, bossSprite) {
+        if (!fireball.active || !this.boss || this.boss.defeated) return;
+        window.Fireball.burst(this, fireball);
+        this.boss.takeDamage();
+    },
+
+    playerHitBoss: function (player, bossSprite) {
+        if (!this.boss || this.boss.defeated) return;
+        // Stomp from above damages the boss; otherwise Mario takes the hit.
+        var stomping = player.body.velocity.y > 0 &&
+                       (player.body.bottom - bossSprite.body.top) < 28;
+        if (stomping) {
+            if (this.boss.takeDamage()) player.setVelocityY(-300);
+        } else {
+            if (this.isInvincible || this.starPower) return;
+            this.loseOnePower({ source: 'enemy' });
+        }
+    },
+
+    updateBoss: function (delta) {
+        if (!this.bossActive || !this.boss) return;
+        this.boss.update(delta, this.player.x);
+
+        if (this.boss.attackReady) {
+            this.boss.attackReady = false;
+            this.fireBossProjectile();
+        }
+
+        // HP bar
+        if (this.bossHpFill) {
+            var frac = Math.max(0, this.boss.hp / this.boss.maxHp);
+            this.bossHpFill.width = 316 * frac;
+        }
+
+        if (this.boss.defeated) {
+            this.defeatBoss();
+        }
+    },
+
+    defeatBoss: function () {
+        if (!this.bossActive) return;
+        this.bossActive = false;
+        this.score += 5000;
+        this.registry.set('score', this.score);
+        this.events.emit('scoreChange', this.score);
+        this.showFloatingText('NUGALEJAI!', 0xF8D830);
+
+        if (this.bossWall) { this.bossWall.destroy(); this.bossWall = null; }
+        if (this.bossHpBg) this.bossHpBg.destroy();
+        if (this.bossHpFill) this.bossHpFill.destroy();
+        if (this.bossHpLabel) this.bossHpLabel.destroy();
+        if (this.bossChallenge && this.bossChallenge.cleanup) this.bossChallenge.cleanup();
+        if (this.bossProjectiles) this.bossProjectiles.clear(true, true);
     },
 
     // ==========================================
