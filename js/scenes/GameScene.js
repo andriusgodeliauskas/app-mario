@@ -241,7 +241,11 @@ var GameScene = new Phaser.Class({
                 enemy.setOffset(8, 16);
                 enemy.enemyType = 'goomba';
             } else if (esp.type === 'koopa') {
-                enemy = this.enemies.create(esp.x, esp.y, 'koopa');
+                // Koopa is 48px tall vs Goomba's 32 — spawning at the shared
+                // tile-center Y buried its body 9px in the ground, pinning it in
+                // place (turn-cooldown thrash → never moved). Lift it by the
+                // height difference so its feet land cleanly on the ground.
+                enemy = this.enemies.create(esp.x, esp.y - 10, 'koopa');
                 enemy.setScale(0.25);
                 enemy.play('koopa-walk');
                 enemy.setSize(112, 160);

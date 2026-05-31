@@ -116,25 +116,28 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     });
     (pipeInfo.count >= 1 && pipeInfo.hasEnter) ? ok('bonus pipe injected (' + pipeInfo.count + ')') : bad('bonus pipe', JSON.stringify(pipeInfo));
 
-    const bonus = await page.evaluate(async () => {
-        const s = window.game.scene.getScene('GameScene');
-        s.enterBonusPipe();
-        await new Promise(r => setTimeout(r, 700)); // wait descend tween + launch
+    // Trigger the descend, then poll for launch (the descend tween is driven by
+    // the scene clock; headless RAF can be throttled, so wait on the condition).
+    await page.evaluate(() => window.game.scene.getScene('GameScene').enterBonusPipe());
+    const launched = await page.waitForFunction(
+        () => window.game.scene.isActive('BonusRoomScene'), null, { timeout: 8000 }
+    ).then(() => true).catch(() => false);
+    const bonus = await page.evaluate(() => {
         const br = window.game.scene.getScene('BonusRoomScene');
-        return { active: window.game.scene.isActive('BonusRoomScene'),
-                 hasPlayer: !!(br && br.player), gamePaused: window.game.scene.isPaused('GameScene') };
+        return { hasPlayer: !!(br && br.player) };
     });
-    (bonus.active && bonus.hasPlayer) ? ok('bonus room launches with player') : bad('bonus room', JSON.stringify(bonus));
+    (launched && bonus.hasPlayer) ? ok('bonus room launches with player') : bad('bonus room', JSON.stringify(bonus) + ' launched=' + launched);
 
-    const exited = await page.evaluate(async () => {
+    await page.evaluate(() => {
         const br = window.game.scene.getScene('BonusRoomScene');
         br.mathChallenge = null; // pretend math solved
         br.exitRoom();
-        await new Promise(r => setTimeout(r, 500));
-        return { bonusActive: window.game.scene.isActive('BonusRoomScene'),
-                 gameActive: window.game.scene.isActive('GameScene') };
     });
-    (!exited.bonusActive && exited.gameActive) ? ok('exit returns to level') : bad('exit room', JSON.stringify(exited));
+    const returned = await page.waitForFunction(
+        () => !window.game.scene.isActive('BonusRoomScene') && window.game.scene.isActive('GameScene'),
+        null, { timeout: 8000 }
+    ).then(() => true).catch(() => false);
+    returned ? ok('exit returns to level') : bad('exit room', 'did not return');
 
     // Boss fight on level 5
     await page.evaluate(() => {
