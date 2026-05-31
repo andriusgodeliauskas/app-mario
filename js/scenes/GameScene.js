@@ -1840,8 +1840,36 @@ var GameScene = new Phaser.Class({
             this.extendMapTo300(data.map, data.variant || 'a');
             // Every level gets one enterable bonus pipe at a safe floor spot.
             this.injectBonusPipe(data.map);
+            // Ensure the new power-ups appear in every level (incl. the old ones).
+            this.injectPowerups(data.map);
         }
         return data;
+    },
+
+    // ==========================================
+    // INJECT POWER-UPS — guarantee a fire flower (42) and a 1-UP (43) exist by
+    // converting a couple of plain ? blocks (tileId 4). Skips levels that
+    // already define them.
+    // ==========================================
+    injectPowerups: function (map) {
+        var hasFire = false, hasOneUp = false;
+        var plain = [];
+        for (var r = 0; r < map.length; r++) {
+            for (var c = 0; c < map[r].length; c++) {
+                if (map[r][c] === 42) hasFire = true;
+                else if (map[r][c] === 43) hasOneUp = true;
+                else if (map[r][c] === 4) plain.push([r, c]);
+            }
+        }
+        if (!hasFire && plain.length > 0) {
+            var fi = Math.min(1, plain.length - 1); // 2nd plain block if available
+            map[plain[fi][0]][plain[fi][1]] = 42;
+            plain.splice(fi, 1);
+        }
+        if (!hasOneUp && plain.length > 2) {
+            var oi = plain.length - 1; // last plain block
+            map[plain[oi][0]][plain[oi][1]] = 43;
+        }
     },
 
     // ==========================================
