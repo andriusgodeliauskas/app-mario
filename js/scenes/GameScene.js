@@ -176,6 +176,13 @@ var GameScene = new Phaser.Class({
                 } else if (tileId === 61) {
                     // Koopa spawn
                     enemySpawns.push({ x: tx, y: ty, type: 'koopa' });
+                } else if (tileId === 44) {
+                    // Enterable pipe top — renders as a pipe tile and registers
+                    // a "press DOWN here" spot that leads to a bonus room.
+                    var ep = this.pipeTiles.create(tx, ty, 'tiles', 6);
+                    ep.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    this._enterPipes = this._enterPipes || [];
+                    this._enterPipes.push({ x: tx, topY: ty - TILE / 2 });
                 } else if (tileId === 12) {
                     // Horizontal moving platform marker
                     platformSpecs.push({ x: tx, y: ty, axis: 'h' });
@@ -285,6 +292,19 @@ var GameScene = new Phaser.Class({
             else plat.body.setVelocityY(plat._speed);
         }
 
+        // Bobbing "↓" hints above each enterable pipe.
+        if (this._enterPipes) {
+            for (var ep2 = 0; ep2 < this._enterPipes.length; ep2++) {
+                var pipe = this._enterPipes[ep2];
+                var arrow = this.add.text(pipe.x, pipe.topY - 30, '↓', {
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: '20px', color: '#7CFC00', stroke: '#000', strokeThickness: 3
+                }).setOrigin(0.5).setDepth(6);
+                this.tweens.add({ targets: arrow, y: arrow.y - 8, duration: 500,
+                    yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+            }
+        }
+
         // ----------------------------------
         // Flagpole
         // ----------------------------------
@@ -362,6 +382,10 @@ var GameScene = new Phaser.Class({
         this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
         this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+        this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+
+        // Restore Mario after returning from a bonus room.
+        this.events.on('resume', this.onResume, this);
 
         // ----------------------------------
         // Launch HUD overlay (only if not already running)
@@ -734,6 +758,22 @@ var GameScene = new Phaser.Class({
         this.updateMovingPlatforms(delta);
 
         // ----------------------------------
+        // Enter a bonus pipe (stand on it + press DOWN)
+        // ----------------------------------
+        if (this._enterPipes && onGround && !this.levelComplete && !this.isDead) {
+            var downPressed = this.cursors.down.isDown || this.keyS.isDown ||
+                              (window.TouchController && window.TouchController.downPressed);
+            if (downPressed) {
+                for (var ep3 = 0; ep3 < this._enterPipes.length; ep3++) {
+                    if (Math.abs(player.x - this._enterPipes[ep3].x) < 28) {
+                        this.enterBonusPipe();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ----------------------------------
         // Touch controller frame update
         // ----------------------------------
         if (window.TouchController && window.TouchController.enabled) {
@@ -918,6 +958,41 @@ var GameScene = new Phaser.Class({
             targets: t, y: t.y - 40, alpha: 0, duration: 1000,
             ease: 'Cubic.Out', onComplete: function () { t.destroy(); }
         });
+    },
+
+    // ==========================================
+    // ENTER BONUS PIPE — descend animation, then pause level + launch bonus room
+    // ==========================================
+    enterBonusPipe: function () {
+        if (this._enteringPipe) return;
+        this._enteringPipe = true;
+        var self = this;
+        if (window.AudioManager) AudioManager.play('powerup');
+        this.player.body.setVelocity(0, 0);
+        this.player.body.setAllowGravity(false);
+        this.tweens.add({
+            targets: this.player,
+            y: this.player.y + 48,
+            alpha: 0.15,
+            duration: 500,
+            ease: 'Cubic.In',
+            onComplete: function () {
+                self.scene.pause();
+                self.scene.launch('BonusRoomScene', { from: 'GameScene' });
+            }
+        });
+    },
+
+    // Restore Mario when we come back from the bonus room.
+    onResume: function () {
+        this._enteringPipe = false;
+        if (this.player && this.player.body) {
+            this.player.setAlpha(1);
+            this.player.body.setAllowGravity(true);
+            this.player.y -= 52; // lift back onto the pipe top
+            this.player.body.setVelocity(0, 0);
+        }
+        this.applyMarioTint();
     },
 
     // ==========================================
@@ -1591,8 +1666,34 @@ var GameScene = new Phaser.Class({
         // filler pattern is added in the extended section.
         if (data && data.map) {
             this.extendMapTo300(data.map, data.variant || 'a');
+            // Every level gets one enterable bonus pipe at a safe floor spot.
+            this.injectBonusPipe(data.map);
         }
         return data;
+    },
+
+    // ==========================================
+    // INJECT BONUS PIPE — retexture one floor cell as an enterable pipe (44).
+    // Scans candidate columns for a standable floor with headroom so the pipe
+    // never blocks the path or sits under low ceilings.
+    // ==========================================
+    injectBonusPipe: function (map) {
+        var rows = map.length;
+        var candidates = [60, 90, 120, 150, 180, 75, 105];
+        for (var ci = 0; ci < candidates.length; ci++) {
+            var col = candidates[ci];
+            if (col >= map[0].length) continue;
+            for (var r = 2; r < rows; r++) {
+                var here = map[r][col];
+                var above1 = map[r - 1][col];
+                var above2 = map[r - 2][col];
+                // Solid ground (grass/earth/stone) with two empty cells above.
+                if ((here === 1 || here === 2 || here === 11) && above1 === 0 && above2 === 0) {
+                    map[r][col] = 44;
+                    return;
+                }
+            }
+        }
     },
 
     // ==========================================

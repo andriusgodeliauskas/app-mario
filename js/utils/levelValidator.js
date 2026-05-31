@@ -16,7 +16,8 @@
  *           50=coin,60=goomba,61=koopa,70=flagpole,0=empty.
  */
 (function () {
-    var SOLID = { 1: 1, 2: 1, 3: 1, 4: 1, 40: 1, 41: 1, 6: 1, 7: 1, 8: 1, 9: 1, 11: 1 };
+    var SOLID = { 1: 1, 2: 1, 3: 1, 4: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1,
+                  6: 1, 7: 1, 8: 1, 9: 1, 11: 1, 12: 1, 13: 1 };
 
     function validateLevelMap(map, opts) {
         opts = opts || {};

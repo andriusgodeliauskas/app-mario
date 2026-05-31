@@ -22,7 +22,7 @@ var gameConfig = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, MenuScene, SettingsScene, GameScene, HUDScene, WinScene]
+    scene: [BootScene, MenuScene, SettingsScene, GameScene, BonusRoomScene, HUDScene, WinScene]
 };
 
 // Create the game instance

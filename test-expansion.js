@@ -109,6 +109,33 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     });
     methods ? ok('all new GameScene methods present') : bad('methods', 'missing');
 
+    // Bonus pipe injected into the level + enter → BonusRoomScene runs
+    const pipeInfo = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        return { count: (s._enterPipes || []).length, hasEnter: typeof s.enterBonusPipe === 'function' };
+    });
+    (pipeInfo.count >= 1 && pipeInfo.hasEnter) ? ok('bonus pipe injected (' + pipeInfo.count + ')') : bad('bonus pipe', JSON.stringify(pipeInfo));
+
+    const bonus = await page.evaluate(async () => {
+        const s = window.game.scene.getScene('GameScene');
+        s.enterBonusPipe();
+        await new Promise(r => setTimeout(r, 700)); // wait descend tween + launch
+        const br = window.game.scene.getScene('BonusRoomScene');
+        return { active: window.game.scene.isActive('BonusRoomScene'),
+                 hasPlayer: !!(br && br.player), gamePaused: window.game.scene.isPaused('GameScene') };
+    });
+    (bonus.active && bonus.hasPlayer) ? ok('bonus room launches with player') : bad('bonus room', JSON.stringify(bonus));
+
+    const exited = await page.evaluate(async () => {
+        const br = window.game.scene.getScene('BonusRoomScene');
+        br.mathChallenge = null; // pretend math solved
+        br.exitRoom();
+        await new Promise(r => setTimeout(r, 500));
+        return { bonusActive: window.game.scene.isActive('BonusRoomScene'),
+                 gameActive: window.game.scene.isActive('GameScene') };
+    });
+    (!exited.bonusActive && exited.gameActive) ? ok('exit returns to level') : bad('exit room', JSON.stringify(exited));
+
     if (consoleErrors.length) bad('no console errors', consoleErrors.slice(0, 5).join(' | '));
     else ok('no console errors');
 

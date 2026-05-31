@@ -11,6 +11,7 @@ window.TouchController = {
     jumpJustPressed: false,
     firePressed: false,
     fireJustPressed: false,
+    downPressed: false,
     enabled: false,
 
     // Track active touches per button so multi-touch works correctly
@@ -18,7 +19,8 @@ window.TouchController = {
         left: {},
         right: {},
         jump: {},
-        fire: {}
+        fire: {},
+        down: {}
     },
 
     init: function () {
@@ -37,6 +39,7 @@ window.TouchController = {
         var rightBtn = document.getElementById('touch-right');
         var jumpBtn = document.getElementById('touch-jump');
         var fireBtn = document.getElementById('touch-fire');
+        var downBtn = document.getElementById('touch-down');
 
         if (!leftBtn || !rightBtn || !jumpBtn) return;
 
@@ -79,6 +82,7 @@ window.TouchController = {
         bindButton(rightBtn, 'right');
         bindButton(jumpBtn, 'jump');
         if (fireBtn) bindButton(fireBtn, 'fire');
+        if (downBtn) bindButton(downBtn, 'down');
 
         // Prevent all default touch behaviors on the entire controls overlay
         controlsEl.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
@@ -105,6 +109,8 @@ window.TouchController = {
             if (pressed) {
                 this.fireJustPressed = true;
             }
+        } else if (key === 'down') {
+            this.downPressed = pressed;
         }
     },
 
