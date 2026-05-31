@@ -1691,8 +1691,10 @@ var GameScene = new Phaser.Class({
                 targets: elements[ei],
                 y: '-=60',
                 alpha: 0,
-                duration: 2500,
-                delay: 500,
+                // ~30% longer on-screen time so the word stays readable:
+                // hold 650ms then float+fade over 3250ms (was 500 + 2500).
+                duration: 3250,
+                delay: 650,
                 ease: 'Power1',
                 onComplete: function () {
                     this.targets[0].destroy();
