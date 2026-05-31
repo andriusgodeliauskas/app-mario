@@ -1121,11 +1121,20 @@ var GameScene = new Phaser.Class({
 
     playerHitBoss: function (player, bossSprite) {
         if (!this.boss || this.boss.defeated) return;
-        // Stomp from above damages the boss; otherwise Mario takes the hit.
-        var stomping = player.body.velocity.y > 0 &&
-                       (player.body.bottom - bossSprite.body.top) < 28;
-        if (stomping) {
-            if (this.boss.takeDamage()) player.setVelocityY(-300);
+        // While the boss is flashing from a recent hit, ignore contact entirely
+        // (no damage, no death) — this is the window where the player bounces off
+        // and would otherwise re-collide with the boss's side.
+        if (this.boss.invuln > 0) return;
+
+        // Stomp = the player's feet are above the boss's vertical middle and he
+        // isn't shooting upward. The boss is tall, so keying off its TOP made a
+        // head-stomp nearly impossible (feet sat far below the top at ground
+        // level → every hit read as a deadly side hit). Mid-body is forgiving.
+        var bossMidY = (bossSprite.body.top + bossSprite.body.bottom) / 2;
+        var fromAbove = player.body.bottom <= bossMidY + 16 &&
+                        player.body.velocity.y > -60;
+        if (fromAbove) {
+            if (this.boss.takeDamage()) player.setVelocityY(-340);
         } else {
             if (this.isInvincible || this.starPower) return;
             this.loseOnePower({ source: 'enemy' });

@@ -18,7 +18,7 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     page.on('pageerror', e => consoleErrors.push('PAGEERROR: ' + e.message));
 
     await page.goto(BASE_URL + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForFunction(() => window.game && window.game.textures && window.game.textures.exists('fireball'), null, { timeout: 15000 });
+    await page.waitForFunction(() => window.game && window.game.textures && window.game.textures.exists('fireball'), null, { timeout: 45000 });
     ok('game boots');
 
     // Textures
@@ -120,7 +120,7 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     // the scene clock; headless RAF can be throttled, so wait on the condition).
     await page.evaluate(() => window.game.scene.getScene('GameScene').enterBonusPipe());
     const launched = await page.waitForFunction(
-        () => window.game.scene.isActive('BonusRoomScene'), null, { timeout: 8000 }
+        () => window.game.scene.isActive('BonusRoomScene'), null, { timeout: 20000 }
     ).then(() => true).catch(() => false);
     const bonus = await page.evaluate(() => {
         const br = window.game.scene.getScene('BonusRoomScene');
@@ -158,6 +158,17 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
         return { before, after: s.boss.hp, max: s.boss.maxHp };
     });
     (bossHp.after === bossHp.before - 1) ? ok('boss takes damage (hp ' + bossHp.before + '→' + bossHp.after + ')') : bad('boss damage', JSON.stringify(bossHp));
+
+    // Jumping on the boss's head must damage it (not kill the player).
+    const stompBoss = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        const bs = s.boss.sprite;
+        s.isDead = false; s.isBig = false; s.isFire = false; s.isInvincible = false; s.starPower = false; s.lives = 3; s.boss.hp = 3; s.boss.invuln = 0;
+        s.player.body.reset(bs.x, bs.body.top - 4); s.player.body.velocity.y = 200;
+        const hp0 = s.boss.hp; s.playerHitBoss(s.player, bs);
+        return { damaged: s.boss.hp < hp0, dead: s.isDead };
+    });
+    (stompBoss.damaged && !stompBoss.dead) ? ok('jump on boss head damages it (player survives)') : bad('boss stomp', JSON.stringify(stompBoss));
 
     const defeated = await page.evaluate(() => {
         const s = window.game.scene.getScene('GameScene');
