@@ -635,8 +635,11 @@ var GameScene = new Phaser.Class({
                 e.body.setVelocityX(e.shellDir * SHELL_SPEED);
                 for (var s = 0; s < enemies.length; s++) {
                     var o = enemies[s];
-                    if (o === e || !o.active || o.isShell || o.isSquished) continue;
-                    if (Phaser.Geom.Intersects.RectangleToRectangle(e.body.getBounds(), o.body.getBounds())) {
+                    if (o === e || !o.active || o.isShell || o.isSquished || !o.body) continue;
+                    // Manual AABB overlap — Arcade Body has no zero-arg getBounds().
+                    var eb = e.body, ob = o.body;
+                    if (eb.right > ob.left && eb.left < ob.right &&
+                        eb.bottom > ob.top && eb.top < ob.bottom) {
                         this.squishEnemy(o, true);
                     }
                 }
