@@ -79,7 +79,10 @@ var BonusRoomScene = new Phaser.Class({
         this.tweens.add({ targets: this.exitHint, y: this.exitHint.y - 6, duration: 500,
             yoyo: true, repeat: -1, ease: 'Sine.InOut' });
 
-        // ---- One math challenge in the middle ----
+        // ---- One OPTIONAL math challenge in the middle ----
+        // Solve it for bonus coins, but it must never trap the player: remove
+        // the "answer wall" so Mario can always walk to the exit without
+        // answering. (A stuck child is the worst outcome here.)
         if (window.MathChallenge && window.MathSettings) {
             var settings = window.MathSettings.load();
             this._mathHistory = [];
@@ -87,6 +90,7 @@ var BonusRoomScene = new Phaser.Class({
                 this, settings, this._mathHistory, W / 2, groundTop, function () {
                     self.mathChallenge = null;
                 });
+            if (this.mathChallenge._removeWall) this.mathChallenge._removeWall();
         }
 
         // ---- Input ----
@@ -119,6 +123,7 @@ var BonusRoomScene = new Phaser.Class({
 
     update: function () {
         if (this._exiting || !this.player) return;
+      try {
         var player = this.player;
         var onGround = player.body.blocked.down || player.body.touching.down;
 
@@ -144,17 +149,28 @@ var BonusRoomScene = new Phaser.Class({
         else if (player.body.velocity.x !== 0) player.play('mario-run', true);
         else player.play('mario-idle', true);
 
-        // Exit when standing near the pipe and pressing up (only after math done)
-        var nearExit = Math.abs(player.x - this.exitPipe.x) < 36 && onGround;
+        // Exit: stand near the pipe (math NOT required — never trap the player).
+        // Pressing up exits; just standing on the pipe for a moment also exits,
+        // so a child who can't find the jump button still gets out.
+        var nearExit = Math.abs(player.x - this.exitPipe.x) < 48 && onGround;
         var upHeld = this.cursors.up.isDown || this.keyW.isDown ||
                      (window.TouchController && window.TouchController.jumpPressed);
-        if (nearExit && upHeld && !this.mathChallenge) {
-            this.exitRoom();
+        if (nearExit) {
+            this._exitDwell = (this._exitDwell || 0) + 16;
+            if (upHeld || this._exitDwell > 900) {
+                this.exitRoom();
+            }
+        } else {
+            this._exitDwell = 0;
         }
 
         if (window.TouchController && window.TouchController.enabled) {
             window.TouchController.update();
         }
+      } catch (e) {
+        console.error('[BonusRoomScene.update] caught error — exiting room safely:', e);
+        this.exitRoom();
+      }
     },
 
     exitRoom: function () {

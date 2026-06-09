@@ -498,6 +498,11 @@ var GameScene = new Phaser.Class({
         // re-instantiates the player. Skip until the new player is ready.
         if (!this.player || !this.player.body) return;
 
+      // Crash safety: Phaser does not catch exceptions thrown from a scene's
+      // update(), and an uncaught one aborts the frame's render → the game
+      // appears frozen. Wrapping the whole loop means a stray error is logged
+      // but the next frame still runs, so the game keeps going.
+      try {
         // Math challenge spawner — runs every frame, decides when/where to spawn
         if (this.mathSpawner) this.mathSpawner.update(time, delta);
 
@@ -798,6 +803,12 @@ var GameScene = new Phaser.Class({
         if (window.TouchController && window.TouchController.enabled) {
             window.TouchController.update();
         }
+      } catch (e) {
+        this._updateErrorCount = (this._updateErrorCount || 0) + 1;
+        if (this._updateErrorCount <= 5) {
+            console.error('[GameScene.update] caught error — game kept running:', e);
+        }
+      }
     },
 
     // ==========================================
@@ -1915,24 +1926,52 @@ var GameScene = new Phaser.Class({
     // already define them.
     // ==========================================
     injectPowerups: function (map) {
-        var hasFire = false, hasOneUp = false;
+        var BOSS_LEVELS = { 5: 1, 10: 1, 15: 1, 19: 1 };
+        var hasOneUp = false, fireCount = 0;
         var plain = [];
         for (var r = 0; r < map.length; r++) {
             for (var c = 0; c < map[r].length; c++) {
-                if (map[r][c] === 42) hasFire = true;
+                if (map[r][c] === 42) fireCount++;
                 else if (map[r][c] === 43) hasOneUp = true;
                 else if (map[r][c] === 4) plain.push([r, c]);
             }
         }
-        if (!hasFire && plain.length > 0) {
-            var fi = Math.min(1, plain.length - 1); // 2nd plain block if available
-            map[plain[fi][0]][plain[fi][1]] = 42;
-            plain.splice(fi, 1);
+        // Fire Flower should be COMMON (it's the best boss weapon): turn roughly
+        // every other plain ? block into a fire flower.
+        var targetFire = Math.max(2, Math.ceil(plain.length / 2));
+        for (var i = 0; i < plain.length && fireCount < targetFire; i += 2) {
+            map[plain[i][0]][plain[i][1]] = 42;
+            fireCount++;
         }
-        if (!hasOneUp && plain.length > 2) {
-            var oi = plain.length - 1; // last plain block
-            map[plain[oi][0]][plain[oi][1]] = 43;
+        // One 1-UP from a remaining plain block.
+        if (!hasOneUp) {
+            for (var j = 0; j < plain.length; j++) {
+                if (map[plain[j][0]][plain[j][1]] === 4) { map[plain[j][0]][plain[j][1]] = 43; break; }
+            }
         }
+        // Boss levels: guarantee a fire flower right before the boss arena.
+        if (BOSS_LEVELS[this.currentLevel]) {
+            this._ensureFireFlowerBeforeBoss(map);
+        }
+    },
+
+    // Place a reachable fire-flower ? block just before the boss (~col 268) so
+    // the player can arm up for the fight. Adds ground below if needed.
+    _ensureFireFlowerBeforeBoss: function (map) {
+        var candidates = [268, 266, 270, 264, 272, 260];
+        var blockRow = 14; // ~3 tiles above ground → reachable by jump
+        for (var i = 0; i < candidates.length; i++) {
+            var col = candidates[i];
+            if (col >= map[0].length) continue;
+            if (map[blockRow][col] === 0 && map[blockRow - 1][col] === 0) {
+                map[blockRow][col] = 42;
+                if (!(map[17][col] || map[18][col])) { map[17][col] = 1; map[18][col] = 2; }
+                return;
+            }
+        }
+        // Fallback: force it at col 268.
+        map[blockRow][268] = 42;
+        map[17][268] = 1; map[18][268] = 2;
     },
 
     // ==========================================
