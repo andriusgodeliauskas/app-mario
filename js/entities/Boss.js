@@ -39,9 +39,12 @@ Boss.prototype.update = function (delta, playerX) {
     if (this.defeated || !this.sprite || !this.sprite.active) return;
     var spr = this.sprite;
 
-    // Pace between bounds.
+    // Pace between bounds — and reverse if wedged against anything, so the boss
+    // can never get permanently stuck on an obstacle.
     if (spr.x <= this.minX && this._dir < 0) { this._dir = 1; spr.setFlipX(true); }
     else if (spr.x >= this.maxX && this._dir > 0) { this._dir = -1; spr.setFlipX(false); }
+    else if (spr.body.blocked.left && this._dir < 0) { this._dir = 1; spr.setFlipX(true); }
+    else if (spr.body.blocked.right && this._dir > 0) { this._dir = -1; spr.setFlipX(false); }
     spr.setVelocityX(this._dir * this._speed);
 
     if (this.invuln > 0) {

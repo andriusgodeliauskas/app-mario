@@ -1011,6 +1011,16 @@ var GameScene = new Phaser.Class({
             scale: this.currentLevel === 19 ? 0.5 : 0.4
         });
         this.bossActive = true;
+
+        // Clear obstacles (pipes, bricks, floating ? blocks) from the arena so
+        // the boss can pace freely and never wedges against a pipe/structure.
+        var arenaL = this.boss.minX - 48, arenaR = this.boss.maxX + 48;
+        [this.pipeTiles, this.brickTiles, this.questionTiles].forEach(function (grp) {
+            grp.getChildren().slice().forEach(function (t) {
+                if (t.x >= arenaL && t.x <= arenaR && t.y < groundTop - 8) t.destroy();
+            });
+        });
+
         this.physics.add.collider(this.boss.sprite, this.groundTiles);
         this.physics.add.collider(this.boss.sprite, this.pipeTiles);
 
@@ -1916,8 +1926,27 @@ var GameScene = new Phaser.Class({
             this.injectBonusPipe(data.map);
             // Ensure the new power-ups appear in every level (incl. the old ones).
             this.injectPowerups(data.map);
+            // A ?-block with a solid tile directly below it can't be hit from
+            // beneath — float it up one row so it's reachable.
+            this._unstackBlocks(data.map);
         }
         return data;
+    },
+
+    // Move any ?-block that sits directly on a solid tile up by one row so the
+    // player can hit it from below (otherwise it's unreachable).
+    _unstackBlocks: function (map) {
+        var QB = { 4: 1, 40: 1, 41: 1, 42: 1, 43: 1 };
+        var SOLID = { 1:1, 2:1, 3:1, 11:1, 6:1, 7:1, 8:1, 9:1, 12:1, 13:1, 44:1,
+                      4:1, 40:1, 41:1, 42:1, 43:1 };
+        for (var r = 1; r < map.length - 1; r++) {
+            for (var c = 0; c < map[r].length; c++) {
+                if (QB[map[r][c]] && SOLID[map[r + 1][c]] && map[r - 1][c] === 0) {
+                    map[r - 1][c] = map[r][c]; // lift the block up
+                    map[r][c] = 0;             // leave a gap beneath it
+                }
+            }
+        }
     },
 
     // ==========================================
