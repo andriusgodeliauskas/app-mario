@@ -1136,6 +1136,9 @@ var GameScene = new Phaser.Class({
 
     fireballHitBoss: function (fireball, bossSprite) {
         if (!fireball.active || !this.boss || this.boss.defeated) return;
+        // A fireball reaching the boss starts the fight (so the HP bar/banner
+        // show) instead of silently chipping a boss the player can't see fighting.
+        if (!this._bossFightStarted) this.startBossFight();
         window.Fireball.burst(this, fireball);
         this.boss.takeDamage();
     },
@@ -1164,6 +1167,15 @@ var GameScene = new Phaser.Class({
 
     updateBoss: function (delta) {
         if (!this.bossActive || !this.boss) return;
+
+        // Always finish a defeated boss — even if the fight never formally
+        // started (a fireball can reach the boss from across the arena before
+        // the player walks up). Without this the boss sprite vanished but the
+        // containment wall stayed, trapping the player.
+        if (this.boss.defeated) {
+            this.defeatBoss();
+            return;
+        }
 
         // The boss idles until the player reaches the arena; then the fight
         // begins with an announcement so it's an unmistakable event.

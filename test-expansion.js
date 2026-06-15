@@ -179,6 +179,30 @@ function bad(n, e) { failed++; fails.push(n + ': ' + e); console.log('  ✗ ' + 
     });
     (defeated.defeated && defeated.wallGone && !defeated.bossActive) ? ok('boss defeat removes wall + ends fight') : bad('boss defeat', JSON.stringify(defeated));
 
+    // Defeating the boss with fireballs from afar (fight not yet started) must
+    // still remove the wall — otherwise the boss vanishes and the player is stuck.
+    await page.evaluate(() => {
+        window.game.scene.stop('GameScene');
+        window.game.scene.start('GameScene', { level: 5 });
+    });
+    await page.waitForFunction(() => {
+        const s = window.game.scene.getScene('GameScene');
+        return s && s.player && s.boss;
+    }, null, { timeout: 10000 });
+    const fbFar = await page.evaluate(() => {
+        const s = window.game.scene.getScene('GameScene');
+        s.player.x = 100; // far away → fight not started
+        let guard = 0;
+        while (s.boss && !s.boss.defeated && guard++ < 20) {
+            s.boss.invuln = 0;
+            const fb = s.fireballs.create(s.boss.sprite.x, s.boss.sprite.y, 'fireball');
+            s.fireballHitBoss(fb, s.boss.sprite);
+        }
+        for (let i = 0; i < 5; i++) s.update(0, 16);
+        return { defeated: s.boss ? s.boss.defeated : true, wallGone: !s.bossWall, bossActive: s.bossActive };
+    });
+    (fbFar.defeated && fbFar.wallGone && !fbFar.bossActive) ? ok('boss defeated by fireballs from afar still clears the wall') : bad('boss fireball-far', JSON.stringify(fbFar));
+
     if (consoleErrors.length) bad('no console errors', consoleErrors.slice(0, 5).join(' | '));
     else ok('no console errors');
 
