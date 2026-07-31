@@ -112,8 +112,51 @@ var EnglishWords = {
     /**
      * Get a random word that hasn't been shown recently
      */
-    getRandomWord: function () {
+    getRandomWord: function (level) {
+        var keys = this._getWordKeysForLevel(level);
+        return this._pickRandomWord(keys);
+    },
+
+    /**
+     * Get display-ready words for a level's theme. Falls back to the full pool.
+     */
+    getWordsForLevel: function (level, count) {
+        var keys = this._getWordKeysForLevel(level);
+        var words = [];
+        var limit = count || keys.length;
+        for (var i = 0; i < keys.length && words.length < limit; i++) {
+            var w = this.getWord(keys[i]);
+            if (w) {
+                w.key = keys[i];
+                words.push(w);
+            }
+        }
+        if (words.length === 0) {
+            keys = Object.keys(this.words);
+            for (var j = 0; j < keys.length && words.length < limit; j++) {
+                var fallback = this.getWord(keys[j]);
+                if (fallback) {
+                    fallback.key = keys[j];
+                    words.push(fallback);
+                }
+            }
+        }
+        return words;
+    },
+
+    _getWordKeysForLevel: function (level) {
         var keys = Object.keys(this.words);
+        var theme = (typeof window !== 'undefined' && window.getLevelTheme) ? window.getLevelTheme(level) : null;
+        if (!theme || !theme.words || theme.words.length === 0) return keys;
+
+        var themed = [];
+        for (var i = 0; i < theme.words.length; i++) {
+            if (this.words[theme.words[i]]) themed.push(theme.words[i]);
+        }
+        return themed.length ? themed : keys;
+    },
+
+    _pickRandomWord: function (keys) {
         // Filter out recently shown
         var available = [];
         for (var i = 0; i < keys.length; i++) {
@@ -162,9 +205,7 @@ var EnglishWords = {
             }
         }
         if (matching.length === 0) return this.getRandomWord();
-        var randomKey = matching[Math.floor(Math.random() * matching.length)];
-        var w = this.words[randomKey];
-        return { key: randomKey, en: w.en, lt: w.lt, icon: w.icon, category: w.category };
+        return this._pickRandomWord(matching);
     }
 };
 

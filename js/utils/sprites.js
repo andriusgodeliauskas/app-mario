@@ -3038,6 +3038,14 @@
             generateRainbowArchDeco(scene);
             generateSparkleDeco(scene);
 
+            // Themed decorations for levels 20-42 live in separate files
+            // (js/utils/sprites-themed-*.js) and register themselves here.
+            var extra = window.EXTRA_SPRITE_GENERATORS || [];
+            for (var i = 0; i < extra.length; i++) {
+                try { extra[i](scene); }
+                catch (e) { console.warn('[SpriteGenerator] extra generator failed:', e); }
+            }
+
             console.log('[SpriteGenerator] All sprites generated successfully.');
         }
     };

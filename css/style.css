@@ -10,6 +10,15 @@
     box-sizing: border-box;
 }
 
+:root {
+    /* Android reserves a back-gesture strip (~24dp) along the left and right
+       screen edges, and a home-gesture strip along the bottom. env(safe-area-*)
+       does NOT cover these — on most phones in landscape it reports 0 — so a
+       button sitting 16px from the edge has its outer half swallowed by the
+       system gesture. Keep interactive controls this far clear of every edge. */
+    --gesture-inset: 28px;
+}
+
 html, body {
     width: 100%;
     height: 100%;
@@ -20,6 +29,64 @@ html, body {
     -moz-osx-font-smoothing: unset;
 }
 
+#rotate-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    padding: 28px;
+    background-color: #101820;
+    color: #ffffff;
+    text-align: center;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.rotate-phone-icon {
+    width: 96px;
+    height: 96px;
+    animation: rotate-phone 1.8s ease-in-out infinite;
+}
+
+.rotate-phone-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: #ffd23f;
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.rotate-overlay-title {
+    max-width: 90vw;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+.rotate-overlay-subtitle {
+    max-width: 90vw;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+@keyframes rotate-phone {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    45%, 65% {
+        transform: rotate(90deg);
+    }
+}
+
 /* Game Container — Centered */
 #game-container {
     position: relative;
@@ -28,12 +95,106 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* touch-action does NOT inherit. Windowed, taps are covered by the rule on
+       html/body — but in fullscreen this element is promoted to the browser's
+       top layer, where html/body styles no longer apply to it, and it falls back
+       to touch-action:auto. Chrome then holds each touch back to see whether it
+       becomes a pan/zoom gesture, which is the fullscreen-only tap delay. */
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 #game-container canvas {
     display: block;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    touch-action: none;
+}
+
+/* Fullscreen: the whole container goes fullscreen (see scale.fullscreenTarget
+   in js/config.js), so it must fill the screen and keep the canvas centred with
+   the touch controls still laid over it. */
+#game-container:fullscreen,
+#game-container:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    /* Restated explicitly: in the top layer this element is its own gesture
+       root, so it must suppress pan/zoom disambiguation itself. */
+    touch-action: none;
+    overscroll-behavior: none;
+}
+
+#game-container:fullscreen *,
+#game-container:-webkit-full-screen * {
+    touch-action: none;
+}
+
+#game-container:fullscreen #touch-controls,
+#game-container:-webkit-full-screen #touch-controls {
+    display: flex;
+}
+
+/* Fullscreen toggle — HTML overlay, shared by all Phaser scenes */
+#fullscreen-toggle {
+    position: absolute;
+    top: calc(58px + env(safe-area-inset-top));
+    left: calc(16px + env(safe-area-inset-left) + var(--gesture-inset));
+    z-index: 150;
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    border: 4px solid #ffffff;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffd93d 0%, #ff9f1c 100%);
+    box-shadow: 0 6px 0 #b45f06, 0 10px 18px rgba(0, 0, 0, 0.35);
+    color: #113355;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 34px;
+    line-height: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    pointer-events: auto;
+}
+
+#fullscreen-toggle:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #b45f06, 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+#fullscreen-toggle:focus-visible {
+    outline: 4px solid #4ecdc4;
+    outline-offset: 4px;
+}
+
+#fullscreen-toggle.is-fullscreen {
+    background: linear-gradient(180deg, #4ecdc4 0%, #2aa79f 100%);
+    box-shadow: 0 6px 0 #176b66, 0 10px 18px rgba(0, 0, 0, 0.35);
+    color: #ffffff;
+}
+
+#fullscreen-toggle.is-fullscreen:active {
+    box-shadow: 0 2px 0 #176b66, 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+#fullscreen-toggle[hidden],
+#fullscreen-toggle.fullscreen-pending {
+    display: none;
 }
 
 /* ============================================
@@ -66,6 +227,49 @@ html, body {
         justify-content: space-between;
         align-items: flex-end;
         padding: 0 16px 20px 16px;
+    }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+    #rotate-overlay {
+        display: flex;
+    }
+
+    #fullscreen-toggle {
+        display: none;
+    }
+}
+
+@media (orientation: landscape) and (pointer: coarse) {
+    html, body {
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
+    #game-container {
+        width: 100vw;
+        height: 100dvh;
+    }
+
+    #touch-controls {
+        height: calc(112px + env(safe-area-inset-bottom) + var(--gesture-inset));
+        padding:
+            0
+            calc(16px + env(safe-area-inset-right) + var(--gesture-inset))
+            calc(14px + env(safe-area-inset-bottom) + var(--gesture-inset))
+            calc(16px + env(safe-area-inset-left) + var(--gesture-inset));
+    }
+
+    .touch-btn {
+        min-width: 64px;
+        min-height: 64px;
+    }
+
+    #touch-jump {
+        min-width: 80px;
+        min-height: 80px;
     }
 }
 
@@ -145,8 +349,8 @@ html, body {
     border-color: rgba(228, 40, 40, 0.8);
 }
 
-/* Responsive: smaller buttons on narrow screens */
-@media (pointer: coarse) and (max-width: 480px) {
+/* Responsive: smaller buttons on narrow portrait screens */
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 480px) {
     #touch-controls {
         height: 120px;
         padding: 0 10px 12px 10px;
@@ -166,5 +370,45 @@ html, body {
         width: 64px;
         height: 64px;
         font-size: 8px;
+    }
+}
+
+@media (orientation: landscape) and (pointer: coarse) and (max-width: 900px) {
+    #touch-controls {
+        height: calc(104px + env(safe-area-inset-bottom) + var(--gesture-inset));
+        padding:
+            0
+            calc(14px + env(safe-area-inset-right) + var(--gesture-inset))
+            calc(12px + env(safe-area-inset-bottom) + var(--gesture-inset))
+            calc(14px + env(safe-area-inset-left) + var(--gesture-inset));
+    }
+
+    .touch-btn {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        min-height: 64px;
+        font-size: 14px;
+    }
+
+    #touch-dpad {
+        gap: 10px;
+    }
+
+    #touch-actions {
+        gap: 12px;
+    }
+
+    #touch-jump {
+        width: 80px;
+        height: 80px;
+        min-width: 80px;
+        min-height: 80px;
+        font-size: 10px;
+    }
+
+    #fullscreen-toggle {
+        top: calc(58px + env(safe-area-inset-top));
+        left: calc(14px + env(safe-area-inset-left) + var(--gesture-inset));
     }
 }

@@ -14,7 +14,24 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div id="rotate-overlay" aria-live="polite">
+        <div class="rotate-phone-icon" aria-hidden="true">
+            <svg viewBox="0 0 80 80" focusable="false">
+                <rect x="28" y="12" width="24" height="48" rx="5"></rect>
+                <line x1="35" y1="17" x2="45" y2="17"></line>
+                <circle cx="40" cy="54" r="2"></circle>
+                <path d="M18 41a24 24 0 0 1 43-15"></path>
+                <path d="M61 26l1-14 11 8"></path>
+            </svg>
+        </div>
+        <div class="rotate-overlay-title">Pasuk telefoną 🔄</div>
+        <div class="rotate-overlay-subtitle">Žaidimas veikia gulsčiai</div>
+    </div>
+
     <div id="game-container">
+        <button id="fullscreen-toggle" class="fullscreen-pending" type="button" aria-label="Įjungti visą ekraną" title="Visas ekranas">
+            <span class="fullscreen-icon" aria-hidden="true">⛶</span>
+        </button>
         <div id="touch-controls">
             <div id="touch-dpad">
                 <button id="touch-left" class="touch-btn">&lt;</button>
@@ -32,13 +49,23 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 
     <!-- Utils -->
+    <script src="js/data/themes.js"></script>
+    <script src="js/data/themes-ext.js"></script>
     <script src="js/utils/sprites.js"></script>
+    <script src="js/utils/sprites-themed-a.js"></script>
+    <script src="js/utils/sprites-themed-b.js"></script>
     <script src="js/utils/english.js"></script>
     <script src="js/utils/audio.js"></script>
     <script src="js/utils/touch.js"></script>
+    <script src="js/utils/fullscreen.js"></script>
     <script src="js/utils/math.js"></script>
     <script src="js/utils/settings.js"></script>
     <script src="js/utils/levelValidator.js"></script>
+    <script src="js/utils/levelBuilder.js"></script>
+    <script src="js/data/levels-20-26.js"></script>
+    <script src="js/data/levels-27-32.js"></script>
+    <script src="js/data/levels-33-37.js"></script>
+    <script src="js/data/levels-38-42.js"></script>
 
     <!-- Entities -->
     <script src="js/entities/Player.js"></script>
@@ -64,5 +91,8 @@
 
     <!-- Game Config (must be last — references scenes) -->
     <script src="js/config.js"></script>
+
+    <!-- Diagnostics overlay: only active with ?debug=1 -->
+    <script src="js/utils/debughud.js"></script>
 </body>
 </html>

@@ -52,26 +52,23 @@ var GameScene = new Phaser.Class({
         var TILE = 32;
         var COLS = 300; // 9600 / 32 — levels are 50% longer than the original 200-col layout
         var ROWS = 19;  // 608 / 32 — we use 19 rows, bottom at y=608 but world is 600
+        this._tileSize = TILE;
+        this._staticCullBuckets = [];
+        this._staticCullVisible = {};
+        this._staticCullVisibleList = [];
+        this._staticCullLastCol = null;
+        this._staticCullCounter = 1;
+        this._staticCullStats = { total: 0, visible: 0 };
+        this._solidTileColumns = [];
 
         this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H + 64);
 
         // ----------------------------------
-        // Sky background — per level
+        // Theme visuals — per level
         // ----------------------------------
-        var bgColors = {
-            1: '#6B8CFF', 2: '#000000', 3: '#9494FF', 4: '#1A0A1E', 5: '#87CEEB',
-            6: '#1A3A1A', 7: '#E8A050', 8: '#C0D8E8', 9: '#2A0808',
-            10: '#1A1230', 11: '#0E3A1E', 12: '#2E86C1', 13: '#05050F', 14: '#FFB6E6',
-            15: '#2A0A0A', 16: '#10240F', 17: '#BFE3FF', 18: '#FFD9F0', 19: '#0A0A14'
-        };
-        this.cameras.main.setBackgroundColor(bgColors[this.currentLevel] || '#6B8CFF');
-
-        // Per-level tile tint — gives new levels (10-14) a distinct themed look
-        // without changing tile geometry/physics. Applied to ground (1/2) and
-        // stone (11) tiles only; bricks/?-blocks/pipes stay original.
-        var tileTint = { 10: 0x9aa0c0, 11: 0x7bc47b, 12: 0x9ad6ff, 13: 0xc8ccd8, 14: 0xffd6f2,
-            15: 0xff8866, 16: 0x88aa66, 17: 0xddeeff, 18: 0xffc0e0, 19: 0xb0b0c0 };
-        this._tileTint = tileTint[this.currentLevel] || null;
+        this.levelTheme = window.getLevelTheme ? window.getLevelTheme(this.currentLevel) : null;
+        this.cameras.main.setBackgroundColor((this.levelTheme && this.levelTheme.bg) || '#6B8CFF');
+        this._tileTint = (this.levelTheme && this.levelTheme.tint) || null;
 
         // ----------------------------------
         // Get level data
@@ -119,12 +116,16 @@ var GameScene = new Phaser.Class({
                     var gt = this.groundTiles.create(tx, ty, 'tiles', tileId);
                     gt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     if (this._tileTint) gt.setTint(this._tileTint);
+                    this.registerStaticCullObject(gt);
+                    this.registerSolidTileColumn(gt, col);
                 } else if (tileId === 3) {
                     // Brick block
                     var bt = this.brickTiles.create(tx, ty, 'tiles', 3);
                     bt.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     bt.tileType = 'brick';
                     bt.isUsed = false;
+                    this.registerStaticCullObject(bt);
+                    this.registerSolidTileColumn(bt, col);
                 } else if (tileId === 4) {
                     // Question block
                     var qt = this.questionTiles.create(tx, ty, 'tiles', 4);
@@ -132,6 +133,7 @@ var GameScene = new Phaser.Class({
                     qt.tileType = 'question';
                     qt.isUsed = false;
                     qt.content = 'coin'; // default content
+                    this.registerStaticCullObject(qt);
                 } else if (tileId === 40) {
                     // Question block with mushroom
                     var qm = this.questionTiles.create(tx, ty, 'tiles', 4);
@@ -139,6 +141,7 @@ var GameScene = new Phaser.Class({
                     qm.tileType = 'question';
                     qm.isUsed = false;
                     qm.content = 'mushroom';
+                    this.registerStaticCullObject(qm);
                 } else if (tileId === 41) {
                     // Question block with star
                     var qs = this.questionTiles.create(tx, ty, 'tiles', 4);
@@ -146,6 +149,7 @@ var GameScene = new Phaser.Class({
                     qs.tileType = 'question';
                     qs.isUsed = false;
                     qs.content = 'star';
+                    this.registerStaticCullObject(qs);
                 } else if (tileId === 42) {
                     // Question block with fire flower
                     var qf = this.questionTiles.create(tx, ty, 'tiles', 4);
@@ -153,6 +157,7 @@ var GameScene = new Phaser.Class({
                     qf.tileType = 'question';
                     qf.isUsed = false;
                     qf.content = 'fireflower';
+                    this.registerStaticCullObject(qf);
                 } else if (tileId === 43) {
                     // Question block with 1-UP green mushroom
                     var q1 = this.questionTiles.create(tx, ty, 'tiles', 4);
@@ -160,15 +165,20 @@ var GameScene = new Phaser.Class({
                     q1.tileType = 'question';
                     q1.isUsed = false;
                     q1.content = '1up';
+                    this.registerStaticCullObject(q1);
                 } else if (tileId === 6 || tileId === 7 || tileId === 8 || tileId === 9) {
                     // Pipe tiles
                     var pt = this.pipeTiles.create(tx, ty, 'tiles', tileId);
                     pt.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    this.registerStaticCullObject(pt);
+                    this.registerSolidTileColumn(pt, col);
                 } else if (tileId === 11) {
                     // Stone platform
                     var st = this.groundTiles.create(tx, ty, 'tiles', 11);
                     st.setScale(0.5).setSize(TILE, TILE).refreshBody();
                     if (this._tileTint) st.setTint(this._tileTint);
+                    this.registerStaticCullObject(st);
+                    this.registerSolidTileColumn(st, col);
                 } else if (tileId === 50) {
                     // Coin spawn marker
                     coinPositions.push({ x: tx, y: ty });
@@ -183,6 +193,8 @@ var GameScene = new Phaser.Class({
                     // a "press DOWN here" spot that leads to a bonus room.
                     var ep = this.pipeTiles.create(tx, ty, 'tiles', 6);
                     ep.setScale(0.5).setSize(TILE, TILE).refreshBody();
+                    this.registerStaticCullObject(ep);
+                    this.registerSolidTileColumn(ep, col);
                     this._enterPipes = this._enterPipes || [];
                     this._enterPipes.push({ x: tx, topY: ty - TILE / 2 });
                 } else if (tileId === 12) {
@@ -224,6 +236,7 @@ var GameScene = new Phaser.Class({
             c.body.setAllowGravity(false);
             c.setSize(48, 56);
             c.setImmovable(true);
+            this.registerStaticCullObject(c);
         }
 
         // ----------------------------------
@@ -331,6 +344,7 @@ var GameScene = new Phaser.Class({
                 (this.flagpole.height - 320) / 2
             );
             this.flagpole.setDepth(5);
+            this.registerStaticCullObject(this.flagpole);
         } else {
             this.flagpole = null;
         }
@@ -378,6 +392,7 @@ var GameScene = new Phaser.Class({
         this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setDeadzone(100, 50);
+        this.updateStaticCulling(true);
 
         // ----------------------------------
         // Input
@@ -416,8 +431,7 @@ var GameScene = new Phaser.Class({
         // Audio — init and start level music
         // ----------------------------------
         if (window.AudioManager) { AudioManager.init(); }
-        var musicMap = { 1: 'overworld', 2: 'underground', 3: 'overworld', 4: 'castle', 5: 'overworld', 6: 'overworld', 7: 'underground', 8: 'overworld', 9: 'castle', 10: 'underground', 11: 'overworld', 12: 'overworld', 13: 'castle', 14: 'overworld', 15: 'castle', 16: 'underground', 17: 'overworld', 18: 'overworld', 19: 'castle' };
-        if (window.AudioManager) AudioManager.startMusic(musicMap[this.currentLevel] || 'overworld');
+        if (window.AudioManager) AudioManager.startMusic((this.levelTheme && this.levelTheme.music) || 'overworld');
 
         // ----------------------------------
         // Math challenge spawner — periodic in-level math problems
@@ -433,7 +447,7 @@ var GameScene = new Phaser.Class({
         }
 
         // ----------------------------------
-        // Boss encounter (levels 5, 10, 15 + final 19)
+        // Boss encounter levels
         // ----------------------------------
         this.setupBoss();
 
@@ -442,6 +456,92 @@ var GameScene = new Phaser.Class({
             window.__mario_test = window.__mario_test || {};
             window.__mario_test.scene = this;
         }
+    },
+
+    registerStaticCullObject: function (obj) {
+        if (!obj || !this._staticCullBuckets) return;
+        // Fixed/parallax objects are already cheap and need different camera math.
+        if (obj.scrollFactorX !== undefined && obj.scrollFactorX !== 1) return;
+
+        var tile = this._tileSize || 32;
+        var col = Math.floor(obj.x / tile);
+        if (col < 0) col = 0;
+        if (!this._staticCullBuckets[col]) this._staticCullBuckets[col] = [];
+
+        obj._staticCullId = this._staticCullCounter++;
+        obj._staticCullBaseVisible = obj.visible !== false;
+        obj.setVisible(false);
+        this._staticCullBuckets[col].push(obj);
+        this._staticCullStats.total++;
+    },
+
+    updateStaticCulling: function (force) {
+        if (!this._staticCullBuckets || !this.cameras || !this.cameras.main) return;
+
+        var cam = this.cameras.main;
+        var tile = this._tileSize || 32;
+        var camCol = Math.floor(cam.scrollX / tile);
+        if (!force && camCol === this._staticCullLastCol) return;
+        this._staticCullLastCol = camCol;
+
+        var oldVisible = this._staticCullVisibleList || [];
+        for (var i = 0; i < oldVisible.length; i++) {
+            var oldObj = oldVisible[i];
+            if (oldObj && oldObj.active) oldObj.setVisible(false);
+        }
+
+        this._staticCullVisible = {};
+        this._staticCullVisibleList = [];
+
+        // Keep a small buffer around the camera so objects are visible before
+        // they scroll onto the screen, but avoid submitting the rest of the map.
+        var margin = tile * 3;
+        var startCol = Math.floor((cam.scrollX - margin) / tile);
+        var endCol = Math.floor((cam.scrollX + cam.width + margin) / tile);
+        if (startCol < 0) startCol = 0;
+
+        for (var col = startCol; col <= endCol; col++) {
+            var bucket = this._staticCullBuckets[col];
+            if (!bucket) continue;
+            for (var j = 0; j < bucket.length; j++) {
+                var obj = bucket[j];
+                if (!obj || !obj.active || this._staticCullVisible[obj._staticCullId]) continue;
+                if (obj._staticCullBaseVisible !== false) obj.setVisible(true);
+                this._staticCullVisible[obj._staticCullId] = true;
+                this._staticCullVisibleList.push(obj);
+            }
+        }
+
+        this._staticCullStats.visible = this._staticCullVisibleList.length;
+    },
+
+    registerSolidTileColumn: function (tileObj, col) {
+        if (!tileObj || !this._solidTileColumns) return;
+        if (!this._solidTileColumns[col]) this._solidTileColumns[col] = [];
+        this._solidTileColumns[col].push(tileObj);
+    },
+
+    hasSolidTileAtPoint: function (x, y) {
+        if (!this._solidTileColumns) return false;
+        var tile = this._tileSize || 32;
+        var col = Math.floor(x / tile);
+        var buckets = [this._solidTileColumns[col]];
+        if (x % tile < 2) buckets.push(this._solidTileColumns[col - 1]);
+        else if (x % tile > tile - 2) buckets.push(this._solidTileColumns[col + 1]);
+
+        for (var b = 0; b < buckets.length; b++) {
+            var arr = buckets[b];
+            if (!arr) continue;
+            for (var i = 0; i < arr.length; i++) {
+                var obj = arr[i];
+                if (obj && obj.active && obj.body &&
+                    x >= obj.body.left && x <= obj.body.right &&
+                    y >= obj.body.top && y <= obj.body.bottom) {
+                    return true;
+                }
+            }
+        }
+        return false;
     },
 
     // ==========================================
@@ -503,6 +603,8 @@ var GameScene = new Phaser.Class({
       // appears frozen. Wrapping the whole loop means a stray error is logged
       // but the next frame still runs, so the game keeps going.
       try {
+        this.updateStaticCulling(false);
+
         // Math challenge spawner — runs every frame, decides when/where to spawn
         if (this.mathSpawner) this.mathSpawner.update(time, delta);
 
@@ -513,7 +615,9 @@ var GameScene = new Phaser.Class({
         // Coyote time tracking
         // ----------------------------------
         if (onGround) {
-            this.coyoteTimer = 80; // 80ms grace
+            // 140ms grace. Was 80ms, which is tight for a 6-year-old on a phone:
+            // on a long frame it can expire before the tap is even processed.
+            this.coyoteTimer = 140;
         } else if (this.wasOnGround && !onGround) {
             // Just left ground — start counting down
         }
@@ -525,14 +629,26 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Jump buffer tracking
         // ----------------------------------
-        var touchJump = (window.TouchController && window.TouchController.jumpJustPressed);
+        // Consume the touch jump AT THE POINT OF USE. TouchController.update()
+        // runs at the very end of this method, so the flag used to survive into
+        // the next frame and buffer the same tap twice.
+        var touchJump = false;
+        if (window.TouchController && window.TouchController.jumpJustPressed) {
+            touchJump = true;
+            window.TouchController.jumpJustPressed = false;
+            window.TouchController._jumpConsumed = false;
+        }
         var jumpPressed = Phaser.Input.Keyboard.JustDown(this.keySpace) ||
                           Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
                           Phaser.Input.Keyboard.JustDown(this.keyW) ||
                           touchJump;
 
         if (jumpPressed) {
-            this.jumpBufferTimer = 100; // 100ms buffer
+            // 200ms buffer (was 100ms). This is what makes an early tap "stick":
+            // press slightly before landing and the jump still fires on landing
+            // instead of being silently dropped, which reads as an unresponsive
+            // button. 200ms is still short enough not to feel like auto-jump.
+            this.jumpBufferTimer = 200;
         }
         if (this.jumpBufferTimer > 0) {
             this.jumpBufferTimer -= delta;
@@ -682,19 +798,7 @@ var GameScene = new Phaser.Class({
                 var belowY = e.body.bottom + 6;
                 var hasGround = false;
 
-                var tileGroups = [this.groundTiles, this.brickTiles, this.pipeTiles];
-                for (var g = 0; g < tileGroups.length && !hasGround; g++) {
-                    var tiles = tileGroups[g].getChildren();
-                    for (var t = 0; t < tiles.length; t++) {
-                        var tile = tiles[t];
-                        if (tile.active &&
-                            aheadX >= tile.body.left && aheadX <= tile.body.right &&
-                            belowY >= tile.body.top && belowY <= tile.body.bottom) {
-                            hasGround = true;
-                            break;
-                        }
-                    }
-                }
+                hasGround = this.hasSolidTileAtPoint(aheadX, belowY);
 
                 if (!hasGround) {
                     e.patrolDir = -e.patrolDir;
@@ -994,7 +1098,7 @@ var GameScene = new Phaser.Class({
     // BOSS ENCOUNTER
     // ==========================================
     setupBoss: function () {
-        var BOSS_HP = { 5: 3, 10: 4, 15: 4, 19: 6 };
+        var BOSS_HP = { 5: 3, 10: 4, 15: 4, 19: 6, 28: 4, 35: 5, 42: 7 };
         var hp = BOSS_HP[this.currentLevel];
         if (!hp || !window.Boss || !this.flagpole) return;
 
@@ -1008,7 +1112,7 @@ var GameScene = new Phaser.Class({
 
         this.boss = new window.Boss(this, bossX, bossY, {
             hp: hp, minX: bossX - 130, maxX: bossX + 130,
-            scale: this.currentLevel === 19 ? 0.5 : 0.4
+            scale: this.currentLevel === 42 ? 0.5 : 0.4
         });
         this.bossActive = true;
 
@@ -1718,7 +1822,7 @@ var GameScene = new Phaser.Class({
     showEnglishPopup: function (wordKey) {
         var word = window.EnglishWords ? window.EnglishWords.getWord(wordKey) : null;
         if (!word) {
-            word = window.EnglishWords ? window.EnglishWords.getRandomWord() : null;
+            word = window.EnglishWords ? window.EnglishWords.getRandomWord(this.currentLevel) : null;
         }
         if (!word) return;
 
@@ -1798,6 +1902,25 @@ var GameScene = new Phaser.Class({
     createDecorations: function (decorations) {
         if (!decorations) return;
 
+        // Generic themed decorations (levels 20-42). Each entry:
+        // { x, y, key, scale, tint, depth, alpha, scrollFactor, flipX }
+        // Silently skipped if the texture isn't registered, so a missing
+        // themed sprite never breaks a level.
+        if (decorations.custom) {
+            for (var xi = 0; xi < decorations.custom.length; xi++) {
+                var xd = decorations.custom[xi];
+                if (!xd || !xd.key || !this.textures.exists(xd.key)) continue;
+                var img = this.add.image(xd.x, xd.y, xd.key);
+                img.setDepth(xd.depth !== undefined ? xd.depth : -8);
+                img.setScale((xd.scale || 1) * 0.5);
+                if (xd.tint !== undefined) img.setTint(xd.tint);
+                if (xd.alpha !== undefined) img.setAlpha(xd.alpha);
+                if (xd.flipX) img.setFlipX(true);
+                img.setScrollFactor(xd.scrollFactor !== undefined ? xd.scrollFactor : 1);
+                this.registerStaticCullObject(img);
+            }
+        }
+
         // Clouds (far background)
         if (decorations.clouds) {
             for (var ci = 0; ci < decorations.clouds.length; ci++) {
@@ -1807,6 +1930,7 @@ var GameScene = new Phaser.Class({
                 cloud.setAlpha(0.8);
                 cloud.setScale((cd.scale || 1) * 0.5);
                 cloud.setScrollFactor(0.3);
+                this.registerStaticCullObject(cloud);
             }
         }
 
@@ -1819,6 +1943,7 @@ var GameScene = new Phaser.Class({
                 hill.setOrigin(0.5, 1);
                 hill.setScale((hd.scale || 1) * 0.5);
                 hill.setScrollFactor(0.5);
+                this.registerStaticCullObject(hill);
             }
         }
 
@@ -1830,6 +1955,7 @@ var GameScene = new Phaser.Class({
                 bush.setDepth(-6);
                 bush.setOrigin(0.5, 1);
                 bush.setScale((bd.scale || 1) * 0.5);
+                this.registerStaticCullObject(bush);
             }
         }
 
@@ -1842,6 +1968,7 @@ var GameScene = new Phaser.Class({
                 fl.setOrigin(0.5, 1);
                 fl.setScale((fd.scale || 1) * 0.5);
                 if (fd.tint) fl.setTint(fd.tint);
+                this.registerStaticCullObject(fl);
             }
         }
 
@@ -1853,6 +1980,7 @@ var GameScene = new Phaser.Class({
                 gr.setDepth(-4);
                 gr.setOrigin(0.5, 1);
                 gr.setScale((gd.scale || 1) * 0.5);
+                this.registerStaticCullObject(gr);
             }
         }
 
@@ -1864,6 +1992,7 @@ var GameScene = new Phaser.Class({
                 mu.setDepth(-4);
                 mu.setOrigin(0.5, 1);
                 mu.setScale((md.scale || 1) * 0.5);
+                this.registerStaticCullObject(mu);
             }
         }
 
@@ -1875,6 +2004,7 @@ var GameScene = new Phaser.Class({
                 rk.setDepth(-6);
                 rk.setOrigin(0.5, 1);
                 rk.setScale((rd.scale || 1) * 0.5);
+                this.registerStaticCullObject(rk);
             }
         }
 
@@ -1886,6 +2016,7 @@ var GameScene = new Phaser.Class({
                 fn.setDepth(-6);
                 fn.setOrigin(0, 1);
                 fn.setScale((fnd.scale || 1) * 0.5);
+                this.registerStaticCullObject(fn);
             }
         }
 
@@ -1919,6 +2050,7 @@ var GameScene = new Phaser.Class({
                 img.setScale((d.scale || 1) * 0.5);
                 if (cfg.scroll) img.setScrollFactor(cfg.scroll);
                 if (d.tint) img.setTint(d.tint);
+                this.registerStaticCullObject(img);
             }
         }
     },
@@ -1927,8 +2059,14 @@ var GameScene = new Phaser.Class({
     // LEVEL DATA — hardcoded tilemaps
     // ==========================================
     getLevelData: function (level) {
+        // Levels may be registered from standalone files (js/data/levels-*.js)
+        // via window.LEVEL_GENERATORS[level] = function (scene) { return {map:..., decorations:...}; }
+        // Falls back to the in-scene getLevel<N>Data methods for levels 1-19.
+        var reg = window.LEVEL_GENERATORS;
         var fn = 'getLevel' + level + 'Data';
-        var data = this[fn] ? this[fn]() : this.getLevel1Data();
+        var data;
+        if (reg && typeof reg[level] === 'function') data = reg[level](this);
+        else data = this[fn] ? this[fn]() : this.getLevel1Data();
         // Uniformly extend every level to 300 cols (50% longer than original).
         // The variant flag (set by some levels — currently level 1) drives which
         // filler pattern is added in the extended section.
@@ -1946,17 +2084,29 @@ var GameScene = new Phaser.Class({
     },
 
     // Move any ?-block that sits directly on a solid tile up by one row so the
-    // player can hit it from below (otherwise it's unreachable).
+    // player can hit it from below (otherwise it's unreachable — you cannot
+    // stand inside the solid underneath it, so you can only walk over the top).
+    //
+    // The cell above only has to be NON-SOLID, not strictly empty: rows above a
+    // block commonly hold coins (50) or enemy spawns (60/61). Requiring `=== 0`
+    // here used to leave those blocks stranded — that stranded 22% of all
+    // ?-blocks, and up to 100% on some levels.
     _unstackBlocks: function (map) {
         var QB = { 4: 1, 40: 1, 41: 1, 42: 1, 43: 1 };
         var SOLID = { 1:1, 2:1, 3:1, 11:1, 6:1, 7:1, 8:1, 9:1, 12:1, 13:1, 44:1,
                       4:1, 40:1, 41:1, 42:1, 43:1 };
-        for (var r = 1; r < map.length - 1; r++) {
+        // Bottom-up so a block lifted into row r-1 is not re-lifted repeatedly.
+        for (var r = map.length - 2; r >= 1; r--) {
             for (var c = 0; c < map[r].length; c++) {
-                if (QB[map[r][c]] && SOLID[map[r + 1][c]] && map[r - 1][c] === 0) {
-                    map[r - 1][c] = map[r][c]; // lift the block up
-                    map[r][c] = 0;             // leave a gap beneath it
-                }
+                if (!QB[map[r][c]]) continue;
+                if (!SOLID[map[r + 1][c]]) continue;   // already hittable
+                if (SOLID[map[r - 1][c]]) continue;    // real geometry above — leave it
+                // Swap upward: whatever sat above (0, a coin, an enemy) drops
+                // into the vacated cell, which keeps the gap beneath the block
+                // non-solid and therefore reachable.
+                var above = map[r - 1][c];
+                map[r - 1][c] = map[r][c];
+                map[r][c] = above;
             }
         }
     },
@@ -1967,7 +2117,7 @@ var GameScene = new Phaser.Class({
     // already define them.
     // ==========================================
     injectPowerups: function (map) {
-        var BOSS_LEVELS = { 5: 1, 10: 1, 15: 1, 19: 1 };
+        var BOSS_LEVELS = { 5: 1, 10: 1, 15: 1, 19: 1, 28: 1, 35: 1, 42: 1 };
         var hasOneUp = false, fireCount = 0;
         var plain = [];
         for (var r = 0; r < map.length; r++) {

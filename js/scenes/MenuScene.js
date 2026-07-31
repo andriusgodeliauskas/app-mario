@@ -1,5 +1,5 @@
 /**
- * MenuScene — Main menu screen with title, decorations, and 9-level selection.
+ * MenuScene — Main menu screen with title, decorations, and paged level selection.
  * All sprites are generated in BootScene — no external assets needed.
  * Cookie-based progress: levels unlock sequentially.
  */
@@ -133,54 +133,32 @@ var MenuScene = new Phaser.Class({
         }).setOrigin(0.5).setDepth(6);
 
         // ========================================
-        // 5. LEVEL SELECTION — "Pasirink lygi"
+        // 5. LEVEL SELECTION — world pages
         // ========================================
-        this.add.text(W / 2, 148, 'PASIRINK LYGI:', {
+        this.add.text(W / 2, 146, 'PASIRINK PASAULI:', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '12px',
             color: '#F8D830'
         }).setOrigin(0.5);
 
-        var levels = [
-            { num: 1, name: 'GRASSLAND',   lt: 'Pieva',       color: 0x30A030, icon: 'hill' },
-            { num: 2, name: 'UNDERGROUND', lt: 'Pozemis',      color: 0x8B6914, icon: 'tiles' },
-            { num: 3, name: 'SKY',         lt: 'Dangus',       color: 0x9494FF, icon: 'cloud' },
-            { num: 4, name: 'CASTLE',      lt: 'Pilis',        color: 0x666666, icon: 'tiles' },
-            { num: 5, name: 'BEACH',       lt: 'Papludimys',   color: 0x44BBDD, icon: 'cloud' },
-            { num: 6, name: 'FOREST',      lt: 'Miskas',       color: 0x1B7A1B, icon: 'hill' },
-            { num: 7, name: 'DESERT',      lt: 'Dykuma',       color: 0xD4A030, icon: 'tiles' },
-            { num: 8, name: 'SNOW',        lt: 'Sniegas',      color: 0xB0D0E8, icon: 'cloud' },
-            { num: 9, name: 'VOLCANO',     lt: 'Ugnikalnis',   color: 0xCC2200, icon: 'tiles' },
-            { num: 10, name: 'CAVE',       lt: 'Ola',          color: 0x5A4A7A, icon: 'tiles' },
-            { num: 11, name: 'JUNGLE',     lt: 'Dziungles',    color: 0x1B7A1B, icon: 'hill' },
-            { num: 12, name: 'OCEAN',      lt: 'Vandenynas',   color: 0x2E86C1, icon: 'cloud' },
-            { num: 13, name: 'SPACE',      lt: 'Kosmosas',     color: 0x202840, icon: 'tiles' },
-            { num: 14, name: 'RAINBOW',    lt: 'Vaivorykste',  color: 0xFF6FB5, icon: 'cloud' },
-            { num: 15, name: 'VOLCANO',    lt: 'Ugnikalnis*',  color: 0xC0392B, icon: 'tiles' },
-            { num: 16, name: 'SWAMP',      lt: 'Pelke',        color: 0x4A7A2A, icon: 'hill' },
-            { num: 17, name: 'CLOUD CITY', lt: 'Debesys',      color: 0x7FB3FF, icon: 'cloud' },
-            { num: 18, name: 'CANDY',      lt: 'Saldainiai',   color: 0xFF7FD0, icon: 'cloud' },
-            { num: 19, name: 'FINAL',      lt: 'Finalas*',     color: 0x2C2C44, icon: 'tiles' }
-        ];
-
-        // 19 levels in a 5-column grid (4 rows). 5*130 + 4*15 = 710 < 800.
-        var cardW = 130;
-        var cardH = 85;
-        var gapX = 15;
-        var gapY = 8;
-        var COLS = 5;
-        var startX = W / 2 - (cardW * COLS + gapX * (COLS - 1)) / 2;
-        var startY = 158;
-
-        for (var i = 0; i < levels.length; i++) {
-            var lv = levels[i];
-            var col = i % COLS;
-            var row = Math.floor(i / COLS);
-            var cx = startX + col * (cardW + gapX) + cardW / 2;
-            var cy = startY + row * (cardH + gapY) + cardH / 2;
-
-            this.createLevelCard(cx, cy, cardW, cardH, lv);
+        var levels = [];
+        var themes = window.LEVEL_THEMES || [];
+        for (var ti = 0; ti < themes.length; ti++) {
+            levels.push({
+                num: themes[ti].num,
+                name: themes[ti].name,
+                lt: themes[ti].lt,
+                color: themes[ti].menuColor,
+                icon: themes[ti].icon
+            });
         }
+
+        this.levels = levels;
+        this.levelsPerWorld = 7;
+        this.currentWorldPage = 0;
+        this.levelCardObjects = [];
+        this.createWorldPager(W, H);
+        this.renderWorldPage();
 
         // ========================================
         // 6. DECORATIVE SPRITES
@@ -236,6 +214,120 @@ var MenuScene = new Phaser.Class({
     },
 
     // ==========================================
+    // WORLD PAGER
+    // ==========================================
+    createWorldPager: function (W, H) {
+        this.totalWorldPages = Math.max(1, Math.ceil(this.levels.length / this.levelsPerWorld));
+
+        this.worldTitleText = this.add.text(W / 2, 174, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5);
+
+        this.worldRangeText = this.add.text(W / 2, 196, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '9px',
+            color: '#E8F8FF'
+        }).setOrigin(0.5);
+
+        this.prevWorldButton = this.createWorldArrow(54, 318, '<', -1);
+        this.nextWorldButton = this.createWorldArrow(W - 54, 318, '>', 1);
+
+        var self = this;
+        this.input.keyboard.on('keydown-LEFT', function () {
+            self.changeWorldPage(-1);
+        });
+        this.input.keyboard.on('keydown-RIGHT', function () {
+            self.changeWorldPage(1);
+        });
+    },
+
+    createWorldArrow: function (x, y, label, dir) {
+        var self = this;
+        var parts = [];
+        var bg = this.add.graphics().setDepth(8);
+        bg.fillStyle(0xFFFFFF, 0.95);
+        bg.fillRoundedRect(x - 36, y - 52, 72, 104, 18);
+        bg.lineStyle(5, 0xF8B800, 1);
+        bg.strokeRoundedRect(x - 36, y - 52, 72, 104, 18);
+        parts.push(bg);
+
+        var txt = this.add.text(x, y - 2, label, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '38px',
+            color: '#E8261C'
+        }).setOrigin(0.5).setDepth(9);
+        parts.push(txt);
+
+        var zone = this.add.zone(x, y, 76, 108).setDepth(10).setInteractive({ useHandCursor: true });
+        zone.on('pointerover', function () {
+            txt.setScale(1.12);
+        });
+        zone.on('pointerout', function () {
+            txt.setScale(1.0);
+        });
+        zone.on('pointerdown', function () {
+            self.changeWorldPage(dir);
+        });
+        parts.push(zone);
+
+        return { bg: bg, text: txt, zone: zone, parts: parts };
+    },
+
+    setWorldArrowEnabled: function (button, enabled) {
+        for (var i = 0; i < button.parts.length; i++) {
+            button.parts[i].setAlpha(enabled ? 1 : 0.35);
+        }
+        if (enabled) button.zone.setInteractive({ useHandCursor: true });
+        else button.zone.disableInteractive();
+    },
+
+    changeWorldPage: function (dir) {
+        var next = this.currentWorldPage + dir;
+        if (next < 0 || next >= this.totalWorldPages) return;
+        this.currentWorldPage = next;
+        this.renderWorldPage();
+    },
+
+    renderWorldPage: function () {
+        var W = this.cameras.main.width;
+        var first = this.currentWorldPage * this.levelsPerWorld;
+        var last = Math.min(first + this.levelsPerWorld, this.levels.length);
+
+        for (var i = 0; i < this.levelCardObjects.length; i++) {
+            this.levelCardObjects[i].destroy();
+        }
+        this.levelCardObjects = [];
+
+        this.worldTitleText.setText('PASAULIS ' + (this.currentWorldPage + 1) + ' / ' + this.totalWorldPages);
+        if (last > first) {
+            this.worldRangeText.setText('LYGIAI ' + this.levels[first].num + '-' + this.levels[last - 1].num);
+        } else {
+            this.worldRangeText.setText('');
+        }
+
+        var cardW = 150;
+        var cardH = 100;
+        var gapX = 20;
+        var cols = 4;
+        var startX = W / 2 - (cardW * cols + gapX * (cols - 1)) / 2;
+        var startY = 200;
+
+        for (var li = first; li < last; li++) {
+            var local = li - first;
+            var col = local % cols;
+            var row = Math.floor(local / cols);
+            var cx = startX + col * (cardW + gapX) + cardW / 2;
+            var cy = startY + row * (cardH + 18) + cardH / 2;
+            this.createLevelCard(cx, cy, cardW, cardH, this.levels[li]);
+        }
+
+        this.setWorldArrowEnabled(this.prevWorldButton, this.currentWorldPage > 0);
+        this.setWorldArrowEnabled(this.nextWorldButton, this.currentWorldPage < this.totalWorldPages - 1);
+    },
+
+    // ==========================================
     // CREATE LEVEL CARD
     // ==========================================
     createLevelCard: function (cx, cy, w, h, levelInfo) {
@@ -245,6 +337,7 @@ var MenuScene = new Phaser.Class({
         var unlockAll = window.MathSettings && window.MathSettings.load().unlockAll === true;
         var isLocked = !unlockAll && levelInfo.num > maxLevel;
         var g = this.add.graphics();
+        this.levelCardObjects.push(g);
 
         // Card shadow
         g.fillStyle(0x000000, 0.4);
@@ -267,65 +360,73 @@ var MenuScene = new Phaser.Class({
         g.fillRoundedRect(cx - w / 2, cy - h / 2, w, 24, { tl: 10, tr: 10, bl: 0, br: 0 });
 
         // Level number
-        this.add.text(cx, cy - h / 2 + 12, 'WORLD 1-' + levelInfo.num, {
+        this.levelCardObjects.push(this.add.text(cx, cy - h / 2 + 13, 'WORLD 1-' + levelInfo.num, {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: isLocked ? '#888888' : '#FFFFFF'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5));
 
         if (isLocked) {
             // Locked card content
-            this.add.text(cx, cy + 2, 'UZRAKINTA', {
+            this.levelCardObjects.push(this.add.text(cx, cy + 4, 'UZRAKINTA', {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
+                fontSize: '9px',
                 color: '#666666'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5));
 
-            this.add.text(cx, cy + h / 2 - 16, 'LOCKED', {
+            this.levelCardObjects.push(this.add.text(cx, cy + h / 2 - 18, '🔒', {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '22px',
+                color: '#AAAAAA'
+            }).setOrigin(0.5));
+
+            this.levelCardObjects.push(this.add.text(cx, cy + h / 2 - 38, levelInfo.lt, {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
-                color: '#555555'
-            }).setOrigin(0.5);
+                fontSize: '7px',
+                color: '#777777'
+            }).setOrigin(0.5));
         } else {
             // Level name (English)
-            this.add.text(cx, cy + 2, levelInfo.name, {
+            this.levelCardObjects.push(this.add.text(cx, cy + 4, levelInfo.name, {
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '8px',
                 color: '#F8D830'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5));
 
             // Level name (Lithuanian)
-            this.add.text(cx, cy + 18, levelInfo.lt, {
+            this.levelCardObjects.push(this.add.text(cx, cy + 22, levelInfo.lt, {
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '7px',
                 color: '#AAAAAA'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5));
 
             // Decorative icon on card
             if (levelInfo.icon === 'hill') {
-                this.add.image(cx, cy - 14, 'hill').setScale(0.125).setTint(levelInfo.color);
+                this.levelCardObjects.push(this.add.image(cx, cy - 17, 'hill').setScale(0.135).setTint(levelInfo.color));
             } else if (levelInfo.icon === 'cloud') {
-                this.add.image(cx, cy - 14, 'cloud').setScale(0.2);
+                this.levelCardObjects.push(this.add.image(cx, cy - 17, 'cloud').setScale(0.22));
             } else {
                 var frame = levelInfo.num === 2 ? 3 : 11;
-                this.add.image(cx, cy - 14, 'tiles', frame).setScale(0.35);
+                this.levelCardObjects.push(this.add.image(cx, cy - 17, 'tiles', frame).setScale(0.38));
             }
 
             // "PLAY" text
-            this.add.text(cx, cy + h / 2 - 16, 'ZAISTI', {
+            this.levelCardObjects.push(this.add.text(cx, cy + h / 2 - 16, 'ZAISTI', {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
+                fontSize: '9px',
                 color: '#30FF30'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5));
 
             // Hover border graphics (separate so we can show/hide)
             var hoverG = this.add.graphics();
+            this.levelCardObjects.push(hoverG);
             hoverG.setVisible(false);
             hoverG.lineStyle(3, 0xF8D830, 1);
             hoverG.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, 10);
 
             // Interactive zone
             var zone = this.add.zone(cx, cy, w, h).setInteractive({ useHandCursor: true });
+            this.levelCardObjects.push(zone);
 
             zone.on('pointerover', function () {
                 hoverG.setVisible(true);

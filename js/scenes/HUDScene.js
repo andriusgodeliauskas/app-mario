@@ -30,7 +30,7 @@ var HUDScene = new Phaser.Class({
         // ----------------------------------
         // Semi-transparent top bar
         // ----------------------------------
-        this.topBar = this.add.rectangle(W / 2, 22, W, 44, 0x000000, 0.6);
+        this.topBar = this.add.rectangle(W / 2, 58, W, 116, 0x000000, 0.6);
         this.topBar.setDepth(0);
 
         // ----------------------------------
@@ -97,21 +97,50 @@ var HUDScene = new Phaser.Class({
         // ----------------------------------
         // Restart/Quit button
         // ----------------------------------
-        var restartBtnX = livesX - 120;
-        var restartBtn = this.add.text(restartBtnX, 14, '[X]', {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
-            color: '#FF6666'
-        }).setDepth(2).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+        // Drawn at ~60% of the previous size — at fullscreen scale the old
+        // 104x92 glyph was overbearing. The interactive zone stays deliberately
+        // larger than the artwork so it still clears the 60px child touch-target
+        // rule on a windowed landscape phone (96 * 0.65 = 62px).
+        var restartBtnX = W - 180;
+        var restartBtnY = 84;
+        var restartBtnW = 62;
+        var restartBtnH = 55;
+        this.restartBtnBg = this.add.graphics().setDepth(2);
+        this.restartBtnBg.fillStyle(0xE8261C, 1);
+        this.restartBtnBg.fillRoundedRect(restartBtnX - restartBtnW / 2, restartBtnY - restartBtnH / 2, restartBtnW, restartBtnH, 9);
+        this.restartBtnBg.lineStyle(3, 0xFFFFFF, 1);
+        this.restartBtnBg.strokeRoundedRect(restartBtnX - restartBtnW / 2, restartBtnY - restartBtnH / 2, restartBtnW, restartBtnH, 9);
 
-        restartBtn.on('pointerover', function() { restartBtn.setColor('#FF0000'); });
-        restartBtn.on('pointerout', function() { restartBtn.setColor('#FF6666'); });
-        restartBtn.on('pointerdown', function() { self.showQuitDialog(); });
+        var restartBtn = this.add.text(restartBtnX, restartBtnY, '✕', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '19px',
+            color: '#FFFFFF'
+        }).setDepth(3).setOrigin(0.5);
+        this.restartBtnText = restartBtn;
+
+        var restartZone = this.add.zone(restartBtnX, restartBtnY, 96, 96)
+            .setDepth(4)
+            .setInteractive({ useHandCursor: true });
+        this.restartZone = restartZone;
+
+        // Single redraw helper so hover/idle can never drift from the base size.
+        function drawRestartBtn(fillColor) {
+            self.restartBtnBg.clear();
+            self.restartBtnBg.fillStyle(fillColor, 1);
+            self.restartBtnBg.fillRoundedRect(restartBtnX - restartBtnW / 2, restartBtnY - restartBtnH / 2, restartBtnW, restartBtnH, 9);
+            self.restartBtnBg.lineStyle(3, 0xFFFFFF, 1);
+            self.restartBtnBg.strokeRoundedRect(restartBtnX - restartBtnW / 2, restartBtnY - restartBtnH / 2, restartBtnW, restartBtnH, 9);
+        }
+        restartZone.on('pointerover', function() { drawRestartBtn(0xFF3B30); });
+        restartZone.on('pointerout', function() { drawRestartBtn(0xE8261C); });
+        restartZone.on('pointerdown', function() { self.showQuitDialog(); });
 
         // ----------------------------------
         // Quit dialog state
         // ----------------------------------
         this.quitDialogVisible = false;
+        // Reset per-run: the scene object is reused across stop/start cycles.
+        this._quitting = false;
 
         // ----------------------------------
         // Listen to registry events for live updates
@@ -187,7 +216,9 @@ var HUDScene = new Phaser.Class({
         var yesBtnY = H / 2 + 40;
         this.yesBtnBg = this.add.graphics().setDepth(52);
         this.yesBtnBg.fillStyle(0xE8261C, 1);
-        this.yesBtnBg.fillRoundedRect(yesBtnX - 60, yesBtnY - 18, 120, 36, 8);
+        this.yesBtnBg.fillRoundedRect(yesBtnX - 76, yesBtnY - 48, 152, 96, 14);
+        this.yesBtnBg.lineStyle(4, 0xFFFFFF, 1);
+        this.yesBtnBg.strokeRoundedRect(yesBtnX - 76, yesBtnY - 48, 152, 96, 14);
 
         this.yesBtnText = this.add.text(yesBtnX, yesBtnY, 'TAIP', {
             fontFamily: '"Press Start 2P", monospace',
@@ -195,7 +226,7 @@ var HUDScene = new Phaser.Class({
             color: '#FFFFFF'
         }).setOrigin(0.5).setDepth(53);
 
-        var yesZone = this.add.zone(yesBtnX, yesBtnY, 120, 36)
+        var yesZone = this.add.zone(yesBtnX, yesBtnY, 152, 96)
             .setDepth(54).setInteractive({ useHandCursor: true });
         this.yesZone = yesZone;
 
@@ -208,7 +239,9 @@ var HUDScene = new Phaser.Class({
         var noBtnY = H / 2 + 40;
         this.noBtnBg = this.add.graphics().setDepth(52);
         this.noBtnBg.fillStyle(0x30A030, 1);
-        this.noBtnBg.fillRoundedRect(noBtnX - 60, noBtnY - 18, 120, 36, 8);
+        this.noBtnBg.fillRoundedRect(noBtnX - 76, noBtnY - 48, 152, 96, 14);
+        this.noBtnBg.lineStyle(4, 0xFFFFFF, 1);
+        this.noBtnBg.strokeRoundedRect(noBtnX - 76, noBtnY - 48, 152, 96, 14);
 
         this.noBtnText = this.add.text(noBtnX, noBtnY, 'NE', {
             fontFamily: '"Press Start 2P", monospace',
@@ -216,7 +249,7 @@ var HUDScene = new Phaser.Class({
             color: '#FFFFFF'
         }).setOrigin(0.5).setDepth(53);
 
-        var noZone = this.add.zone(noBtnX, noBtnY, 120, 36)
+        var noZone = this.add.zone(noBtnX, noBtnY, 152, 96)
             .setDepth(54).setInteractive({ useHandCursor: true });
         this.noZone = noZone;
 
@@ -228,9 +261,14 @@ var HUDScene = new Phaser.Class({
     hideQuitDialog: function () {
         this.quitDialogVisible = false;
 
-        // Resume game
+        // Resume game — but ONLY if it is genuinely paused by this dialog.
+        // hideQuitDialog also runs from shutdown() during quitGame(), where
+        // GameScene has already been stopped; resuming a stopped scene revives
+        // it, leaving the game running invisibly behind the menu.
         var gameScene = this.scene.get('GameScene');
-        if (gameScene) gameScene.scene.resume();
+        if (gameScene && !this._quitting && gameScene.scene.isPaused()) {
+            gameScene.scene.resume();
+        }
 
         // Destroy dialog elements
         if (this.quitOverlay) this.quitOverlay.destroy();
@@ -245,6 +283,10 @@ var HUDScene = new Phaser.Class({
     },
 
     quitGame: function () {
+        // Marks the teardown path so the shutdown -> hideQuitDialog chain does
+        // not resume the GameScene we are about to stop.
+        this._quitting = true;
+
         // Stop music
         if (window.AudioManager) AudioManager.stopMusic();
 

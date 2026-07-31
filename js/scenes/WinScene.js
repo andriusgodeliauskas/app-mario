@@ -1,8 +1,8 @@
 /**
  * WinScene -- Victory screen shown after completing a level.
  *
- * Levels 1-3: "Level Complete!" with score recap + vocabulary learned.
- * Level 4 (final): Princess/Victory screen with castle, dialogue, confetti.
+ * Levels 1-41: "Level Complete!" with score recap + vocabulary learned.
+ * Level 42 (final): Princess/Victory screen with castle, dialogue, confetti.
  *
  * Accepts data via init(data): { score, coins, level, lives }
  */
@@ -36,7 +36,7 @@ var WinScene = new Phaser.Class({
             AudioManager.stopMusic();
         }
 
-        if (this.playerLevel >= 19) {
+        if (this.playerLevel === 42) {
             this.createPrincessScreen();
         } else {
             this.createLevelCompleteScreen();
@@ -233,7 +233,7 @@ var WinScene = new Phaser.Class({
     },
 
     // ========================================
-    // LEVEL 4 (FINAL): PRINCESS / VICTORY SCREEN
+    // LEVEL 42 (FINAL): PRINCESS / VICTORY SCREEN
     // ========================================
     createPrincessScreen: function () {
         var W = this.W;
@@ -519,7 +519,7 @@ var WinScene = new Phaser.Class({
 
         // Save progress — all levels complete
         if (window.GameProgress) {
-            window.GameProgress.unlockLevel(19);
+            window.GameProgress.unlockLevel(42);
         }
     },
 
@@ -656,6 +656,10 @@ var WinScene = new Phaser.Class({
     getVocabForLevel: function (level) {
         // Use EnglishWords dictionary if available
         var EW = window.EnglishWords;
+        if (EW && EW.getWordsForLevel) {
+            var themedWords = EW.getWordsForLevel(level, 4);
+            if (themedWords && themedWords.length) return themedWords;
+        }
         var levelVocab = {
             1: ['coin', 'mushroom', 'brick', 'jump'],
             2: ['star', 'run', 'turtle', 'life'],
@@ -698,7 +702,7 @@ var WinScene = new Phaser.Class({
             this.autoTimer = null;
         }
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 19) {
+        if (nextLevel > 42) {
             nextLevel = 1;
         }
         var self = this;

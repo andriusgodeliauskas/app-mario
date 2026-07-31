@@ -13,6 +13,9 @@ window.TouchController = {
     fireJustPressed: false,
     downPressed: false,
     enabled: false,
+    _listenersBound: false,
+    _viewportListenersBound: false,
+    _pausedForRotate: false,
 
     // Track active touches per button so multi-touch works correctly
     _activeTouches: {
@@ -26,6 +29,9 @@ window.TouchController = {
     init: function () {
         var self = this;
         var controlsEl = document.getElementById('touch-controls');
+
+        this._bindViewportListeners();
+        this._handleViewportChange();
 
         // If no touch support, hide controls and bail out
         if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
@@ -42,6 +48,8 @@ window.TouchController = {
         var downBtn = document.getElementById('touch-down');
 
         if (!leftBtn || !rightBtn || !jumpBtn) return;
+        if (this._listenersBound) return;
+        this._listenersBound = true;
 
         // --- Helper: bind a button to a direction/action ---
         function bindButton(el, key) {
@@ -91,6 +99,96 @@ window.TouchController = {
 
         // Prevent context menu (long-press) on touch buttons
         controlsEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    },
+
+    clearState: function () {
+        this.leftPressed = false;
+        this.rightPressed = false;
+        this.jumpPressed = false;
+        this.jumpJustPressed = false;
+        this.firePressed = false;
+        this.fireJustPressed = false;
+        this.downPressed = false;
+        this._jumpConsumed = false;
+        this._fireConsumed = false;
+        this._activeTouches = {
+            left: {},
+            right: {},
+            jump: {},
+            fire: {},
+            down: {}
+        };
+    },
+
+    _bindViewportListeners: function () {
+        var self = this;
+
+        if (this._viewportListenersBound) return;
+        this._viewportListenersBound = true;
+
+        window.addEventListener('orientationchange', function () {
+            // A real rotation can strand a held button, so wipe input state.
+            self._handleViewportChange(true);
+        });
+
+        window.addEventListener('resize', function () {
+            // NOT a rotation. Entering fullscreen (and the URL bar hiding on
+            // mobile) fires a burst of resize events; wiping input state on each
+            // one silently kills a jump the player is in the middle of making,
+            // which reads as "jump lags in fullscreen".
+            self._handleViewportChange(false);
+        });
+    },
+
+    // clearInput=true only for genuine orientation changes. Bursts of events are
+    // debounced into a single trailing refresh instead of one refresh each.
+    _handleViewportChange: function (clearInput) {
+        var self = this;
+
+        if (clearInput) this.clearState();
+        this._refreshScale();
+        this._syncRotatePause();
+
+        this._pendingClearInput = this._pendingClearInput || clearInput;
+        if (this._viewportTimer) window.clearTimeout(this._viewportTimer);
+        this._viewportTimer = window.setTimeout(function () {
+            self._viewportTimer = null;
+            if (self._pendingClearInput) self.clearState();
+            self._pendingClearInput = false;
+            self._refreshScale();
+            self._syncRotatePause();
+        }, 150);
+    },
+
+    _refreshScale: function () {
+        if (window.game && window.game.scale && window.game.scale.refresh) {
+            window.game.scale.refresh();
+        }
+    },
+
+    _isRotateOverlayVisible: function () {
+        if (!window.matchMedia) return false;
+        return window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
+    },
+
+    _syncRotatePause: function () {
+        if (!window.game || !window.game.scene) return;
+
+        var sceneManager = window.game.scene;
+        var overlayVisible = this._isRotateOverlayVisible();
+
+        if (overlayVisible) {
+            if (sceneManager.isActive && sceneManager.isActive('GameScene')) {
+                sceneManager.pause('GameScene');
+                this._pausedForRotate = true;
+            }
+            return;
+        }
+
+        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('GameScene')) {
+            sceneManager.resume('GameScene');
+        }
+        this._pausedForRotate = false;
     },
 
     _updateState: function (key, pressed) {
