@@ -9,8 +9,8 @@
  * Side effects:
  *   - Pushes problem.key into history (and trims to last 8)
  *   - Calls onResolved() exactly once when the challenge is done (success or failure)
- *   - On wrong answer: calls scene.loseOnePower({ source: 'enemy' }) — costs a life
- *     just like hitting an enemy (big Mario shrinks, small Mario dies).
+ *   - On wrong answer: shows feedback and clears the wall. Math mistakes do
+ *     not cost lives or power-ups.
  */
 
 // Vertical placement (relative to ground top y):
@@ -137,12 +137,6 @@ MathChallenge.prototype._handleWrong = function (player, block) {
 
     block.bump();
     this._removeWall();
-
-    if (typeof scene.loseOnePower === 'function') {
-        // Wrong answer is treated exactly like an enemy hit: big Mario shrinks,
-        // small Mario loses a life. (Previously math mistakes were harmless.)
-        scene.loseOnePower({ source: 'enemy' });
-    }
 
     var blocks = this.blocks;
     var self = this;

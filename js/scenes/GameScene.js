@@ -12,16 +12,36 @@ var GameScene = new Phaser.Class({
 
     init: function (data) {
         this.currentLevel = (data && data.level) ? data.level : 1;
+        this.mathSettings = window.MathSettings ? window.MathSettings.load() : null;
+        this.difficultyProfile = window.MathSettings
+            ? window.MathSettings.difficultyProfile(this.mathSettings)
+            : { lives: 3, enemyCount: 1, enemySpeed: 1, coyoteMs: 140, jumpBufferMs: 200,
+                firePowerupRatio: 1, oneUp: 'guaranteed', invincibleMs: 2000,
+                bossHpMul: 1, mathAnswerTimeMul: 1, distractorCloseness: 'far' };
         // Preserve score/coins/lives across level transitions and respawns
         this.score = (data && data.score !== undefined) ? data.score : 0;
         this.coins = (data && data.coins !== undefined) ? data.coins : 0;
-        this.lives = (data && data.lives !== undefined) ? data.lives : 3;
+        this.lives = (data && data.lives !== undefined) ? data.lives : this.difficultyProfile.lives;
         this.isBig = false;
         this.isFire = false;        // Fire Mario — can shoot fireballs
         this.fireCooldown = 0;      // ms until next shot allowed
         this.isInvincible = false;
         this.isDead = false;
         this.levelComplete = false;
+        this._bossRescueActive = false;
+        this._bossRescueFinished = false;
+        this._princessFreedMessageShown = false;
+        this._bossRescueElapsed = 0;
+        this._bossRescueStage = 0;
+        this._bossRescueStartedAt = 0;
+        this.boss = null;
+        this.bossActive = false;
+        this.bossRescue = null;
+        this.bossWall = null;
+        this.bossProjectiles = null;
+        this.bossChallenge = null;
+        this.bossMathPending = false;
+        this._bossFightStarted = false;
         this.coyoteTimer = 0;
         this.jumpBufferTimer = 0;
         this.wasOnGround = false;
@@ -242,6 +262,9 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Enemies
         // ----------------------------------
+        enemySpawns = this.applyEnemyDifficulty(enemySpawns);
+        this._enemyBaseSpeed = 60 * this.difficultyProfile.enemySpeed;
+        this._enemyStuckSpeed = 80 * this.difficultyProfile.enemySpeed;
         this.enemies = this.physics.add.group();
         for (var ei = 0; ei < enemySpawns.length; ei++) {
             var esp = enemySpawns[ei];
@@ -267,7 +290,7 @@ var GameScene = new Phaser.Class({
             }
             if (enemy) {
                 enemy.setBounce(0);
-                enemy.setVelocityX(-60);
+                enemy.setVelocityX(-this._enemyBaseSpeed);
                 enemy.patrolDir = -1;
                 enemy.isSquished = false;
                 enemy.isShell = false;
@@ -442,7 +465,7 @@ var GameScene = new Phaser.Class({
             this.mathSpawner = null;
         }
         if (window.MathSpawner && window.MathSettings) {
-            this.mathSettings = window.MathSettings.load();
+            this.mathSettings = this.mathSettings || window.MathSettings.load();
             this.mathSpawner = new window.MathSpawner(this, this.mathSettings);
         }
 
@@ -473,6 +496,27 @@ var GameScene = new Phaser.Class({
         obj.setVisible(false);
         this._staticCullBuckets[col].push(obj);
         this._staticCullStats.total++;
+    },
+
+    applyEnemyDifficulty: function (enemySpawns) {
+        var profile = this.difficultyProfile || { enemyCount: 1 };
+        var multiplier = profile.enemyCount || 1;
+        if (multiplier <= 1 || enemySpawns.length === 0) return enemySpawns;
+
+        var targetCount = Math.round(enemySpawns.length * multiplier);
+        var expanded = enemySpawns.slice();
+        var extra = targetCount - enemySpawns.length;
+        var spacing = 96;
+        for (var i = 0; i < extra; i++) {
+            var base = enemySpawns[i % enemySpawns.length];
+            var wave = Math.floor(i / enemySpawns.length) + 1;
+            expanded.push({
+                x: base.x + spacing * wave,
+                y: base.y,
+                type: base.type
+            });
+        }
+        return expanded;
     },
 
     updateStaticCulling: function (force) {
@@ -605,6 +649,12 @@ var GameScene = new Phaser.Class({
       try {
         this.updateStaticCulling(false);
 
+        if (this._bossRescueActive) {
+            this.player.body.setVelocity(0, 0);
+            this.updatePrincessRescue(delta);
+            return;
+        }
+
         // Math challenge spawner — runs every frame, decides when/where to spawn
         if (this.mathSpawner) this.mathSpawner.update(time, delta);
 
@@ -617,7 +667,7 @@ var GameScene = new Phaser.Class({
         if (onGround) {
             // 140ms grace. Was 80ms, which is tight for a 6-year-old on a phone:
             // on a long frame it can expire before the tap is even processed.
-            this.coyoteTimer = 140;
+            this.coyoteTimer = this.difficultyProfile.coyoteMs;
         } else if (this.wasOnGround && !onGround) {
             // Just left ground — start counting down
         }
@@ -648,7 +698,7 @@ var GameScene = new Phaser.Class({
             // press slightly before landing and the jump still fires on landing
             // instead of being silently dropped, which reads as an unresponsive
             // button. 200ms is still short enough not to feel like auto-jump.
-            this.jumpBufferTimer = 200;
+            this.jumpBufferTimer = this.difficultyProfile.jumpBufferMs;
         }
         if (this.jumpBufferTimer > 0) {
             this.jumpBufferTimer -= delta;
@@ -781,12 +831,12 @@ var GameScene = new Phaser.Class({
 
             // Turn around at walls
             if (e.body.blocked.left && e._turnCooldown <= 0) {
-                e.setVelocityX(60);
+                e.setVelocityX(this._enemyBaseSpeed);
                 e.patrolDir = 1;
                 e.setFlipX(true);
                 e._turnCooldown = 300;
             } else if (e.body.blocked.right && e._turnCooldown <= 0) {
-                e.setVelocityX(-60);
+                e.setVelocityX(-this._enemyBaseSpeed);
                 e.patrolDir = -1;
                 e.setFlipX(false);
                 e._turnCooldown = 300;
@@ -802,7 +852,7 @@ var GameScene = new Phaser.Class({
 
                 if (!hasGround) {
                     e.patrolDir = -e.patrolDir;
-                    e.setVelocityX(60 * e.patrolDir);
+                    e.setVelocityX(this._enemyBaseSpeed * e.patrolDir);
                     e.setFlipX(e.patrolDir > 0);
                     e._turnCooldown = 400;
                 }
@@ -814,7 +864,7 @@ var GameScene = new Phaser.Class({
                 var moved = Math.abs(e.x - e._lastX);
                 if (moved < 5) {
                     e.patrolDir = -e.patrolDir;
-                    e.setVelocityX(80 * e.patrolDir);
+                    e.setVelocityX(this._enemyStuckSpeed * e.patrolDir);
                     e.setFlipX(e.patrolDir > 0);
                     e._turnCooldown = 500;
                 }
@@ -824,7 +874,7 @@ var GameScene = new Phaser.Class({
 
             // Re-kick if velocity dropped too low
             if (e.body.blocked.down && Math.abs(e.body.velocity.x) < 10) {
-                e.setVelocityX(60 * e.patrolDir);
+                e.setVelocityX(this._enemyBaseSpeed * e.patrolDir);
             }
 
             // Fall death for enemies
@@ -1101,6 +1151,7 @@ var GameScene = new Phaser.Class({
         var BOSS_HP = { 5: 3, 10: 4, 15: 4, 19: 6, 28: 4, 35: 5, 42: 7 };
         var hp = BOSS_HP[this.currentLevel];
         if (!hp || !window.Boss || !this.flagpole) return;
+        hp = Math.ceil(hp * this.difficultyProfile.bossHpMul);
 
         var groundTop = this.groundLevelY;          // 544
         var bossX = this.flagpole.x - 360;
@@ -1127,6 +1178,8 @@ var GameScene = new Phaser.Class({
 
         this.physics.add.collider(this.boss.sprite, this.groundTiles);
         this.physics.add.collider(this.boss.sprite, this.pipeTiles);
+
+        this.createPrincessCage(bossX + 118, groundTop - 190);
 
         // Containment wall just before the flagpole — removed on victory.
         this.bossWall = this.add.rectangle(this.flagpole.x - 120, groundTop - 150, 16, 320, 0xff0000, 0);
@@ -1312,6 +1365,7 @@ var GameScene = new Phaser.Class({
     defeatBoss: function () {
         if (!this.bossActive) return;
         this.bossActive = false;
+        this._bossRescueActive = true;
         this.score += 5000;
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
@@ -1323,6 +1377,270 @@ var GameScene = new Phaser.Class({
         if (this.bossHpLabel) this.bossHpLabel.destroy();
         if (this.bossChallenge && this.bossChallenge.cleanup) this.bossChallenge.cleanup();
         if (this.bossProjectiles) this.bossProjectiles.clear(true, true);
+
+        this.playPrincessRescue();
+    },
+
+    createPrincessCage: function (x, y) {
+        this.ensurePrincessCageTextures();
+
+        var group = this.add.container(x, y).setDepth(8);
+        var glow = this.add.circle(0, 4, 62, 0xfff1a8, 0.22);
+        var princess = this.add.sprite(0, 28, 'princess').setScale(0.36);
+        var cage = this.add.sprite(0, 10, 'princess-cage-closed').setScale(1);
+        var leftDoor = this.add.sprite(-26, 10, 'princess-cage-left').setOrigin(1, 0.5).setVisible(false);
+        var rightDoor = this.add.sprite(26, 10, 'princess-cage-right').setOrigin(0, 0.5).setVisible(false);
+        var worry = this.add.text(0, -72, '!', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '18px',
+            color: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        group.add([glow, princess, cage, leftDoor, rightDoor, worry]);
+        this.bossRescue = {
+            group: group,
+            glow: glow,
+            princess: princess,
+            cage: cage,
+            leftDoor: leftDoor,
+            rightDoor: rightDoor,
+            worry: worry,
+            x: x,
+            y: y
+        };
+
+        this.tweens.add({
+            targets: princess,
+            y: princess.y - 8,
+            duration: 520,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.InOut'
+        });
+        this.tweens.add({
+            targets: worry,
+            y: worry.y - 6,
+            alpha: 0.35,
+            duration: 520,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.InOut'
+        });
+
+        this.registerStaticCullObject(group);
+    },
+
+    ensurePrincessCageTextures: function () {
+        if (this.textures.exists('princess-cage-closed')) return;
+
+        var g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0x1f3552, 0.28);
+        g.fillRoundedRect(20, 16, 104, 124, 10);
+        g.lineStyle(8, 0xf7d56b, 1);
+        g.strokeRoundedRect(20, 16, 104, 124, 10);
+        g.lineStyle(5, 0xffffff, 0.82);
+        for (var bx = 38; bx <= 106; bx += 17) g.lineBetween(bx, 18, bx, 138);
+        g.lineStyle(5, 0xf7d56b, 1);
+        g.lineBetween(24, 56, 120, 56);
+        g.lineBetween(24, 98, 120, 98);
+        g.generateTexture('princess-cage-closed', 144, 156);
+        g.clear();
+
+        g.lineStyle(8, 0xf7d56b, 1);
+        g.strokeRoundedRect(0, 0, 52, 124, 8);
+        g.lineStyle(5, 0xffffff, 0.82);
+        g.lineBetween(18, 4, 18, 120);
+        g.lineBetween(36, 4, 36, 120);
+        g.lineStyle(5, 0xf7d56b, 1);
+        g.lineBetween(4, 40, 48, 40);
+        g.lineBetween(4, 82, 48, 82);
+        g.generateTexture('princess-cage-left', 52, 124);
+        g.clear();
+
+        g.lineStyle(8, 0xf7d56b, 1);
+        g.strokeRoundedRect(0, 0, 52, 124, 8);
+        g.lineStyle(5, 0xffffff, 0.82);
+        g.lineBetween(16, 4, 16, 120);
+        g.lineBetween(34, 4, 34, 120);
+        g.lineStyle(5, 0xf7d56b, 1);
+        g.lineBetween(4, 40, 48, 40);
+        g.lineBetween(4, 82, 48, 82);
+        g.generateTexture('princess-cage-right', 52, 124);
+        g.destroy();
+    },
+
+    playPrincessRescue: function () {
+        var rescue = this.bossRescue;
+
+        try {
+            this._bossRescueElapsed = 0;
+            this._bossRescueStage = 0;
+            this._bossRescueStartedAt = this.time.now;
+            if (this.player && this.player.body) {
+                this.player.body.setVelocity(0, 0);
+            }
+            if (!rescue || !rescue.group || !rescue.group.active) {
+                this.showPrincessFreedMessage();
+                return;
+            }
+        } catch (e) {
+            console.warn('[GameScene] princess rescue failed; completing level.', e);
+            this.showPrincessFreedMessage();
+            this.finishPrincessRescue();
+        }
+    },
+
+    updatePrincessRescue: function (delta) {
+        var rescue = this.bossRescue;
+        if (this._bossRescueStartedAt) {
+            this._bossRescueElapsed = this.time.now - this._bossRescueStartedAt;
+        } else {
+            this._bossRescueElapsed = (this._bossRescueElapsed || 0) + delta;
+        }
+
+        try {
+            if (this._bossRescueStage < 1 && this._bossRescueElapsed >= 860) {
+                this._bossRescueStage = 1;
+                if (rescue && rescue.group && rescue.group.active) {
+                    this.cameras.main.pan(rescue.x, rescue.y + 30, 450, 'Sine.easeInOut', false);
+                    this.cameras.main.flash(260, 255, 247, 160);
+                }
+                if (window.AudioManager) AudioManager.play('powerup');
+            }
+
+            if (this._bossRescueStage < 2 && this._bossRescueElapsed >= 1040) {
+                this._bossRescueStage = 2;
+                if (rescue && rescue.group && rescue.group.active) {
+                    if (rescue.worry) rescue.worry.setVisible(false);
+                    if (rescue.cage) rescue.cage.setVisible(false);
+                    if (rescue.leftDoor) rescue.leftDoor.setVisible(true);
+                    if (rescue.rightDoor) rescue.rightDoor.setVisible(true);
+                    this.tweens.add({ targets: rescue.leftDoor, angle: -78, x: rescue.leftDoor.x - 26, duration: 520, ease: 'Back.Out' });
+                    this.tweens.add({ targets: rescue.rightDoor, angle: 78, x: rescue.rightDoor.x + 26, duration: 520, ease: 'Back.Out' });
+                    this.createRescueSparkles(rescue.x, rescue.y);
+                }
+            }
+
+            if (this._bossRescueStage < 3 && this._bossRescueElapsed >= 1620) {
+                this._bossRescueStage = 3;
+                if (rescue && rescue.group && rescue.group.active) {
+                    this.tweens.add({ targets: rescue.princess, x: rescue.princess.x + 74, y: rescue.princess.y + 26, duration: 560, ease: 'Back.Out' });
+                }
+                if (window.AudioManager) AudioManager.play('coin');
+            }
+
+            if (this._bossRescueStage < 4 && this._bossRescueElapsed >= 2240) {
+                this._bossRescueStage = 4;
+                if (rescue && rescue.group && rescue.group.active) {
+                    this.tweens.add({ targets: rescue.princess, y: rescue.princess.y - 34, duration: 260, yoyo: true, ease: 'Quad.Out' });
+                    this.createRescueHearts(rescue.x + 74, rescue.y + 12);
+                }
+                this.showPrincessFreedMessage();
+                if (window.AudioManager) AudioManager.play('oneUp');
+            }
+
+            if (this._bossRescueElapsed >= 3800) {
+                this.finishPrincessRescue();
+            }
+        } catch (e) {
+            console.warn('[GameScene] princess rescue update failed; completing level.', e);
+            this.showPrincessFreedMessage();
+            this.finishPrincessRescue();
+        }
+    },
+
+    createRescueSparkles: function (x, y) {
+        function fadeSparkle(scene, sparkle, targetX, targetY) {
+            scene.tweens.add({
+                targets: sparkle,
+                x: targetX,
+                y: targetY,
+                angle: Phaser.Math.Between(-180, 180),
+                alpha: 0,
+                duration: 900,
+                ease: 'Cubic.Out',
+                onComplete: function () { sparkle.destroy(); }
+            });
+        }
+
+        for (var i = 0; i < 22; i++) {
+            var color = [0xfff176, 0xffffff, 0xff7ab6, 0x5ce1e6][i % 4];
+            var p = this.add.rectangle(x, y, 8, 8, color, 1).setDepth(30);
+            var dx = Phaser.Math.Between(-110, 110);
+            var dy = Phaser.Math.Between(-100, 40);
+            fadeSparkle(this, p, x + dx, y + dy);
+        }
+    },
+
+    createRescueHearts: function (x, y) {
+        function floatHeart(scene, heart, delay) {
+            scene.tweens.add({
+                targets: heart,
+                y: heart.y - 58,
+                alpha: 0,
+                duration: 1100,
+                delay: delay,
+                ease: 'Sine.Out',
+                onComplete: function () { heart.destroy(); }
+            });
+        }
+
+        for (var i = 0; i < 3; i++) {
+            var h = this.add.text(x + i * 24 - 24, y - 28, '♥', {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '28px',
+                color: '#FF5DA2',
+                stroke: '#FFFFFF',
+                strokeThickness: 3
+            }).setOrigin(0.5).setDepth(31);
+            floatHeart(this, h, i * 130);
+        }
+    },
+
+    showPrincessFreedMessage: function () {
+        if (this._princessFreedMessageShown) return;
+        this._princessFreedMessageShown = true;
+        var W = this.cameras.main.width;
+        var title = this.add.text(W / 2, 142, 'PRINCESĖ IŠLAISVINTA!', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '28px',
+            color: '#FFF176',
+            stroke: '#7B1FA2',
+            strokeThickness: 7,
+            align: 'center'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(70).setScale(0.35);
+        var sub = this.add.text(W / 2, 190, 'AČIŪ, MARIO!', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '16px',
+            color: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 5,
+            align: 'center'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(70);
+        this.tweens.add({ targets: title, scale: 1, duration: 360, ease: 'Back.Out' });
+        this.time.delayedCall(1800, function () {
+            if (title && title.active) title.destroy();
+            if (sub && sub.active) sub.destroy();
+        });
+    },
+
+    finishPrincessRescue: function () {
+        if (this._bossRescueFinished) return;
+        this._bossRescueFinished = true;
+        this._bossRescueActive = false;
+        if (this.flagpole && this.player) {
+            this.reachFlagpole(this.player, this.flagpole);
+            return;
+        }
+        this.scene.stop('HUDScene');
+        this.scene.start('WinScene', {
+            score: this.score,
+            coins: this.coins,
+            lives: this.lives,
+            level: this.currentLevel
+        });
     },
 
     // ==========================================
@@ -1627,7 +1945,7 @@ var GameScene = new Phaser.Class({
             this.isFire = false;
             this.applyMarioTint();
             this.isInvincible = true;
-            this.invincibleTimer = 2000;
+            this.invincibleTimer = this.difficultyProfile.invincibleMs;
             return;
         }
 
@@ -1640,7 +1958,7 @@ var GameScene = new Phaser.Class({
             this.player.setOffset(16, 8);
             this.player.play('mario-idle');
             this.isInvincible = true;
-            this.invincibleTimer = 2000;
+            this.invincibleTimer = this.difficultyProfile.invincibleMs;
             return;
         }
 
@@ -2129,13 +2447,17 @@ var GameScene = new Phaser.Class({
         }
         // Fire Flower should be COMMON (it's the best boss weapon): turn roughly
         // every other plain ? block into a fire flower.
-        var targetFire = Math.max(2, Math.ceil(plain.length / 2));
+        var baseTargetFire = Math.max(2, Math.ceil(plain.length / 2));
+        var targetFire = Math.max(1, Math.ceil(baseTargetFire * this.difficultyProfile.firePowerupRatio));
         for (var i = 0; i < plain.length && fireCount < targetFire; i += 2) {
             map[plain[i][0]][plain[i][1]] = 42;
             fireCount++;
         }
-        // One 1-UP from a remaining plain block.
-        if (!hasOneUp) {
+        // One 1-UP from a remaining plain block. Harder keeps this as a rare
+        // deterministic treat; hard adds no extra 1-UP blocks.
+        var shouldAddOneUp = this.difficultyProfile.oneUp === 'guaranteed' ||
+            (this.difficultyProfile.oneUp === 'rare' && this.currentLevel % 4 === 0);
+        if (!hasOneUp && shouldAddOneUp) {
             for (var j = 0; j < plain.length; j++) {
                 if (map[plain[j][0]][plain[j][1]] === 4) { map[plain[j][0]][plain[j][1]] = 43; break; }
             }

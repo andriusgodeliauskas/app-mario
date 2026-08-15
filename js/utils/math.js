@@ -56,7 +56,33 @@
     // Distractors for a "find the unknown operand" (x) problem.
     // unknown is the value the answer blocks must match; keep candidates >= 0,
     // <= ceiling, != unknown, and distinct.
-    function generateUnknownDistractors(unknown, ceiling) {
+    function nearestDistractors(answer, ceiling) {
+        var values = [];
+        for (var step = 1; values.length < 2 && step <= ceiling + 3; step++) {
+            if (answer + step <= ceiling) values.push(answer + step);
+            if (values.length < 2 && answer - step >= 0) values.push(answer - step);
+        }
+        while (values.length < 2) values.push(answer + values.length + 1);
+        return values;
+    }
+
+    function mediumDistractors(answer, ceiling) {
+        var values = [];
+        var candidates = [answer + 2, answer - 2, answer + 3, answer - 3, answer + 1, answer - 1];
+        for (var i = 0; i < candidates.length; i++) {
+            if (candidates[i] >= 0 && candidates[i] <= ceiling &&
+                candidates[i] !== answer && values.indexOf(candidates[i]) === -1) {
+                values.push(candidates[i]);
+                if (values.length === 2) return values;
+            }
+        }
+        return nearestDistractors(answer, ceiling);
+    }
+
+    function generateUnknownDistractors(unknown, ceiling, closeness) {
+        if (closeness === 'close') return nearestDistractors(unknown, ceiling);
+        if (closeness === 'medium') return mediumDistractors(unknown, ceiling);
+
         var d1 = null, d2 = null;
         function valid(n) { return n >= 0 && n <= ceiling && n !== unknown; }
         var cands = [unknown + 1, unknown - 1, unknown + 2, unknown - 2, unknown + 3];
@@ -76,7 +102,7 @@
 
     // Build a "find x" problem from a solved triple (a op b = result).
     // Hides one operand and exposes it as the answer the blocks must match.
-    function buildMissingProblem(op, a, b, result, max) {
+    function buildMissingProblem(op, a, b, result, max, closeness) {
         var hideA = Math.random() < 0.5;
         var unknown = hideA ? a : b;
         var symbol = SYMBOLS[op];
@@ -86,7 +112,7 @@
         var solvedText = a + ' ' + symbol + ' ' + b + ' = ' + result;
         var ceiling = (op === 'divide') ? max * 2 : max;
         if (unknown > ceiling) ceiling = unknown + 2;
-        var distractors = generateUnknownDistractors(unknown, ceiling);
+        var distractors = generateUnknownDistractors(unknown, ceiling, closeness);
         return {
             operation: op,
             form: 'missing',
@@ -102,11 +128,13 @@
         };
     }
 
-    function generateDistractors(op, a, b, answer, max) {
+    function generateDistractors(op, a, b, answer, max, closeness) {
         var d1, d2;
         // Ceiling: stay close to max for add/subtract; allow up to max*2 for ×/÷
         // (since multiply confusion like 3×3 → 6 needs room when answer=9)
         var ceiling = (op === 'add' || op === 'subtract') ? max : max * 2;
+        if (closeness === 'close') return nearestDistractors(answer, ceiling);
+        if (closeness === 'medium') return mediumDistractors(answer, ceiling);
 
         function valid(n) {
             return n >= 0 && n <= ceiling && n !== answer;
@@ -151,8 +179,12 @@
          * @param {Array<string>} history - recent problem keys (last ~8)
          * @returns {Object} problem
          */
-        next: function (settings, history) {
+        next: function (settings, history, distractorCloseness) {
             history = history || [];
+            if (!distractorCloseness && typeof window !== 'undefined' &&
+                window.MathSettings && window.MathSettings.difficultyProfile) {
+                distractorCloseness = window.MathSettings.difficultyProfile(settings).distractorCloseness;
+            }
             var enabled = [];
             if (settings.add && settings.add.enabled)           enabled.push('add');
             if (settings.subtract && settings.subtract.enabled) enabled.push('subtract');
@@ -185,10 +217,10 @@
             }
 
             if (useMissing) {
-                return buildMissingProblem(problem.op, problem.a, problem.b, problem.answer, problem.max);
+                return buildMissingProblem(problem.op, problem.a, problem.b, problem.answer, problem.max, distractorCloseness);
             }
 
-            var distractors = generateDistractors(problem.op, problem.a, problem.b, problem.answer, problem.max);
+            var distractors = generateDistractors(problem.op, problem.a, problem.b, problem.answer, problem.max, distractorCloseness);
             var options = shuffle([problem.answer, distractors[0], distractors[1]]);
 
             return {
@@ -204,6 +236,10 @@
                 solvedText: problem.a + ' ' + SYMBOLS[problem.op] + ' ' + problem.b + ' = ' + problem.answer,
                 key: key(problem.op, problem.a, problem.b)
             };
+        },
+
+        generate: function (settings) {
+            return this.next(settings, []);
         }
     };
 

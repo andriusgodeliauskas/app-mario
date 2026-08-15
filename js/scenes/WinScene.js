@@ -1,8 +1,8 @@
 /**
  * WinScene -- Victory screen shown after completing a level.
  *
- * Levels 1-41: "Level Complete!" with score recap + vocabulary learned.
- * Level 42 (final): Princess/Victory screen with castle, dialogue, confetti.
+ * Levels 1-42: "Level Complete!" with score recap + vocabulary learned.
+ * Level 43 (final): Princess/Victory screen with castle, dialogue, confetti.
  *
  * Accepts data via init(data): { score, coins, level, lives }
  */
@@ -36,7 +36,7 @@ var WinScene = new Phaser.Class({
             AudioManager.stopMusic();
         }
 
-        if (this.playerLevel === 42) {
+        if (this.playerLevel === 43) {
             this.createPrincessScreen();
         } else {
             this.createLevelCompleteScreen();
@@ -519,7 +519,7 @@ var WinScene = new Phaser.Class({
 
         // Save progress — all levels complete
         if (window.GameProgress) {
-            window.GameProgress.unlockLevel(42);
+            window.GameProgress.unlockLevel(43);
         }
     },
 
@@ -702,12 +702,14 @@ var WinScene = new Phaser.Class({
             this.autoTimer = null;
         }
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 42) {
+        if (nextLevel > 53) {
             nextLevel = 1;
         }
+        var theme = window.getLevelTheme ? window.getLevelTheme(nextLevel) : null;
+        var sceneKey = (theme && theme.scene) ? theme.scene : 'GameScene';
         var self = this;
         try {
-            this.scene.start('GameScene', {
+            this.scene.start(sceneKey, {
                 level: nextLevel,
                 score: this.playerScore,
                 coins: this.playerCoins,

@@ -3,3 +3,4 @@ deploy.sh
 .DS_Store
 node_modules/
 test-artifacts/
+verification-screenshots/

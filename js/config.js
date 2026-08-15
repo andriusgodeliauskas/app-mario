@@ -9,6 +9,7 @@ var gameConfig = {
     height: 600,
     parent: 'game-container',
     backgroundColor: '#000000',
+    transparent: true,
     pixelArt: false,
     roundPixels: false,
     physics: {
@@ -36,7 +37,7 @@ var gameConfig = {
             height: 900
         }
     },
-    scene: [BootScene, MenuScene, SettingsScene, GameScene, BonusRoomScene, HUDScene, WinScene]
+    scene: [BootScene, MenuScene, SettingsScene, GameScene, BonusRoomScene, RunnerScene, WonderScene, HUDScene, WinScene]
 };
 
 // Create the game instance

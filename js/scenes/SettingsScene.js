@@ -28,13 +28,16 @@ var SettingsScene = new Phaser.Class({
             ? JSON.parse(JSON.stringify(window.MathSettings.load()))
             : { add:{enabled:true,max:10}, subtract:{enabled:false,max:10},
                 multiply:{enabled:false,max:10}, divide:{enabled:false,max:10},
-                missingOperand:false, unlockAll:false };
+                missingOperand:false, unlockAll:false, difficulty:'easy' };
         if (typeof this.workingSettings.missingOperand !== 'boolean') {
             this.workingSettings.missingOperand = false;
         }
         if (typeof this.workingSettings.unlockAll !== 'boolean') {
             this.workingSettings.unlockAll = false;
         }
+        this.workingSettings.difficulty = window.MathSettings
+            ? window.MathSettings.validDifficulty(this.workingSettings.difficulty)
+            : 'easy';
 
         // ========================================
         // BACKGROUND
@@ -49,7 +52,7 @@ var SettingsScene = new Phaser.Class({
         // ========================================
         // HEADER
         // ========================================
-        this.add.text(W / 2, 40, 'MATEMATIKOS NUSTATYMAI', {
+        this.add.text(W / 2, 34, 'NUSTATYMAI', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '18px',
             color: '#F8D830',
@@ -58,9 +61,11 @@ var SettingsScene = new Phaser.Class({
         }).setOrigin(0.5);
 
         // Close (X) button — top-right
-        var closeBtnSize = 50;
-        var closeX = W - closeBtnSize / 2 - 12;
-        var closeY = closeBtnSize / 2 + 12;
+        // 96 game px = ~62 CSS px on a landscape phone, clearing the 60px
+        // child touch-target rule. At 50 it measured 32.5px.
+        var closeBtnSize = 96;
+        var closeX = W - closeBtnSize / 2 - 10;
+        var closeY = closeBtnSize / 2 + 10;
 
         var closeBg = this.add.graphics();
         closeBg.fillStyle(0xC0392B, 1);
@@ -70,7 +75,7 @@ var SettingsScene = new Phaser.Class({
 
         this.add.text(closeX, closeY, '✕', {
             fontFamily: 'Arial Black, sans-serif',
-            fontSize: '28px',
+            fontSize: '46px',
             color: '#FFFFFF'
         }).setOrigin(0.5);
 
@@ -79,6 +84,19 @@ var SettingsScene = new Phaser.Class({
         closeZone.on('pointerdown', function () {
             self._goBack();
         });
+
+        // x/width keep the panel clear of the close button at the top-right;
+        // y clears the title. Heights below are sized so the 96px-tall
+        // buttons fit inside the panel without covering either label.
+        this._buildDifficultySelector(40, 100, W - 160);
+
+        this.add.text(W / 2, 268, 'MATEMATIKA', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '13px',
+            color: '#9CEBFF',
+            stroke: '#000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
 
         // ========================================
         // OPERATION ROWS
@@ -90,8 +108,8 @@ var SettingsScene = new Phaser.Class({
             { key: 'divide',   label: 'DALYBA',   symbol: '/', color: 0x8E44AD }
         ];
 
-        var rowStartY = 90;
-        var rowHeight = 92;
+        var rowStartY = 292;
+        var rowHeight = 56;
         var rowMarginX = 40;
         var rowWidth = W - rowMarginX * 2;
 
@@ -101,14 +119,14 @@ var SettingsScene = new Phaser.Class({
         }
 
         // "Find x" toggle row (single full-width toggle, no range buttons)
-        this._buildMissingToggle(rowStartY + opConfig.length * rowHeight + 2, rowMarginX, rowWidth);
+        this._buildMissingToggle(rowStartY + opConfig.length * rowHeight + 4, rowMarginX, rowWidth);
 
         // ========================================
         // SAVE BUTTON
         // ========================================
         var saveBtnW = 280, saveBtnH = 60;
         var saveBtnX = W / 2;
-        var saveBtnY = H - 40;
+        var saveBtnY = H - 34;
 
         this.saveBg = this.add.graphics();
         this._drawButton(this.saveBg, saveBtnX, saveBtnY, saveBtnW, saveBtnH, 0xF8B800, 0xFFFFFF);
@@ -126,7 +144,7 @@ var SettingsScene = new Phaser.Class({
         saveZone.on('pointerdown', function () { self._save(); });
 
         // Notification area (above save button) for "auto-enabled" message
-        this.notifyText = this.add.text(W / 2, saveBtnY - 50, '', {
+        this.notifyText = this.add.text(W / 2, saveBtnY - 44, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '11px',
             color: '#F8D830',
@@ -134,6 +152,61 @@ var SettingsScene = new Phaser.Class({
             strokeThickness: 2,
             align: 'center'
         }).setOrigin(0.5);
+    },
+
+    _buildDifficultySelector: function (y, x, width) {
+        var self = this;
+        var labels = [
+            { key: 'easy', label: 'LENGVAS', color: 0x2ECC71 },
+            { key: 'medium', label: 'VIDUTINIS', color: 0x3498DB },
+            { key: 'harder', label: 'SUNKESNIS', color: 0xF39C12 },
+            { key: 'hard', label: 'SUNKUS', color: 0xE74C3C }
+        ];
+        this.difficultyUI = [];
+
+        var bg = this.add.graphics();
+        bg.fillStyle(0x222244, 0.62);
+        bg.fillRoundedRect(x, y, width, 140, 10);
+        bg.lineStyle(2, 0xF8D830, 0.85);
+        bg.strokeRoundedRect(x, y, width, 140, 10);
+
+        // Centred on its own line. Left-aligned at x+82 it ran into the first
+        // button (measured 8px of overlap).
+        this.add.text(x + width / 2, y + 22, 'SUNKUMAS', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '11px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5);
+
+        var btnW = 132;
+        // 96 game px -> 62.4 CSS px on a landscape phone. Was 60 (=39px).
+        var btnH = 96;
+        var gap = 12;
+        var rowW = btnW * labels.length + gap * (labels.length - 1);
+        var startX = x + (width - rowW) / 2;
+        for (var i = 0; i < labels.length; i++) {
+            (function (idx) {
+                var cfg = labels[idx];
+                var bx = startX + idx * (btnW + gap);
+                var by = y + 88;
+                var g = self.add.graphics();
+                var t = self.add.text(bx + btnW / 2, by, cfg.label, {
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: '10px',
+                    color: '#FFFFFF',
+                    stroke: '#000',
+                    strokeThickness: 2
+                }).setOrigin(0.5);
+                var zone = self.add.zone(bx + btnW / 2, by, btnW, btnH)
+                    .setInteractive({ useHandCursor: true });
+                zone.on('pointerdown', function () {
+                    self.workingSettings.difficulty = cfg.key;
+                    self._refreshDifficultySelector();
+                });
+                self.difficultyUI.push({ key: cfg.key, color: cfg.color, bg: g, text: t, x: bx, y: by, w: btnW, h: btnH });
+            })(i);
+        }
+        this._refreshDifficultySelector();
     },
 
     // ==========================================
@@ -148,13 +221,13 @@ var SettingsScene = new Phaser.Class({
         // Row background
         ui.rowBg = this.add.graphics();
         ui.rowBg.fillStyle(0x222244, 0.6);
-        ui.rowBg.fillRoundedRect(x, y, width, 90, 10);
+        ui.rowBg.fillRoundedRect(x, y, width, 52, 10);
         ui.rowBg.lineStyle(2, cfg.color, 0.8);
-        ui.rowBg.strokeRoundedRect(x, y, width, 90, 10);
+        ui.rowBg.strokeRoundedRect(x, y, width, 52, 10);
 
         // ----- Toggle (left side) -----
         var toggleX = x + 30;
-        var toggleY = y + 25;
+        var toggleY = y + 20;
         var toggleSize = 30;
 
         ui.toggleBg = this.add.graphics();
@@ -163,7 +236,7 @@ var SettingsScene = new Phaser.Class({
         // Label: "SUDETIS  (+)"
         ui.label = this.add.text(toggleX + 50, toggleY, cfg.label + '  (' + cfg.symbol + ')', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
+            fontSize: '13px',
             color: this.workingSettings[op].enabled ? '#FFFFFF' : '#888888'
         }).setOrigin(0, 0.5);
 
@@ -177,9 +250,9 @@ var SettingsScene = new Phaser.Class({
 
         // ----- Range buttons (below) -----
         var maxOptions = window.MathSettings.MAX_OPTIONS[op];
-        var rangeY = y + 62;
+        var rangeY = y + 47;
         var rangeBtnW = 60;
-        var rangeBtnH = 30;
+        var rangeBtnH = 28;
         var rangeStartX = x + 130;
         var rangeGap = 14;
 
@@ -199,7 +272,7 @@ var SettingsScene = new Phaser.Class({
                 var btnBg = self.add.graphics();
                 var btnText = self.add.text(bx + rangeBtnW / 2, by, String(maxVal), {
                     fontFamily: '"Press Start 2P", monospace',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#FFFFFF'
                 }).setOrigin(0.5);
 
@@ -290,6 +363,21 @@ var SettingsScene = new Phaser.Class({
             var borderColor = isSelected ? 0xFFFFFF : (isDimmed ? 0x555555 : 0x4A6080);
             this._drawButton(btn.bg, btn.x + btn.w / 2, btn.y, btn.w, btn.h, bgColor, borderColor);
             btn.text.setColor(isSelected ? '#FFFFFF' : (isDimmed ? '#666666' : '#CCCCCC'));
+        }
+    },
+
+    _refreshDifficultySelector: function () {
+        if (!this.difficultyUI) return;
+        for (var i = 0; i < this.difficultyUI.length; i++) {
+            var btn = this.difficultyUI[i];
+            var selected = this.workingSettings.difficulty === btn.key;
+            btn.bg.clear();
+            btn.bg.fillStyle(selected ? btn.color : 0x2C3E50, 1);
+            btn.bg.fillRoundedRect(btn.x, btn.y - btn.h / 2, btn.w, btn.h, 8);
+            btn.bg.lineStyle(selected ? 4 : 2, selected ? 0xFFFFFF : 0x64748B, 1);
+            btn.bg.strokeRoundedRect(btn.x, btn.y - btn.h / 2, btn.w, btn.h, 8);
+            btn.text.setColor(selected ? '#FFFFFF' : '#D8E4FF');
+            btn.text.setScale(selected ? 1.08 : 1);
         }
     },
 

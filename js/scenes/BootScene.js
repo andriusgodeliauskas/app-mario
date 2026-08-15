@@ -81,6 +81,30 @@ var BootScene = new Phaser.Class({
         });
 
         // ========================================
+        // RUNNER MARIO (back view) ANIMATIONS
+        // ========================================
+        anims.create({
+            key: 'mario-runner-idle',
+            frames: [{ key: 'mario-runner', frame: 0 }],
+            frameRate: 1,
+            repeat: -1
+        });
+
+        anims.create({
+            key: 'mario-runner-run',
+            frames: anims.generateFrameNumbers('mario-runner', { start: 0, end: 2 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        anims.create({
+            key: 'mario-runner-jump',
+            frames: [{ key: 'mario-runner', frame: 3 }],
+            frameRate: 1,
+            repeat: 0
+        });
+
+        // ========================================
         // BIG MARIO ANIMATIONS
         // ========================================
 
@@ -164,6 +188,45 @@ var BootScene = new Phaser.Class({
         anims.create({
             key: 'koopa-shell-spin',
             frames: anims.generateFrameNumbers('koopa', { start: 2, end: 3 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        var wonderEnemyKeys = [
+            'wonder-plains-walker', 'wonder-cloud-puff', 'wonder-glow-crawler',
+            'wonder-depths-fish', 'wonder-depths-crab', 'wonder-neon-bot',
+            'wonder-ice-penguin', 'wonder-sand-crab', 'wonder-windup-bot',
+            'wonder-metal-bug', 'wonder-mirror-creature'
+        ];
+        for (var wi = 0; wi < wonderEnemyKeys.length; wi++) {
+            anims.create({
+                key: wonderEnemyKeys[wi] + '-walk',
+                frames: anims.generateFrameNumbers(wonderEnemyKeys[wi], { start: 0, end: 1 }),
+                frameRate: 4,
+                repeat: -1
+            });
+            anims.create({
+                key: wonderEnemyKeys[wi] + '-squish',
+                frames: [{ key: wonderEnemyKeys[wi], frame: 2 }],
+                frameRate: 1,
+                repeat: 0
+            });
+        }
+        anims.create({
+            key: 'wonder-shell-enemy-walk',
+            frames: anims.generateFrameNumbers('wonder-shell-enemy', { start: 0, end: 1 }),
+            frameRate: 4,
+            repeat: -1
+        });
+        anims.create({
+            key: 'wonder-shell-enemy-shell',
+            frames: [{ key: 'wonder-shell-enemy', frame: 2 }],
+            frameRate: 1,
+            repeat: 0
+        });
+        anims.create({
+            key: 'wonder-shell-enemy-spin',
+            frames: anims.generateFrameNumbers('wonder-shell-enemy', { start: 2, end: 3 }),
             frameRate: 8,
             repeat: -1
         });

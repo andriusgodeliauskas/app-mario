@@ -15,6 +15,63 @@
         divide:   [10, 20, 50]
     };
 
+    var DIFFICULTIES = ['easy', 'medium', 'harder', 'hard'];
+
+    var DIFFICULTY_PROFILES = {
+        easy: {
+            lives: 3,
+            enemyCount: 1.0,
+            enemySpeed: 1.0,
+            coyoteMs: 140,
+            jumpBufferMs: 200,
+            firePowerupRatio: 1.0,
+            oneUp: 'guaranteed',
+            invincibleMs: 2000,
+            bossHpMul: 1.0,
+            mathAnswerTimeMul: 1.0,
+            distractorCloseness: 'far'
+        },
+        medium: {
+            lives: 3,
+            enemyCount: 1.3,
+            enemySpeed: 1.15,
+            coyoteMs: 120,
+            jumpBufferMs: 180,
+            firePowerupRatio: 0.7,
+            oneUp: 'guaranteed',
+            invincibleMs: 1800,
+            bossHpMul: 1.2,
+            mathAnswerTimeMul: 0.85,
+            distractorCloseness: 'medium'
+        },
+        harder: {
+            lives: 2,
+            enemyCount: 1.6,
+            enemySpeed: 1.3,
+            coyoteMs: 100,
+            jumpBufferMs: 150,
+            firePowerupRatio: 0.5,
+            oneUp: 'rare',
+            invincibleMs: 1500,
+            bossHpMul: 1.4,
+            mathAnswerTimeMul: 0.7,
+            distractorCloseness: 'close'
+        },
+        hard: {
+            lives: 2,
+            enemyCount: 2.0,
+            enemySpeed: 1.45,
+            coyoteMs: 80,
+            jumpBufferMs: 120,
+            firePowerupRatio: 0.3,
+            oneUp: 'none',
+            invincibleMs: 1200,
+            bossHpMul: 1.6,
+            mathAnswerTimeMul: 0.6,
+            distractorCloseness: 'close'
+        }
+    };
+
     function defaults() {
         return {
             add:      { enabled: true,  max: 10 },
@@ -25,8 +82,13 @@
             // so the per-op validation loop below ignores it.
             missingOperand: false,
             // Unlock every level in the menu (for testing/free play). Off by default.
-            unlockAll: false
+            unlockAll: false,
+            difficulty: 'easy'
         };
+    }
+
+    function validDifficulty(value) {
+        return DIFFICULTIES.indexOf(value) !== -1 ? value : 'easy';
     }
 
     function isValidOp(op, settings) {
@@ -75,6 +137,7 @@
             // Coerce optional flags (absent in older saves → false)
             parsed.missingOperand = parsed.missingOperand === true;
             parsed.unlockAll = parsed.unlockAll === true;
+            parsed.difficulty = validDifficulty(parsed.difficulty);
             return parsed;
         } catch (e) {
             return defaults();
@@ -85,6 +148,7 @@
         // Validate + auto-fix: if all disabled, force add on
         var clone = JSON.parse(JSON.stringify(settings));
         if (!isAnyEnabled(clone)) clone.add.enabled = true;
+        clone.difficulty = validDifficulty(clone.difficulty);
 
         var s = getStorage();
         if (!s) return clone;
@@ -94,12 +158,21 @@
         return clone;
     }
 
+    function difficultyProfile(settings) {
+        var difficulty = validDifficulty(settings && settings.difficulty);
+        return JSON.parse(JSON.stringify(DIFFICULTY_PROFILES[difficulty]));
+    }
+
     var MathSettings = {
         STORAGE_KEY: STORAGE_KEY,
         MAX_OPTIONS: MAX_OPTIONS,
+        DIFFICULTIES: DIFFICULTIES,
+        DIFFICULTY_PROFILES: DIFFICULTY_PROFILES,
         defaults: defaults,
         load: load,
         save: save,
+        validDifficulty: validDifficulty,
+        difficultyProfile: difficultyProfile,
         isAnyEnabled: isAnyEnabled,
         enabledOps: enabledOps
     };

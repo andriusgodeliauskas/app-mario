@@ -185,9 +185,9 @@ var HUDScene = new Phaser.Class({
         var H = this.cameras.main.height;
         var self = this;
 
-        // Pause the game scene
-        var gameScene = this.scene.get('GameScene');
-        if (gameScene) gameScene.scene.pause();
+        // Pause the active gameplay scene.
+        var gameSceneKey = this.getActiveGameplaySceneKey();
+        if (gameSceneKey) this.scene.pause(gameSceneKey);
 
         // Dark overlay
         this.quitOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7)
@@ -263,11 +263,11 @@ var HUDScene = new Phaser.Class({
 
         // Resume game — but ONLY if it is genuinely paused by this dialog.
         // hideQuitDialog also runs from shutdown() during quitGame(), where
-        // GameScene has already been stopped; resuming a stopped scene revives
+        // the gameplay scene has already been stopped; resuming a stopped scene revives
         // it, leaving the game running invisibly behind the menu.
-        var gameScene = this.scene.get('GameScene');
-        if (gameScene && !this._quitting && gameScene.scene.isPaused()) {
-            gameScene.scene.resume();
+        var gameSceneKey = this.getActiveGameplaySceneKey();
+        if (gameSceneKey && !this._quitting && this.scene.isPaused(gameSceneKey)) {
+            this.scene.resume(gameSceneKey);
         }
 
         // Destroy dialog elements
@@ -296,11 +296,25 @@ var HUDScene = new Phaser.Class({
             gameScene.mathSpawner.destroy();
             gameScene.mathSpawner = null;
         }
+        var wonderScene = this.scene.get('WonderScene');
+        if (wonderScene && wonderScene.mathSpawner) {
+            wonderScene.mathSpawner.destroy();
+            wonderScene.mathSpawner = null;
+        }
 
         // Stop both scenes and go to menu
         this.scene.stop('GameScene');
+        this.scene.stop('RunnerScene');
+        this.scene.stop('WonderScene');
         this.scene.stop('HUDScene');
         this.scene.start('MenuScene');
+    },
+
+    getActiveGameplaySceneKey: function () {
+        if (this.scene.isActive('WonderScene')) return 'WonderScene';
+        if (this.scene.isActive('RunnerScene')) return 'RunnerScene';
+        if (this.scene.isActive('GameScene')) return 'GameScene';
+        return null;
     },
 
     // ==========================================

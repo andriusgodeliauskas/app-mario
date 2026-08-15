@@ -182,11 +182,25 @@ window.TouchController = {
                 sceneManager.pause('GameScene');
                 this._pausedForRotate = true;
             }
+            if (sceneManager.isActive && sceneManager.isActive('RunnerScene')) {
+                sceneManager.pause('RunnerScene');
+                this._pausedForRotate = true;
+            }
+            if (sceneManager.isActive && sceneManager.isActive('WonderScene')) {
+                sceneManager.pause('WonderScene');
+                this._pausedForRotate = true;
+            }
             return;
         }
 
         if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('GameScene')) {
             sceneManager.resume('GameScene');
+        }
+        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('RunnerScene')) {
+            sceneManager.resume('RunnerScene');
+        }
+        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('WonderScene')) {
+            sceneManager.resume('WonderScene');
         }
         this._pausedForRotate = false;
     },

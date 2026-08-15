@@ -149,7 +149,8 @@ var MenuScene = new Phaser.Class({
                 name: themes[ti].name,
                 lt: themes[ti].lt,
                 color: themes[ti].menuColor,
-                icon: themes[ti].icon
+                icon: themes[ti].icon,
+                scene: themes[ti].scene || 'GameScene'
             });
         }
 
@@ -435,7 +436,7 @@ var MenuScene = new Phaser.Class({
                 hoverG.setVisible(false);
             });
             zone.on('pointerdown', function () {
-                self.startLevel(levelInfo.num);
+                self.startLevel(levelInfo);
             });
         }
     },
@@ -443,16 +444,18 @@ var MenuScene = new Phaser.Class({
     // ==========================================
     // START SPECIFIC LEVEL
     // ==========================================
-    startLevel: function (levelNum) {
+    startLevel: function (levelInfo) {
         if (this.isStarting) return;
         this.isStarting = true;
 
         if (window.AudioManager) AudioManager.init();
 
         var self = this;
+        var levelNum = (typeof levelInfo === 'number') ? levelInfo : levelInfo.num;
+        var sceneKey = (levelInfo && levelInfo.scene) ? levelInfo.scene : 'GameScene';
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', function () {
-            self.scene.start('GameScene', { level: levelNum });
+            self.scene.start(sceneKey, { level: levelNum });
         });
     },
 
