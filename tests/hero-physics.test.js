@@ -26,12 +26,20 @@ async function profile(p, id) {
   }, null, { timeout: 15000 });
   await p.waitForTimeout(600);
 
-  // Run: hold right for a few frames and read the applied X velocity.
+  // Read the STEADY-STATE speed, measured in GAME FRAMES.
+  //
+  // Wall-clock waits are useless here: headless Chrome throttles rAF while the
+  // test is idle, so waitForTimeout(700) advanced the game by only ~200ms and
+  // sampled Toad mid-burst. Driving rAF from inside the page is the only
+  // reliable clock.
   await p.keyboard.down('ArrowRight');
-  await p.waitForTimeout(350);
-  const vx = await p.evaluate(() => Math.abs(window.game.scene.getScene('GameScene').player.body.velocity.x));
+  const vx = await p.evaluate(async () => {
+    const s = window.game.scene.getScene('GameScene');
+    for (let i = 0; i < 45; i++) await new Promise(r => requestAnimationFrame(r));  // past any burst
+    return Math.abs(s.player.body.velocity.x);
+  });
   await p.keyboard.up('ArrowRight');
-  await p.waitForTimeout(250);
+  await p.evaluate(async () => { for (let i = 0; i < 10; i++) await new Promise(r => requestAnimationFrame(r)); });
 
   // Jump: the peak height reached is what a child feels.
   const jump = await p.evaluate(async () => {

@@ -737,7 +737,8 @@ var GameScene = new Phaser.Class({
         // Per-hero speed. The multiplier is capped at ±10% in the registry:
         // the 52 levels were laid out for Mario's reach, so a wider spread
         // would put some jumps out of reach for the slower heroes.
-        var speed = 200 * (this.heroPhysics ? this.heroPhysics.speedMul : 1);
+        var speed = 200 * (this.heroPhysics ? this.heroPhysics.speedMul : 1)
+                  * HeroPowers.speedFactor(this, delta, moveLeft, moveRight);
 
         if (moveLeft) {
             player.setVelocityX(-speed);
@@ -745,7 +746,7 @@ var GameScene = new Phaser.Class({
         } else if (moveRight) {
             player.setVelocityX(speed);
             player.setFlipX(false);
-        } else {
+        } else if (!HeroPowers.applyStop(this, player)) {
             player.setVelocityX(0);
         }
 
@@ -754,11 +755,15 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         var canJump = onGround || this.coyoteTimer > 0;
 
+        if (onGround) HeroPowers.reset(this);
+
         if (this.jumpBufferTimer > 0 && canJump) {
             player.setVelocityY(-520 * (this.heroPhysics ? this.heroPhysics.jumpMul : 1));
             this.coyoteTimer = 0;
             this.jumpBufferTimer = 0;
             if (window.AudioManager) AudioManager.play('jump');
+        } else if (this.jumpBufferTimer > 0 && HeroPowers.tryAirJump(this, player)) {
+            this.jumpBufferTimer = 0;
         }
 
         // Variable jump height — release early for shorter jump
@@ -768,6 +773,9 @@ var GameScene = new Phaser.Class({
         if (!jumpHeld && player.body.velocity.y < -cutoff) {
             player.setVelocityY(-cutoff);
         }
+
+        // Glide, coin magnet and friends
+        HeroPowers.update(this, delta, jumpHeld);
 
         // ----------------------------------
         // Head-bump rescue: when Mario's head touches a ceiling, scan for any
@@ -1890,7 +1898,7 @@ var GameScene = new Phaser.Class({
         if (isStomping) {
             // Stomp the enemy (Koopa becomes a kickable shell)
             this.squishEnemy(enemy);
-            player.setVelocityY(-250);
+            player.setVelocityY(-HeroPowers.stompBounce(this, 250));
         } else {
             // Player takes damage
             if (this.isInvincible) return;
