@@ -208,6 +208,9 @@ var GameScene = new Phaser.Class({
                 } else if (tileId === 61) {
                     // Koopa spawn
                     enemySpawns.push({ x: tx, y: ty, type: 'koopa' });
+                } else if (window.Villains && Villains.typeForTile(tileId)) {
+                    // Villain spawn (62 wario, 63 waluigi, 64 boo, 65 jr, 66 dk)
+                    enemySpawns.push({ x: tx, y: ty, type: Villains.typeForTile(tileId) });
                 } else if (tileId === 44) {
                     // Enterable pipe top — renders as a pipe tile and registers
                     // a "press DOWN here" spot that leads to a bonus room.
@@ -289,6 +292,11 @@ var GameScene = new Phaser.Class({
                 enemy.setSize(112, 160);
                 enemy.setOffset(8, 32);
                 enemy.enemyType = 'koopa';
+            } else if (window.Villains && Villains.isVillain(esp.type)) {
+                // Boo floats and DK stands still, so the generic setup below
+                // must not overwrite what Villains.spawn arranged.
+                enemy = Villains.spawn(this, esp.type, esp.x, esp.y);
+                if (enemy && enemy.customMotion) enemy = null;
             }
             if (enemy) {
                 enemy.setBounce(0);
@@ -515,13 +523,20 @@ var GameScene = new Phaser.Class({
         var multiplier = profile.enemyCount || 1;
         if (multiplier <= 1 || enemySpawns.length === 0) return enemySpawns;
 
-        var targetCount = Math.round(enemySpawns.length * multiplier);
+        // Only rank-and-file enemies multiply. Duplicating DK or Bowser Jr.
+        // would stack mini-bosses on top of each other.
+        var duplicable = enemySpawns.filter(function (e) {
+            return e.type === 'goomba' || e.type === 'koopa';
+        });
+        if (duplicable.length === 0) return enemySpawns;
+
+        var targetCount = Math.round(duplicable.length * multiplier);
         var expanded = enemySpawns.slice();
-        var extra = targetCount - enemySpawns.length;
+        var extra = targetCount - duplicable.length;
         var spacing = 96;
         for (var i = 0; i < extra; i++) {
-            var base = enemySpawns[i % enemySpawns.length];
-            var wave = Math.floor(i / enemySpawns.length) + 1;
+            var base = duplicable[i % duplicable.length];
+            var wave = Math.floor(i / duplicable.length) + 1;
             expanded.push({
                 x: base.x + spacing * wave,
                 y: base.y,
@@ -846,6 +861,11 @@ var GameScene = new Phaser.Class({
             }
 
             if (e.isSquished) continue;
+
+            // Villains get their own behaviour first. A true return means the
+            // villain moved itself (Boo drifts, DK stands and throws) and the
+            // patrol logic below must not fight it.
+            if (e.isVillain && window.Villains && Villains.updateOne(this, e, delta)) continue;
 
             // Initialize tracking vars
             if (e._lastX === undefined) { e._lastX = e.x; e._stuckTime = 0; e._turnCooldown = 0; }
@@ -1896,6 +1916,21 @@ var GameScene = new Phaser.Class({
         var isStomping = player.body.velocity.y > 0 && (playerBottom - enemyTop) < 16;
 
         if (isStomping) {
+            var outcome = (enemy.isVillain && window.Villains) ? Villains.onStomp(this, enemy) : 'kill';
+
+            if (outcome === 'ignore') {
+                // Boo cannot be stomped — landing on him is just a hit.
+                if (this.isInvincible) return;
+                this.playerHit();
+                return;
+            }
+            if (outcome === 'damage') {
+                // Bowser Jr. survives the first stomp; bounce off him anyway.
+                if (window.AudioManager) AudioManager.play('bump');
+                player.setVelocityY(-HeroPowers.stompBounce(this, 250));
+                return;
+            }
+
             // Stomp the enemy (Koopa becomes a kickable shell)
             this.squishEnemy(enemy);
             player.setVelocityY(-HeroPowers.stompBounce(this, 250));
@@ -1936,6 +1971,9 @@ var GameScene = new Phaser.Class({
         enemy.body.setEnable(false);
         if (enemy.enemyType === 'goomba') enemy.play('goomba-squish');
         else if (enemy.enemyType === 'koopa') enemy.play('koopa-shell');
+        else if (enemy.isVillain && this.anims.exists(Villains.squishAnim(enemy))) {
+            enemy.play(Villains.squishAnim(enemy));
+        }
         this.score += 100;
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
