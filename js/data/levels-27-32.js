@@ -322,7 +322,7 @@
             pipes: [{ col: 70, row: 15 }, { col: 132, row: 15 }, { col: 198, row: 15 }],
             blocks: [{ col: 24, row: 11, tile: 42 }, { col: 84, row: 10, tile: 4 }, { col: 120, row: 12, tile: 4 }, { col: 260, row: 10, tile: 43 }],
             coins: [8,9,10,23,24,25,46,47,63,64,83,84,85,98,99,120,121,122,156,157,179,180,181,222,223,237,238,259,260,261,274,275],
-            enemies: [{ col: 36 }, { col: 76, tile: 61 }, { col: 110 }, { col: 146 }, { col: 188, tile: 61 }, { col: 244 }, { col: 266 }],
+            enemies: [{ col: 36 }, { col: 76, tile: 61 }, { col: 110 }, { col: 146 }, { col: 188, tile: 61 }, { col: 244 }, { col: 266 }, { col: 150, tile: 66 }],
             movers: [{ col: 54, row: 12 }, { col: 166, row: 12 }],
             flagCol: 290,
             variant: 'a'
@@ -375,7 +375,7 @@
             pipes: [{ col: 72, row: 15 }, { col: 158, row: 15 }, { col: 236, row: 15 }],
             blocks: [{ col: 20, row: 12, tile: 42 }, { col: 54, row: 10, tile: 4 }, { col: 138, row: 9, tile: 41 }, { col: 240, row: 11, tile: 43 }],
             coins: [8,9,10,19,20,21,53,54,55,83,84,97,98,99,136,137,138,175,176,189,190,191,218,219,239,240,241,260,261],
-            enemies: [{ col: 34 }, { col: 66, tile: 61 }, { col: 112 }, { col: 146 }, { col: 194, tile: 61 }, { col: 250 }],
+            enemies: [{ col: 34 }, { col: 66, tile: 61 }, { col: 112 }, { col: 146 }, { col: 194, tile: 61 }, { col: 250 }, { col: 130, tile: 64 }],
             movers: [{ col: 104, row: 12 }, { col: 166, row: 12 }],
             flagCol: 290,
             variant: 'a'

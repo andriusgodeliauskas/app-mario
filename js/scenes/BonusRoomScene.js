@@ -52,11 +52,11 @@ var BonusRoomScene = new Phaser.Class({
         this.solids.add(rightWall);
 
         // ---- Player ----
-        this.player = this.physics.add.sprite(90, groundTop - 40, 'mario');
+        this.player = this.physics.add.sprite(90, groundTop - 40, HeroRuntime.keyFor(this));
         this.player.setScale(0.25);
         this.player.setSize(96, 120).setOffset(16, 8);
         this.player.setCollideWorldBounds(true);
-        this.player.play('mario-idle');
+        this.player.play(this.heroKey + '-idle');
         this.player.setDepth(10);
         this.physics.add.collider(this.player, this.solids);
 
@@ -145,9 +145,10 @@ var BonusRoomScene = new Phaser.Class({
         }
 
         // Animations
-        if (!onGround) player.play('mario-jump', true);
-        else if (player.body.velocity.x !== 0) player.play('mario-run', true);
-        else player.play('mario-idle', true);
+        var prefix = this.heroKey + '-';
+        if (!onGround) player.play(prefix + 'jump', true);
+        else if (player.body.velocity.x !== 0) player.play(prefix + 'run', true);
+        else player.play(prefix + 'idle', true);
 
         // Exit: stand near the pipe (math NOT required — never trap the player).
         // Pressing up exits; just standing on the pipe for a moment also exits,

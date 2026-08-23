@@ -30,16 +30,23 @@ Peach lieka ir gelbstimoji. Kai žaidžiama Peach, narvelyje sėdi Daisy.
 Fizika aprašoma dviem daugikliais nuo bazės (greitis 200, dabartinis šuolis).
 Galia yra atskiras, lygių geometrijos nekeičiantis priedas.
 
+**Pataisymas įgyvendinimo metu:** pradinis planas numatė 0.95 daugiklius Peach,
+Rosalina ir Diddy. Patikra (`tests/hero-reach.test.js`) parodė, kad 6 lygiuose
+(1, 5-9) ties 195-199 stulpeliu yra 5 plotelių tuštumos tarpas, kurio 0.95
+greičio herojus nepasiekia. Todėl galioja griežtesnė taisyklė: **joks herojus
+negali būti prastesnis už Mario** — daugikliai yra 1.00 arba 1.10, niekada
+mažiau. Skirtumus kuria galios, ne trūkumai.
+
 | Herojus | speedMul | jumpMul | Galia |
 |---|---|---|---|
 | Mario | 1.00 | 1.00 | ugnies gėlė (esama mechanika) |
 | Luigi | 1.00 | 1.10 | slidesnis stabdymas (mažesnė trintis) |
-| Peach | 0.95 | 1.00 | sklendimas: laikant šuolio mygtuką krytis sulėtėja ~0.6 s |
+| Peach | 1.00 | 1.00 | sklendimas: laikant šuolio mygtuką krytis sulėtėja ~0.6 s |
 | Toad | 1.10 | 1.00 | greitas startas (didesnis pagreitis) |
 | Yoshi | 1.00 | 1.00 | žemas antras šuolis ore (60% pirmojo) |
 | Daisy | 1.00 | 1.00 | atšokimas nuo priešo +40% (kombo grandinė) |
-| Rosalina | 0.95 | 1.00 | Luma skrieja aplink ir traukia monetas bei angliškų žodžių burbulus |
-| Diddy Kong | 1.10 | 0.95 | ridenimosi spurtas (trumpas greitėjimas dvigubai spustelėjus kryptį) |
+| Rosalina | 1.00 | 1.00 | Luma skrieja aplink ir traukia monetas bei angliškų žodžių burbulus |
+| Diddy Kong | 1.10 | 1.00 | ridenimosi spurtas (trumpas greitėjimas dvigubai spustelėjus kryptį) |
 
 Galios neįjungiamos, kol nepatvirtinta, kad lygiai išeinami su visais
 speedMul/jumpMul deriniais (žr. Testavimas).

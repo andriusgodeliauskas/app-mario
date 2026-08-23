@@ -41,8 +41,80 @@ var BootScene = new Phaser.Class({
         this.scene.start('MenuScene');
     },
 
+
+    /**
+     * Build idle/run/jump/death (and big idle/run/jump) for every registry
+     * hero. Skips Mario: his textures come from sprites.js under the legacy
+     * 'mario' keys, which the animations below already cover.
+     */
+/**
+     * Villain animations. Every villain sheet is walk1/walk2/squished, so one
+     * loop covers all of them; Boo's third frame is "shy" (he cannot be
+     * stomped) and gets its own key alongside the shared one.
+     */
+    createVillainAnimations: function () {
+        var anims = this.anims;
+        var self = this;
+        var types = window.Villains ? Object.keys(window.Villains.TILE_CODES).map(function (k) {
+            return window.Villains.TILE_CODES[k];
+        }) : [];
+
+        types.forEach(function (type) {
+            if (!self.textures.exists(type)) {
+                console.warn('[BootScene] missing villain texture ' + type);
+                return;
+            }
+            anims.create({ key: type + '-walk', frames: anims.generateFrameNumbers(type, { start: 0, end: 1 }), frameRate: 5, repeat: -1 });
+            anims.create({ key: type + '-squish', frames: [{ key: type, frame: 2 }], frameRate: 1, repeat: 0 });
+        });
+
+        if (this.textures.exists('boo')) {
+            anims.create({ key: 'boo-shy', frames: [{ key: 'boo', frame: 2 }], frameRate: 1, repeat: -1 });
+        }
+        if (this.textures.exists('dk-barrel')) {
+            anims.create({ key: 'dk-barrel-roll', frames: anims.generateFrameNumbers('dk-barrel', { start: 0, end: 1 }), frameRate: 12, repeat: -1 });
+        }
+    },
+
+    createHeroAnimations: function () {
+        var anims = this.anims;
+        var Chars = window.Characters;
+        if (!Chars) return;
+
+        Chars.LIST.forEach(function (ch) {
+            if (ch.id === 'mario') return;
+
+            var key = 'hero-' + ch.id;
+            var bigKey = key + '-big';
+            if (!this.textures.exists(key)) {
+                console.warn('[BootScene] missing texture for hero ' + ch.id);
+                return;
+            }
+
+            anims.create({ key: key + '-idle', frames: [{ key: key, frame: 0 }], frameRate: 1, repeat: -1 });
+            anims.create({ key: key + '-run', frames: anims.generateFrameNumbers(key, { start: 0, end: 2 }), frameRate: 10, repeat: -1 });
+            anims.create({ key: key + '-jump', frames: [{ key: key, frame: 3 }], frameRate: 1, repeat: 0 });
+            anims.create({ key: key + '-death', frames: [{ key: key, frame: 4 }], frameRate: 1, repeat: 0 });
+
+            if (!this.textures.exists(bigKey)) return;
+            anims.create({ key: bigKey + '-idle', frames: [{ key: bigKey, frame: 0 }], frameRate: 1, repeat: -1 });
+            anims.create({ key: bigKey + '-run', frames: anims.generateFrameNumbers(bigKey, { start: 0, end: 2 }), frameRate: 10, repeat: -1 });
+            anims.create({ key: bigKey + '-jump', frames: [{ key: bigKey, frame: 3 }], frameRate: 1, repeat: 0 });
+        }, this);
+    },
+
     createAnimations: function () {
         var anims = this.anims;
+
+        // ========================================
+        // HERO ANIMATIONS (one set per playable character)
+        // ========================================
+        // Every hero sheet has Mario's exact frame layout, so the same frame
+        // ranges work for all of them. Mario himself keeps the original
+        // 'mario' / 'mario-big' keys defined below — his sheet is hand-drawn
+        // in sprites.js, not generated from the registry.
+        this.createHeroAnimations();
+        this.createVillainAnimations();
 
         // ========================================
         // MARIO (small) ANIMATIONS

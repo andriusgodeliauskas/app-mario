@@ -132,7 +132,7 @@
             blocks: [{ col: 22, row: 12, tile: 42 }, { col: 38, row: 11, tile: 4 }, { col: 78, row: 12, tile: 40 },
                 { col: 98, row: 10, tile: 4 }, { col: 136, row: 12, tile: 41 }, { col: 206, row: 12, tile: 4 }, { col: 228, row: 10, tile: 43 }],
             coins: withArcs(coinList([8,9,10,30,31,56,57,68,69,88,89,120,121,144,145,168,169,184,185,216,217,240,241,266,267]), [[20,28,11], [74,84,11], [132,141,11], [202,212,11], [256,263,11]]),
-            enemies: [{ col: 34 }, { col: 70, tile: 61 }, { col: 104 }, { col: 146 }, { col: 188, tile: 61 }, { col: 220 }, { col: 260 }],
+            enemies: [{ col: 34 }, { col: 70, tile: 61 }, { col: 104 }, { col: 146 }, { col: 188, tile: 61 }, { col: 220 }, { col: 260 }, { col: 140, tile: 63 }],
             flagCol: 290,
             decorations: {
                 rocks: deco([24, 82, 138, 204, 260], GROUND_Y, 0.9, [0x777777, 0xb0b0b0]),
@@ -230,7 +230,7 @@
             blocks: [{ col: 24, row: 12, tile: 42 }, { col: 50, row: 11, tile: 4 }, { col: 118, row: 12, tile: 40 },
                 { col: 142, row: 11, tile: 4 }, { col: 212, row: 12, tile: 41 }, { col: 240, row: 11, tile: 43 }],
             coins: withArcs(coinList([8,9,10,34,35,58,59,84,85,98,99,130,131,162,163,178,179,194,195,224,225,252,253,274,275]), [[22,30,11], [48,54,10], [116,125,11], [140,147,10], [210,220,11], [238,245,10]]),
-            enemies: [{ col: 40 }, { col: 82, tile: 61 }, { col: 134 }, { col: 174 }, { col: 226, tile: 61 }, { col: 258 }],
+            enemies: [{ col: 40 }, { col: 82, tile: 61 }, { col: 134 }, { col: 174 }, { col: 226, tile: 61 }, { col: 258 }, { col: 120, tile: 63 }],
             flagCol: 290,
             decorations: {
                 fences: deco([18, 24, 30, 116, 122, 128, 210, 216, 222], GROUND_Y, 0.75, [0xffffff]),
@@ -344,7 +344,7 @@
                 { col: 98, row: 11, tile: 4 }, { col: 118, row: 9, tile: 41 }, { col: 168, row: 11, tile: 4 },
                 { col: 190, row: 9, tile: 43 }, { col: 240, row: 11, tile: 4 }],
             coins: withArcs(coinList([8,9,10,28,29,46,47,64,65,76,77,88,89,108,109,130,131,144,145,160,161,180,181,204,205,218,219,232,233,260,261]), [[18,24,11], [34,41,10], [52,57,9], [96,103,10], [116,121,8], [166,173,10], [188,193,8], [238,245,10], [252,257,9]]),
-            enemies: [{ col: 44 }, { col: 84, tile: 61 }, { col: 112 }, { col: 154 }, { col: 184, tile: 61 }, { col: 226 }, { col: 252, tile: 61 }],
+            enemies: [{ col: 44 }, { col: 84, tile: 61 }, { col: 112 }, { col: 154 }, { col: 184, tile: 61 }, { col: 226 }, { col: 252, tile: 61 }, { col: 100, tile: 64 }, { col: 170, tile: 64 }],
             flagCol: 290,
             decorations: {
                 stalactites: deco([24, 58, 94, 128, 164, 198, 232, 266], 0, 0.9, [0x5f557a]),

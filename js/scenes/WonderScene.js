@@ -1164,14 +1164,14 @@ var WonderScene = new Phaser.Class({
     createMirrorTwin: function () {
         if (!this.levelData.mirrorTwin) return;
         var spawn = this.levelData.mirrorSpawn || { x: this.worldWidth - 118, y: 438 };
-        this.mirrorTwin = this.physics.add.sprite(spawn.x, spawn.y, 'mario');
+        this.mirrorTwin = this.physics.add.sprite(spawn.x, spawn.y, HeroRuntime.keyFor(this));
         this.mirrorTwin.setScale(0.25);
         this.mirrorTwin.setSize(96, 120);
         this.mirrorTwin.setOffset(16, 8);
         this.mirrorTwin.setTint(0x9BD7FF);
         this.mirrorTwin.setAlpha(0.58);
         this.mirrorTwin.setDepth(10);
-        this.mirrorTwin.play('mario-idle');
+        this.mirrorTwin.play(this.heroKey + '-idle');
         var mf = this.levelData.mirrorFlag || { x: 180, y: 352 };
         this.mirrorFlagpole = this.physics.add.sprite(mf.x, mf.y, 'flagpole');
         this.mirrorFlagpole.setOrigin(0.5, 0.5);
@@ -1227,14 +1227,14 @@ var WonderScene = new Phaser.Class({
 
     createPlayer: function () {
         var spawn = this.levelData.spawn || { x: 96, y: 450 };
-        this.player = this.physics.add.sprite(spawn.x, spawn.y, 'mario');
+        this.player = this.physics.add.sprite(spawn.x, spawn.y, HeroRuntime.keyFor(this));
         this.player.setScale(0.25);
         this.player.setSize(96, 120);
         this.player.setOffset(16, 8);
         this.player.setBounce(0);
         this.player.setCollideWorldBounds(false);
         this.player.setDepth(10);
-        this.player.play('mario-idle');
+        this.player.play(this.heroKey + '-idle');
     },
 
     createColliders: function () {
@@ -1418,9 +1418,10 @@ var WonderScene = new Phaser.Class({
         if (!jumpHeld && !inWater && !upsideDown && p.body.velocity.y < -210 && p._rubberBounceMs <= 0) p.setVelocityY(-210);
         if (!jumpHeld && !inWater && upsideDown && p.body.velocity.y > 210 && p._rubberBounceMs <= 0) p.setVelocityY(210);
 
-        if (!onGround) p.play('mario-jump', true);
-        else if (Math.abs(p.body.velocity.x) > 2) p.play('mario-run', true);
-        else p.play('mario-idle', true);
+        var pPrefix = (this.isBig ? this.heroBigKey : this.heroKey) + '-';
+        if (!onGround) p.play(pPrefix + 'jump', true);
+        else if (Math.abs(p.body.velocity.x) > 2) p.play(pPrefix + 'run', true);
+        else p.play(pPrefix + 'idle', true);
         p.setAngle(upsideDown ? 180 : 0);
     },
 
@@ -1701,9 +1702,10 @@ var WonderScene = new Phaser.Class({
         }
         t._jumpHeldLast = jumpHeld;
         if (!jumpHeld && t.body.velocity.y < -210) t.setVelocityY(-210);
-        if (!onGround) t.play('mario-jump', true);
-        else if (Math.abs(t.body.velocity.x) > 2) t.play('mario-run', true);
-        else t.play('mario-idle', true);
+        var tPrefix = this.heroKey + '-';
+        if (!onGround) t.play(tPrefix + 'jump', true);
+        else if (Math.abs(t.body.velocity.x) > 2) t.play(tPrefix + 'run', true);
+        else t.play(tPrefix + 'idle', true);
 
         var targetX = this.levelData.mirrorAxisX ? (this.levelData.mirrorAxisX * 2 - this.player.x) : t.x;
         if (Math.abs(t.x - targetX) > 480 && onGround) {
@@ -2057,10 +2059,10 @@ var WonderScene = new Phaser.Class({
         if (this.isBig) {
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
-            this.player.setTexture('mario');
+            this.player.setTexture(this.heroKey);
             this.player.setSize(96, 120);
             this.player.setOffset(16, 8);
-            this.player.play('mario-idle');
+            this.player.play(this.heroKey + '-idle');
             this.isInvincible = true;
             this.invincibleTimer = this.difficultyProfile.invincibleMs;
             return;
@@ -2217,7 +2219,7 @@ var WonderScene = new Phaser.Class({
         this.isDead = true;
         this.cleanupMathSpawner();
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('death'); }
-        this.player.play('mario-death');
+        this.player.play(this.heroKey + '-death');
         this.player.body.setVelocity(0, 0);
         this.player.body.setAllowGravity(false);
         this.player.body.setEnable(false);

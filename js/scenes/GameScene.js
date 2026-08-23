@@ -208,6 +208,9 @@ var GameScene = new Phaser.Class({
                 } else if (tileId === 61) {
                     // Koopa spawn
                     enemySpawns.push({ x: tx, y: ty, type: 'koopa' });
+                } else if (window.Villains && Villains.typeForTile(tileId)) {
+                    // Villain spawn (62 wario, 63 waluigi, 64 boo, 65 jr, 66 dk)
+                    enemySpawns.push({ x: tx, y: ty, type: Villains.typeForTile(tileId) });
                 } else if (tileId === 44) {
                     // Enterable pipe top — renders as a pipe tile and registers
                     // a "press DOWN here" spot that leads to a bonus room.
@@ -231,19 +234,21 @@ var GameScene = new Phaser.Class({
         }
 
         // ----------------------------------
-        // Create player (Mario)
+        // Create player (the hero chosen in the menu)
         // ----------------------------------
+        this.resolveHero();
+
         var spawnX = 100;
         var spawnY = (ROWS - 3) * TILE + TILE / 2; // Above the ground rows
 
-        this.player = this.physics.add.sprite(spawnX, spawnY, 'mario');
+        this.player = this.physics.add.sprite(spawnX, spawnY, this.heroKey);
         this.player.setScale(0.25);
         this.player.setSize(96, 120);
         this.player.setOffset(16, 8);
         this.player.setBounce(0);
         this.player.setCollideWorldBounds(false);
         this.player.setDepth(10);
-        this.player.play('mario-idle');
+        this.player.play(this.heroKey + '-idle');
 
         // ----------------------------------
         // Coins
@@ -287,6 +292,11 @@ var GameScene = new Phaser.Class({
                 enemy.setSize(112, 160);
                 enemy.setOffset(8, 32);
                 enemy.enemyType = 'koopa';
+            } else if (window.Villains && Villains.isVillain(esp.type)) {
+                // Boo floats and DK stands still, so the generic setup below
+                // must not overwrite what Villains.spawn arranged.
+                enemy = Villains.spawn(this, esp.type, esp.x, esp.y);
+                if (enemy && enemy.customMotion) enemy = null;
             }
             if (enemy) {
                 enemy.setBounce(0);
@@ -481,6 +491,16 @@ var GameScene = new Phaser.Class({
         }
     },
 
+    /** Resolve the chosen hero into this scene's texture/animation keys. */
+    resolveHero: function () {
+        HeroRuntime.resolve(this);
+    },
+
+    /** Who sits in the cage — see HeroRuntime.captiveKey. */
+    captiveTextureKey: function () {
+        return HeroRuntime.captiveKey(this);
+    },
+
     registerStaticCullObject: function (obj) {
         if (!obj || !this._staticCullBuckets) return;
         // Fixed/parallax objects are already cheap and need different camera math.
@@ -503,13 +523,20 @@ var GameScene = new Phaser.Class({
         var multiplier = profile.enemyCount || 1;
         if (multiplier <= 1 || enemySpawns.length === 0) return enemySpawns;
 
-        var targetCount = Math.round(enemySpawns.length * multiplier);
+        // Only rank-and-file enemies multiply. Duplicating DK or Bowser Jr.
+        // would stack mini-bosses on top of each other.
+        var duplicable = enemySpawns.filter(function (e) {
+            return e.type === 'goomba' || e.type === 'koopa';
+        });
+        if (duplicable.length === 0) return enemySpawns;
+
+        var targetCount = Math.round(duplicable.length * multiplier);
         var expanded = enemySpawns.slice();
-        var extra = targetCount - enemySpawns.length;
+        var extra = targetCount - duplicable.length;
         var spacing = 96;
         for (var i = 0; i < extra; i++) {
-            var base = enemySpawns[i % enemySpawns.length];
-            var wave = Math.floor(i / enemySpawns.length) + 1;
+            var base = duplicable[i % duplicable.length];
+            var wave = Math.floor(i / duplicable.length) + 1;
             expanded.push({
                 x: base.x + spacing * wave,
                 y: base.y,
@@ -722,7 +749,11 @@ var GameScene = new Phaser.Class({
                        (window.TouchController && window.TouchController.leftPressed);
         var moveRight = this.cursors.right.isDown || this.keyD.isDown ||
                         (window.TouchController && window.TouchController.rightPressed);
-        var speed = 200;
+        // Per-hero speed. The multiplier is capped at ±10% in the registry:
+        // the 52 levels were laid out for Mario's reach, so a wider spread
+        // would put some jumps out of reach for the slower heroes.
+        var speed = 200 * (this.heroPhysics ? this.heroPhysics.speedMul : 1)
+                  * HeroPowers.speedFactor(this, delta, moveLeft, moveRight);
 
         if (moveLeft) {
             player.setVelocityX(-speed);
@@ -730,7 +761,7 @@ var GameScene = new Phaser.Class({
         } else if (moveRight) {
             player.setVelocityX(speed);
             player.setFlipX(false);
-        } else {
+        } else if (!HeroPowers.applyStop(this, player)) {
             player.setVelocityX(0);
         }
 
@@ -739,19 +770,27 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         var canJump = onGround || this.coyoteTimer > 0;
 
+        if (onGround) HeroPowers.reset(this);
+
         if (this.jumpBufferTimer > 0 && canJump) {
-            player.setVelocityY(-520);
+            player.setVelocityY(-520 * (this.heroPhysics ? this.heroPhysics.jumpMul : 1));
             this.coyoteTimer = 0;
             this.jumpBufferTimer = 0;
             if (window.AudioManager) AudioManager.play('jump');
+        } else if (this.jumpBufferTimer > 0 && HeroPowers.tryAirJump(this, player)) {
+            this.jumpBufferTimer = 0;
         }
 
         // Variable jump height — release early for shorter jump
         var jumpHeld = this.keySpace.isDown || this.cursors.up.isDown || this.keyW.isDown ||
                        (window.TouchController && window.TouchController.jumpPressed);
-        if (!jumpHeld && player.body.velocity.y < -200) {
-            player.setVelocityY(-200);
+        var cutoff = 200 * (this.heroPhysics ? this.heroPhysics.jumpMul : 1);
+        if (!jumpHeld && player.body.velocity.y < -cutoff) {
+            player.setVelocityY(-cutoff);
         }
+
+        // Glide, coin magnet and friends
+        HeroPowers.update(this, delta, jumpHeld);
 
         // ----------------------------------
         // Head-bump rescue: when Mario's head touches a ceiling, scan for any
@@ -770,7 +809,7 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Animations
         // ----------------------------------
-        var prefix = this.isBig ? 'mario-big-' : 'mario-';
+        var prefix = (this.isBig ? this.heroBigKey : this.heroKey) + '-';
 
         if (!onGround) {
             player.play(prefix + 'jump', true);
@@ -822,6 +861,11 @@ var GameScene = new Phaser.Class({
             }
 
             if (e.isSquished) continue;
+
+            // Villains get their own behaviour first. A true return means the
+            // villain moved itself (Boo drifts, DK stands and throws) and the
+            // patrol logic below must not fight it.
+            if (e.isVillain && window.Villains && Villains.updateOne(this, e, delta)) continue;
 
             // Initialize tracking vars
             if (e._lastX === undefined) { e._lastX = e.x; e._stuckTime = 0; e._turnCooldown = 0; }
@@ -1386,7 +1430,7 @@ var GameScene = new Phaser.Class({
 
         var group = this.add.container(x, y).setDepth(8);
         var glow = this.add.circle(0, 4, 62, 0xfff1a8, 0.22);
-        var princess = this.add.sprite(0, 28, 'princess').setScale(0.36);
+        var princess = this.add.sprite(0, 28, this.captiveTextureKey()).setScale(0.36);
         var cage = this.add.sprite(0, 10, 'princess-cage-closed').setScale(1);
         var leftDoor = this.add.sprite(-26, 10, 'princess-cage-left').setOrigin(1, 0.5).setVisible(false);
         var rightDoor = this.add.sprite(26, 10, 'princess-cage-right').setOrigin(0, 0.5).setVisible(false);
@@ -1729,11 +1773,11 @@ var GameScene = new Phaser.Class({
 
         if (!this.isBig) {
             this.isBig = true;
-            player.setTexture('mario-big');
+            player.setTexture(this.heroBigKey);
             player.setSize(96, 224);
             player.setOffset(16, 32);
             player.y -= 16; // Shift up so we don't clip into ground
-            player.play('mario-big-idle');
+            player.play(this.heroBigKey + '-idle');
         }
         this.showEnglishPopup('mushroom');
     },
@@ -1766,11 +1810,11 @@ var GameScene = new Phaser.Class({
         // Fire flower always makes Mario big (if small) and grants fire power.
         if (!this.isBig) {
             this.isBig = true;
-            player.setTexture('mario-big');
+            player.setTexture(this.heroBigKey);
             player.setSize(96, 224);
             player.setOffset(16, 32);
             player.y -= 16;
-            player.play('mario-big-idle');
+            player.play(this.heroBigKey + '-idle');
         }
         this.isFire = true;
         this.applyMarioTint();
@@ -1872,9 +1916,24 @@ var GameScene = new Phaser.Class({
         var isStomping = player.body.velocity.y > 0 && (playerBottom - enemyTop) < 16;
 
         if (isStomping) {
+            var outcome = (enemy.isVillain && window.Villains) ? Villains.onStomp(this, enemy) : 'kill';
+
+            if (outcome === 'ignore') {
+                // Boo cannot be stomped — landing on him is just a hit.
+                if (this.isInvincible) return;
+                this.playerHit();
+                return;
+            }
+            if (outcome === 'damage') {
+                // Bowser Jr. survives the first stomp; bounce off him anyway.
+                if (window.AudioManager) AudioManager.play('bump');
+                player.setVelocityY(-HeroPowers.stompBounce(this, 250));
+                return;
+            }
+
             // Stomp the enemy (Koopa becomes a kickable shell)
             this.squishEnemy(enemy);
-            player.setVelocityY(-250);
+            player.setVelocityY(-HeroPowers.stompBounce(this, 250));
         } else {
             // Player takes damage
             if (this.isInvincible) return;
@@ -1912,6 +1971,9 @@ var GameScene = new Phaser.Class({
         enemy.body.setEnable(false);
         if (enemy.enemyType === 'goomba') enemy.play('goomba-squish');
         else if (enemy.enemyType === 'koopa') enemy.play('koopa-shell');
+        else if (enemy.isVillain && this.anims.exists(Villains.squishAnim(enemy))) {
+            enemy.play(Villains.squishAnim(enemy));
+        }
         this.score += 100;
         this.registry.set('score', this.score);
         this.events.emit('scoreChange', this.score);
@@ -1953,10 +2015,10 @@ var GameScene = new Phaser.Class({
             // Big → small
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
-            this.player.setTexture('mario');
+            this.player.setTexture(this.heroKey);
             this.player.setSize(96, 120);
             this.player.setOffset(16, 8);
-            this.player.play('mario-idle');
+            this.player.play(this.heroKey + '-idle');
             this.isInvincible = true;
             this.invincibleTimer = this.difficultyProfile.invincibleMs;
             return;
@@ -1981,7 +2043,7 @@ var GameScene = new Phaser.Class({
 
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('death'); }
 
-        this.player.play('mario-death');
+        this.player.play(this.heroKey + '-death');
         this.player.body.setVelocity(0, 0);
         this.player.body.setAllowGravity(false);
         this.player.body.setEnable(false);
@@ -3942,6 +4004,7 @@ var GameScene = new Phaser.Class({
         // Many enemies
         map[16][15] = 60; map[16][28] = 60; map[16][42] = 61; map[16][58] = 60; map[16][72] = 61;
         map[16][88] = 60; map[16][102] = 60; map[16][118] = 61; map[16][135] = 60; map[16][148] = 61; map[16][160] = 60;
+        map[16][96] = 62;   // Wario stalks the volcano
 
         map[5][190] = 70;
 
@@ -4015,7 +4078,7 @@ var GameScene = new Phaser.Class({
         for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
 
         // Enemies (~12) on ground, away from pits & spawn
-        var en = [[18, 60], [33, 61], [48, 60], [60, 60], [72, 61], [88, 60], [104, 61], [120, 60], [134, 61], [148, 60], [164, 61], [178, 60]];
+        var en = [[18, 60], [33, 61], [48, 60], [60, 60], [72, 61], [88, 60], [104, 61], [120, 60], [134, 61], [148, 60], [164, 61], [178, 60], [88, 64]];
         for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
 
         // Flagpole + solid run-up
@@ -4076,7 +4139,7 @@ var GameScene = new Phaser.Class({
         for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
 
         // Enemies (~15)
-        var en = [[14, 60], [24, 61], [34, 60], [42, 60], [50, 61], [62, 60], [70, 61], [88, 60], [98, 60], [110, 61], [122, 60], [138, 61], [150, 60], [162, 61], [176, 60]];
+        var en = [[14, 60], [24, 61], [34, 60], [42, 60], [50, 61], [62, 60], [70, 61], [88, 60], [98, 60], [110, 61], [122, 60], [138, 61], [150, 60], [162, 61], [176, 60], [128, 66]];
         for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
 
         map[5][190] = 70;
@@ -4253,7 +4316,7 @@ var GameScene = new Phaser.Class({
         for (var ci = 0; ci < coins.length; ci++) { if (map[16][coins[ci]] === _) map[16][coins[ci]] = 50; }
 
         // Enemies (~18)
-        var en = [[14, 60], [22, 61], [30, 60], [40, 61], [44, 60], [56, 61], [68, 60], [72, 60], [84, 61], [98, 60], [112, 61], [116, 60], [126, 61], [136, 60], [146, 61], [156, 60], [164, 61], [176, 60]];
+        var en = [[14, 60], [22, 61], [30, 60], [40, 61], [44, 60], [56, 61], [68, 60], [72, 60], [84, 61], [98, 60], [112, 61], [116, 60], [126, 61], [136, 60], [146, 61], [156, 60], [164, 61], [176, 60], [150, 65]];
         for (var e = 0; e < en.length; e++) map[16][en[e][0]] = en[e][1];
 
         map[5][190] = 70;
@@ -4362,7 +4425,7 @@ var GameScene = new Phaser.Class({
             powerups: [[18,12,43],[56,12,42],[98,12,41],[146,12,4]],
             pipes: [44,108,156],
             movers: [[64,12],[132,13]],
-            enemies: [[14,60],[28,61],[40,60],[60,61],[80,60],[100,61],[124,60],[140,61],[160,60]],
+            enemies: [[14,60],[28,61],[40,60],[60,61],[80,60],[100,61],[124,60],[140,61],[160,60],[150,65]],
             coins: [8,9,17,33,55,73,97,121,145,165,166,178,179],
             decorations: {
                 sparkles: [{x:250,y:110,scale:1.0},{x:800,y:90,scale:1.1},{x:1400,y:120,scale:0.9},{x:2100,y:100,scale:1.0},{x:2800,y:110,scale:1.1},{x:3500,y:90,scale:1.0},{x:4200,y:120,scale:0.9},{x:4900,y:100,scale:1.1}],
