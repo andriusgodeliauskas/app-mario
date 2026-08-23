@@ -154,7 +154,7 @@
             blocks: [{ col: 20, row: 12, tile: 4 }, { col: 40, row: 11, tile: 40 }, { col: 98, row: 11, tile: 4 },
                 { col: 130, row: 11, tile: 41 }, { col: 192, row: 11, tile: 4 }, { col: 240, row: 12, tile: 43 }],
             coins: withArcs(coins([8, 9, 28, 29, 52, 53, 88, 89, 110, 111, 136, 137, 170, 171, 204, 205, 260, 261]), [[18, 24, 11], [38, 43, 10], [120, 131, 10], [158, 164, 11], [238, 244, 11]]),
-            enemies: [{ col: 34, tile: 60 }, { col: 78, tile: 60 }, { col: 114, tile: 61 }, { col: 152, tile: 60 }, { col: 212, tile: 60 }, { col: 250, tile: 61 }],
+            enemies: [{ col: 34, tile: 60 }, { col: 78, tile: 60 }, { col: 114, tile: 61 }, { col: 152, tile: 60 }, { col: 212, tile: 60 }, { col: 250, tile: 61 }, { col: 120, tile: 63 }],
             flagCol: 290,
             decorations: {
                 custom: [
@@ -235,7 +235,7 @@
             blocks: [{ col: 22, row: 12, tile: 4 }, { col: 42, row: 11, tile: 40 }, { col: 66, row: 12, tile: 4 },
                 { col: 90, row: 11, tile: 41 }, { col: 122, row: 12, tile: 4 }, { col: 182, row: 12, tile: 43 }, { col: 242, row: 12, tile: 4 }],
             coins: withArcs(coins([8, 9, 32, 33, 56, 57, 80, 81, 100, 101, 112, 113, 158, 159, 172, 173, 194, 195, 232, 233, 256, 257, 274, 275]), [[18, 28, 11], [38, 46, 10], [62, 72, 11], [118, 128, 11], [178, 188, 11], [238, 248, 11]]),
-            enemies: [{ col: 34, tile: 60 }, { col: 74, tile: 61 }, { col: 116, tile: 60 }, { col: 154, tile: 60 }, { col: 198, tile: 61 }, { col: 250, tile: 60 }],
+            enemies: [{ col: 34, tile: 60 }, { col: 74, tile: 61 }, { col: 116, tile: 60 }, { col: 154, tile: 60 }, { col: 198, tile: 61 }, { col: 250, tile: 60 }, { col: 140, tile: 62 }],
             flagCol: 290,
             decorations: {
                 custom: [

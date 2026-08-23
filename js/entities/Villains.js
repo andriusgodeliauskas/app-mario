@@ -52,7 +52,9 @@
         if (!isVillain(type) || !scene.textures.exists(type)) return null;
 
         var e = scene.enemies.create(x, y - (SPAWN_LIFT[type] || 0), type);
-        e.setScale(0.25);
+        // DK is a mini-boss; at the rank-and-file 0.25 he read as just another
+        // goomba-sized enemy stood in the jungle.
+        e.setScale(type === 'dk' ? 0.34 : 0.25);
         e.enemyType = type;
         e.isVillain = true;
         e.isSquished = false;
