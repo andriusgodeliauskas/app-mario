@@ -25,6 +25,16 @@ test('kiekvieno herojaus fizika saugiose ribose (±10%)', () => {
     });
 });
 
+test('nei vienas herojus nera letesnis uz Mario', () => {
+    // Six levels (1, 5-9) have a five-tile void gap only Mario's reach clears,
+    // so a sub-1.0 multiplier would trap a child mid-level. Heroes may match or
+    // beat him, never fall short. See tests/hero-reach.test.js.
+    Characters.LIST.forEach(c => {
+        assert(c.physics.speedMul >= 1, c.id + ' speedMul >= 1 (' + c.physics.speedMul + ')');
+        assert(c.physics.jumpMul >= 1, c.id + ' jumpMul >= 1 (' + c.physics.jumpMul + ')');
+    });
+});
+
 test('mario yra numatytasis ir fiziskai neutralus', () => {
     const m = Characters.byId('mario');
     assert(m !== null, 'mario egzistuoja');

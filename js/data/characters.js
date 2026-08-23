@@ -52,7 +52,7 @@
             lt: 'Princese Peach',
             shape: 'dress',
             power: 'glide',
-            physics: { speedMul: 0.95, jumpMul: 1.00 },
+            physics: { speedMul: 1.00, jumpMul: 1.00 },
             description: 'The beloved princess of the Mushroom Kingdom. She is extremely kind to everyone.',
             palette: {
                 hatBright: '#FFD84A', hatDark: '#C89A10',
@@ -112,7 +112,7 @@
             lt: 'Rozalina',
             shape: 'dress',
             power: 'luma',
-            physics: { speedMul: 0.95, jumpMul: 1.00 },
+            physics: { speedMul: 1.00, jumpMul: 1.00 },
             description: 'A mysterious lady who travels the galaxy with her star-like family, the Lumas.',
             palette: {
                 hatBright: '#E8E8F0', hatDark: '#A8A8C0',
@@ -127,7 +127,7 @@
             lt: 'Didis Kongas',
             shape: 'monkey',
             power: 'rolldash',
-            physics: { speedMul: 1.10, jumpMul: 0.95 },
+            physics: { speedMul: 1.10, jumpMul: 1.00 },
             description: "Donkey Kong's trusted partner. He is agile, fast and a great jumper.",
             palette: {
                 hatBright: '#E82828', hatDark: '#A81010',

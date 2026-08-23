@@ -734,7 +734,10 @@ var GameScene = new Phaser.Class({
                        (window.TouchController && window.TouchController.leftPressed);
         var moveRight = this.cursors.right.isDown || this.keyD.isDown ||
                         (window.TouchController && window.TouchController.rightPressed);
-        var speed = 200;
+        // Per-hero speed. The multiplier is capped at ±10% in the registry:
+        // the 52 levels were laid out for Mario's reach, so a wider spread
+        // would put some jumps out of reach for the slower heroes.
+        var speed = 200 * (this.heroPhysics ? this.heroPhysics.speedMul : 1);
 
         if (moveLeft) {
             player.setVelocityX(-speed);
@@ -752,7 +755,7 @@ var GameScene = new Phaser.Class({
         var canJump = onGround || this.coyoteTimer > 0;
 
         if (this.jumpBufferTimer > 0 && canJump) {
-            player.setVelocityY(-520);
+            player.setVelocityY(-520 * (this.heroPhysics ? this.heroPhysics.jumpMul : 1));
             this.coyoteTimer = 0;
             this.jumpBufferTimer = 0;
             if (window.AudioManager) AudioManager.play('jump');
@@ -761,8 +764,9 @@ var GameScene = new Phaser.Class({
         // Variable jump height — release early for shorter jump
         var jumpHeld = this.keySpace.isDown || this.cursors.up.isDown || this.keyW.isDown ||
                        (window.TouchController && window.TouchController.jumpPressed);
-        if (!jumpHeld && player.body.velocity.y < -200) {
-            player.setVelocityY(-200);
+        var cutoff = 200 * (this.heroPhysics ? this.heroPhysics.jumpMul : 1);
+        if (!jumpHeld && player.body.velocity.y < -cutoff) {
+            player.setVelocityY(-cutoff);
         }
 
         // ----------------------------------
