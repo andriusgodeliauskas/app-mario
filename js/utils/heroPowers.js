@@ -172,6 +172,10 @@
             var coin = kids[i];
             if (!coin.active) continue;
             var dx = px - coin.x, dy = py - coin.y;
+            // Reject on the axes first: most coins in a 300-column level are
+            // nowhere near her, and this runs every frame.
+            if (dx > MAGNET_RANGE || dx < -MAGNET_RANGE) continue;
+            if (dy > MAGNET_RANGE || dy < -MAGNET_RANGE) continue;
             var dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > MAGNET_RANGE || dist < 1) continue;
             coin.x += (dx / dist) * step;

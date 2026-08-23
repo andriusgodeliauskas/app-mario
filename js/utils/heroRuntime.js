@@ -21,7 +21,26 @@
      * Falls back to Mario at every step — a broken hero must never leave a
      * child with an invisible player.
      */
+    /**
+     * Stand-in used when heroPowers.js did not load. GameScene calls into
+     * HeroPowers from its per-frame movement code, so a missing module would
+     * otherwise throw on every single frame.
+     */
+    function installPowerFallback() {
+        if (window.HeroPowers) return;
+        console.warn('[HeroRuntime] HeroPowers missing — heroes will play without their powers.');
+        window.HeroPowers = {
+            reset: function () {},
+            speedFactor: function () { return 1; },
+            applyStop: function () { return false; },
+            tryAirJump: function () { return false; },
+            stompBounce: function (scene, base) { return base; },
+            update: function () {}
+        };
+    }
+
     function resolve(scene) {
+        installPowerFallback();
         var id = 'mario';
         if (window.CharacterSettings) id = window.CharacterSettings.selectedId();
 
