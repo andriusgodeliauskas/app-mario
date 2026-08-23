@@ -137,6 +137,42 @@ var MenuScene = new Phaser.Class({
             color: '#FFFFFF'
         }).setOrigin(0.5).setDepth(6);
 
+        // ----------------------------------
+        // CARD COLLECTION button (mirrors the settings button, top-left)
+        // ----------------------------------
+        var cardsBtnX = 46;
+        var cardsBtnY = 150;
+        var cardsBg = this.add.graphics().setDepth(5);
+        cardsBg.fillStyle(0x000000, 0.6);
+        cardsBg.fillRoundedRect(cardsBtnX - 28, cardsBtnY - 28, 56, 56, 12);
+        cardsBg.lineStyle(3, 0xF8B800, 1);
+        cardsBg.strokeRoundedRect(cardsBtnX - 28, cardsBtnY - 28, 56, 56, 12);
+
+        var cardsLabel = this.add.text(cardsBtnX, cardsBtnY, '\u{1F0CF}', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '32px',
+            color: '#F8D830'
+        }).setOrigin(0.5).setDepth(6);
+
+        this.cardsButtonZone = this.add.zone(cardsBtnX, cardsBtnY, 56, 56)
+            .setDepth(7).setInteractive({ useHandCursor: true });
+        this.cardsButtonZone.on('pointerover', function () { cardsLabel.setScale(1.15); });
+        this.cardsButtonZone.on('pointerout',  function () { cardsLabel.setScale(1.0); });
+        this.cardsButtonZone.on('pointerdown', function () { self.scene.start('CardsScene'); });
+
+        var foundCards = window.CardCollection ? CardCollection.unlockedCount() : 0;
+        var totalCards = window.Cards ? Cards.TOTAL : 0;
+        this.add.text(cardsBtnX, cardsBtnY + 34, 'KORTELES', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(6);
+        this.add.text(cardsBtnX, cardsBtnY + 48, foundCards + '/' + totalCards, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: foundCards === totalCards ? '#6CD82C' : '#F8D830'
+        }).setOrigin(0.5).setDepth(6);
+
         // ========================================
         // 5. LEVEL SELECTION — world pages
         // ========================================

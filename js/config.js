@@ -37,7 +37,7 @@ var gameConfig = {
             height: 900
         }
     },
-    scene: [BootScene, MenuScene, SettingsScene, GameScene, BonusRoomScene, WonderScene, HUDScene, WinScene]
+    scene: [BootScene, MenuScene, SettingsScene, CardsScene, GameScene, BonusRoomScene, WonderScene, HUDScene, WinScene]
 };
 
 // Create the game instance
