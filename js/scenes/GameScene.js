@@ -483,48 +483,14 @@ var GameScene = new Phaser.Class({
         }
     },
 
-    /**
-     * Resolve which hero the player picked in the menu into the texture and
-     * animation keys the rest of the scene uses.
-     *
-     * Mario deliberately keeps the legacy 'mario' / 'mario-big' keys: his
-     * sheet is the hand-drawn one in sprites.js, and every existing test and
-     * save file expects those names. Everyone else uses 'hero-<id>'.
-     *
-     * If anything is missing (registry not loaded, texture failed to
-     * generate) this falls back to Mario rather than leaving the player
-     * invisible.
-     */
+    /** Resolve the chosen hero into this scene's texture/animation keys. */
     resolveHero: function () {
-        var id = 'mario';
-        if (window.CharacterSettings) id = window.CharacterSettings.selectedId();
-
-        var ch = window.Characters ? window.Characters.byId(id) : null;
-        if (!ch) { id = 'mario'; ch = window.Characters ? window.Characters.byId('mario') : null; }
-
-        var key = (id === 'mario') ? 'mario' : 'hero-' + id;
-        if (!this.textures.exists(key)) {
-            console.warn('[GameScene] missing texture ' + key + ' — falling back to Mario');
-            id = 'mario';
-            key = 'mario';
-            ch = window.Characters ? window.Characters.byId('mario') : null;
-        }
-
-        this.heroId = id;
-        this.hero = ch;
-        this.heroKey = key;
-        this.heroBigKey = key + '-big';
-        this.heroPhysics = (ch && ch.physics) ? ch.physics : { speedMul: 1, jumpMul: 1 };
+        HeroRuntime.resolve(this);
     },
 
-    /**
-     * Who sits in the cage. Rescuing yourself makes no sense, so when the
-     * player IS Peach the captive becomes Daisy.
-     */
+    /** Who sits in the cage — see HeroRuntime.captiveKey. */
     captiveTextureKey: function () {
-        if (this.heroKey === undefined) this.resolveHero();
-        if (this.heroKey === 'hero-peach' && this.textures.exists('hero-daisy')) return 'hero-daisy';
-        return 'princess';
+        return HeroRuntime.captiveKey(this);
     },
 
     registerStaticCullObject: function (obj) {
