@@ -2,7 +2,8 @@
  * WinScene -- Victory screen shown after completing a level.
  *
  * Levels 1-42: "Level Complete!" with score recap + vocabulary learned.
- * Level 43 (final): Princess/Victory screen with castle, dialogue, confetti.
+ * Final level: Princess/Victory screen with castle, dialogue, confetti.
+ * Which level counts as final comes from GameProgress.maxLevel, never a literal.
  *
  * Accepts data via init(data): { score, coins, level, lives }
  */
@@ -36,7 +37,15 @@ var WinScene = new Phaser.Class({
             AudioManager.stopMusic();
         }
 
-        if (this.playerLevel === 43) {
+        // Which level is the finale is DATA, not a magic number. It was 43 until
+        // the runner room was removed and the Wonder rooms were renumbered to
+        // 43-52 (commit 10277fd); the hardcoded 43 stayed behind, so finishing
+        // room 43 showed the victory screen and its unlockLevel(43) re-unlocked
+        // a level already open — room 44 never opened and progress dead-ended.
+        var finalLevel = window.GameProgress ? window.GameProgress.maxLevel : 52;
+        this._isFinaleScreen = this.playerLevel >= finalLevel;
+
+        if (this._isFinaleScreen) {
             this.createPrincessScreen();
         } else {
             this.createLevelCompleteScreen();
@@ -521,7 +530,7 @@ var WinScene = new Phaser.Class({
 
         // Save progress — all levels complete
         if (window.GameProgress) {
-            window.GameProgress.unlockLevel(43);
+            window.GameProgress.unlockLevel(window.GameProgress.maxLevel);
         }
     },
 
@@ -703,8 +712,9 @@ var WinScene = new Phaser.Class({
             this.autoTimer.remove(false);
             this.autoTimer = null;
         }
+        var lastLevel = window.GameProgress ? window.GameProgress.maxLevel : 52;
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 52) {
+        if (nextLevel > lastLevel) {
             nextLevel = 1;
         }
         var theme = window.getLevelTheme ? window.getLevelTheme(nextLevel) : null;
