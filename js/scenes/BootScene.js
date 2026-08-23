@@ -41,8 +41,50 @@ var BootScene = new Phaser.Class({
         this.scene.start('MenuScene');
     },
 
+
+    /**
+     * Build idle/run/jump/death (and big idle/run/jump) for every registry
+     * hero. Skips Mario: his textures come from sprites.js under the legacy
+     * 'mario' keys, which the animations below already cover.
+     */
+    createHeroAnimations: function () {
+        var anims = this.anims;
+        var Chars = window.Characters;
+        if (!Chars) return;
+
+        Chars.LIST.forEach(function (ch) {
+            if (ch.id === 'mario') return;
+
+            var key = 'hero-' + ch.id;
+            var bigKey = key + '-big';
+            if (!this.textures.exists(key)) {
+                console.warn('[BootScene] missing texture for hero ' + ch.id);
+                return;
+            }
+
+            anims.create({ key: key + '-idle', frames: [{ key: key, frame: 0 }], frameRate: 1, repeat: -1 });
+            anims.create({ key: key + '-run', frames: anims.generateFrameNumbers(key, { start: 0, end: 2 }), frameRate: 10, repeat: -1 });
+            anims.create({ key: key + '-jump', frames: [{ key: key, frame: 3 }], frameRate: 1, repeat: 0 });
+            anims.create({ key: key + '-death', frames: [{ key: key, frame: 4 }], frameRate: 1, repeat: 0 });
+
+            if (!this.textures.exists(bigKey)) return;
+            anims.create({ key: bigKey + '-idle', frames: [{ key: bigKey, frame: 0 }], frameRate: 1, repeat: -1 });
+            anims.create({ key: bigKey + '-run', frames: anims.generateFrameNumbers(bigKey, { start: 0, end: 2 }), frameRate: 10, repeat: -1 });
+            anims.create({ key: bigKey + '-jump', frames: [{ key: bigKey, frame: 3 }], frameRate: 1, repeat: 0 });
+        }, this);
+    },
+
     createAnimations: function () {
         var anims = this.anims;
+
+        // ========================================
+        // HERO ANIMATIONS (one set per playable character)
+        // ========================================
+        // Every hero sheet has Mario's exact frame layout, so the same frame
+        // ranges work for all of them. Mario himself keeps the original
+        // 'mario' / 'mario-big' keys defined below — his sheet is hand-drawn
+        // in sprites.js, not generated from the registry.
+        this.createHeroAnimations();
 
         // ========================================
         // MARIO (small) ANIMATIONS

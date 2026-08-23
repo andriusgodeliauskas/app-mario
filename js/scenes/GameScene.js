@@ -231,12 +231,14 @@ var GameScene = new Phaser.Class({
         }
 
         // ----------------------------------
-        // Create player (Mario)
+        // Create player (the hero chosen in the menu)
         // ----------------------------------
+        this.resolveHero();
+
         var spawnX = 100;
         var spawnY = (ROWS - 3) * TILE + TILE / 2; // Above the ground rows
 
-        this.player = this.physics.add.sprite(spawnX, spawnY, 'mario');
+        this.player = this.physics.add.sprite(spawnX, spawnY, this.heroKey);
         this.player.setScale(0.25);
         this.player.setSize(96, 120);
         this.player.setOffset(16, 8);
@@ -479,6 +481,50 @@ var GameScene = new Phaser.Class({
             window.__mario_test = window.__mario_test || {};
             window.__mario_test.scene = this;
         }
+    },
+
+    /**
+     * Resolve which hero the player picked in the menu into the texture and
+     * animation keys the rest of the scene uses.
+     *
+     * Mario deliberately keeps the legacy 'mario' / 'mario-big' keys: his
+     * sheet is the hand-drawn one in sprites.js, and every existing test and
+     * save file expects those names. Everyone else uses 'hero-<id>'.
+     *
+     * If anything is missing (registry not loaded, texture failed to
+     * generate) this falls back to Mario rather than leaving the player
+     * invisible.
+     */
+    resolveHero: function () {
+        var id = 'mario';
+        if (window.CharacterSettings) id = window.CharacterSettings.selectedId();
+
+        var ch = window.Characters ? window.Characters.byId(id) : null;
+        if (!ch) { id = 'mario'; ch = window.Characters ? window.Characters.byId('mario') : null; }
+
+        var key = (id === 'mario') ? 'mario' : 'hero-' + id;
+        if (!this.textures.exists(key)) {
+            console.warn('[GameScene] missing texture ' + key + ' — falling back to Mario');
+            id = 'mario';
+            key = 'mario';
+            ch = window.Characters ? window.Characters.byId('mario') : null;
+        }
+
+        this.heroId = id;
+        this.hero = ch;
+        this.heroKey = key;
+        this.heroBigKey = key + '-big';
+        this.heroPhysics = (ch && ch.physics) ? ch.physics : { speedMul: 1, jumpMul: 1 };
+    },
+
+    /**
+     * Who sits in the cage. Rescuing yourself makes no sense, so when the
+     * player IS Peach the captive becomes Daisy.
+     */
+    captiveTextureKey: function () {
+        if (this.heroKey === undefined) this.resolveHero();
+        if (this.heroKey === 'hero-peach' && this.textures.exists('hero-daisy')) return 'hero-daisy';
+        return 'princess';
     },
 
     registerStaticCullObject: function (obj) {
@@ -770,7 +816,7 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         // Animations
         // ----------------------------------
-        var prefix = this.isBig ? 'mario-big-' : 'mario-';
+        var prefix = (this.isBig ? this.heroBigKey : this.heroKey) + '-';
 
         if (!onGround) {
             player.play(prefix + 'jump', true);
@@ -1386,7 +1432,7 @@ var GameScene = new Phaser.Class({
 
         var group = this.add.container(x, y).setDepth(8);
         var glow = this.add.circle(0, 4, 62, 0xfff1a8, 0.22);
-        var princess = this.add.sprite(0, 28, 'princess').setScale(0.36);
+        var princess = this.add.sprite(0, 28, this.captiveTextureKey()).setScale(0.36);
         var cage = this.add.sprite(0, 10, 'princess-cage-closed').setScale(1);
         var leftDoor = this.add.sprite(-26, 10, 'princess-cage-left').setOrigin(1, 0.5).setVisible(false);
         var rightDoor = this.add.sprite(26, 10, 'princess-cage-right').setOrigin(0, 0.5).setVisible(false);
@@ -1729,11 +1775,11 @@ var GameScene = new Phaser.Class({
 
         if (!this.isBig) {
             this.isBig = true;
-            player.setTexture('mario-big');
+            player.setTexture(this.heroBigKey);
             player.setSize(96, 224);
             player.setOffset(16, 32);
             player.y -= 16; // Shift up so we don't clip into ground
-            player.play('mario-big-idle');
+            player.play(this.heroBigKey + '-idle');
         }
         this.showEnglishPopup('mushroom');
     },
@@ -1766,11 +1812,11 @@ var GameScene = new Phaser.Class({
         // Fire flower always makes Mario big (if small) and grants fire power.
         if (!this.isBig) {
             this.isBig = true;
-            player.setTexture('mario-big');
+            player.setTexture(this.heroBigKey);
             player.setSize(96, 224);
             player.setOffset(16, 32);
             player.y -= 16;
-            player.play('mario-big-idle');
+            player.play(this.heroBigKey + '-idle');
         }
         this.isFire = true;
         this.applyMarioTint();
@@ -1953,7 +1999,7 @@ var GameScene = new Phaser.Class({
             // Big → small
             if (window.AudioManager) AudioManager.play('bump');
             this.isBig = false;
-            this.player.setTexture('mario');
+            this.player.setTexture(this.heroKey);
             this.player.setSize(96, 120);
             this.player.setOffset(16, 8);
             this.player.play('mario-idle');

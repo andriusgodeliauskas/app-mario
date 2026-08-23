@@ -90,7 +90,14 @@ var HUDScene = new Phaser.Class({
         // ----------------------------------
         // Mini Mario icon next to lives
         // ----------------------------------
-        this.marioIcon = this.add.sprite(livesX - 80, 30, 'mario', 0);
+        // The icon shows whoever the player picked, not always Mario.
+        var heroKey = 'mario';
+        if (window.CharacterSettings && window.Characters) {
+            var hid = window.CharacterSettings.selectedId();
+            var candidate = (hid === 'mario') ? 'mario' : 'hero-' + hid;
+            if (this.textures.exists(candidate)) heroKey = candidate;
+        }
+        this.marioIcon = this.add.sprite(livesX - 80, 30, heroKey, 0);
         this.marioIcon.setScale(0.175);
         this.marioIcon.setDepth(1);
 
