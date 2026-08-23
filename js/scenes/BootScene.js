@@ -71,6 +71,14 @@ var BootScene = new Phaser.Class({
         if (this.textures.exists('boo')) {
             anims.create({ key: 'boo-shy', frames: [{ key: 'boo', frame: 2 }], frameRate: 1, repeat: -1 });
         }
+        if (this.textures.exists('card-pickup')) {
+            anims.create({
+                key: 'card-shine',
+                frames: anims.generateFrameNumbers('card-pickup', { start: 0, end: 3 }),
+                frameRate: 6,
+                repeat: -1
+            });
+        }
         if (this.textures.exists('dk-barrel')) {
             anims.create({ key: 'dk-barrel-roll', frames: anims.generateFrameNumbers('dk-barrel', { start: 0, end: 1 }), frameRate: 12, repeat: -1 });
         }

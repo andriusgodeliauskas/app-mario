@@ -113,6 +113,7 @@ var GameScene = new Phaser.Class({
         var enemySpawns = [];
         var platformSpecs = [];
         var flagpolePos = null;
+        var cardPos = null;
 
         var map = levelData.map;
         this.levelMap = map;   // retained for dev validation (window.validateLevelMap)
@@ -226,6 +227,9 @@ var GameScene = new Phaser.Class({
                 } else if (tileId === 13) {
                     // Vertical moving platform / moving pipe marker
                     platformSpecs.push({ x: tx, y: ty, axis: 'v' });
+                } else if (tileId === 71) {
+                    // Hidden collectible card
+                    cardPos = { x: tx, y: ty };
                 } else if (tileId === 70) {
                     // Flagpole position
                     flagpolePos = { x: tx, y: ty };
@@ -263,6 +267,11 @@ var GameScene = new Phaser.Class({
             c.setImmovable(true);
             this.registerStaticCullObject(c);
         }
+
+        // ----------------------------------
+        // Collectible card
+        // ----------------------------------
+        this.createCardPickup(cardPos);
 
         // ----------------------------------
         // Enemies
@@ -499,6 +508,145 @@ var GameScene = new Phaser.Class({
     /** Who sits in the cage — see HeroRuntime.captiveKey. */
     captiveTextureKey: function () {
         return HeroRuntime.captiveKey(this);
+    },
+
+    /**
+     * Place this level's hidden card, if it has one and the child has not
+     * already found it. An already-collected card is not re-placed: a
+     * collectible that keeps coming back is not a collectible.
+     */
+    createCardPickup: function (cardPos) {
+        this.cardPickup = null;
+        this.levelCard = null;
+        this.cardGlow = null;
+        if (!cardPos || !window.Cards || !window.CardCollection) return;
+
+        var card = Cards.forLevel(this.currentLevel);
+        if (!card || CardCollection.isUnlocked(card.id)) return;
+        if (!this.textures.exists('card-pickup')) return;
+
+        this.levelCard = card;
+
+        // A soft halo behind it. At the size a collectible has to be, the card
+        // alone reads as just another item next to the ?-blocks; the glow is
+        // what makes a six-year-old go "what is THAT?" and climb for it.
+        var glow = this.add.graphics().setDepth(8);
+        glow.fillStyle(0xF8D030, 0.22);
+        glow.fillCircle(cardPos.x, cardPos.y, 30);
+        glow.fillStyle(0xFFF6D8, 0.18);
+        glow.fillCircle(cardPos.x, cardPos.y, 20);
+        this.tweens.add({
+            targets: glow, alpha: 0.35, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
+        this.cardGlow = glow;
+
+        var pickup = this.physics.add.sprite(cardPos.x, cardPos.y, 'card-pickup');
+        pickup.setScale(0.38).setDepth(9);
+        pickup.body.setAllowGravity(false);
+        pickup.setImmovable(true);
+        pickup.setSize(96, 112);
+        if (this.anims.exists('card-shine')) pickup.play('card-shine');
+
+        // A gentle bob, so it reads as a prize rather than scenery
+        this.tweens.add({
+            targets: pickup,
+            y: cardPos.y - 8,
+            duration: 900,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        this.cardPickup = pickup;
+        this.physics.add.overlap(this.player, pickup, this.collectCard, null, this);
+    },
+
+    /** Pick up the card: unlock it, celebrate, and show what was found. */
+    collectCard: function (player, pickup) {
+        if (!this.levelCard || pickup._collected) return;
+        pickup._collected = true;
+
+        CardCollection.unlock(this.levelCard.id);
+        if (window.AudioManager) AudioManager.play('powerup');
+        this.score += 500;
+        this.registry.set('score', this.score);
+        this.events.emit('scoreChange', this.score);
+
+        pickup.destroy();
+        if (this.cardGlow) { this.cardGlow.destroy(); this.cardGlow = null; }
+        this.showCardPopup(this.levelCard);
+    },
+
+    /**
+     * The card itself, shown for a few seconds.
+     *
+     * Deliberately does NOT pause the game: a six-year-old mid-jump should not
+     * have the controls taken away. It floats above the action and fades out.
+     */
+    showCardPopup: function (card) {
+        var cam = this.cameras.main;
+        var cx = cam.width / 2;
+        var cy = cam.height / 2 - 20;
+
+        var panel = this.add.container(cx, cy).setScrollFactor(0).setDepth(2000);
+
+        var bg = this.add.graphics();
+        bg.fillStyle(0x1A1A2E, 0.94);
+        bg.fillRoundedRect(-190, -120, 380, 240, 16);
+        bg.lineStyle(5, 0xF8D030, 1);
+        bg.strokeRoundedRect(-190, -120, 380, 240, 16);
+        panel.add(bg);
+
+        panel.add(this.add.text(0, -98, 'NAUJA KORTELE!', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '11px',
+            color: '#F8D830'
+        }).setOrigin(0.5));
+
+        if (this.textures.exists(card.texture)) {
+            var portrait = this.add.sprite(-125, -5, card.texture, card.frame);
+            portrait.setScale(0.42).setOrigin(0.5);
+            panel.add(portrait);
+        }
+
+        panel.add(this.add.text(-55, -62, card.name, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '12px',
+            color: '#FFFFFF'
+        }).setOrigin(0, 0));
+
+        panel.add(this.add.text(-55, -42, card.lt, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#88D8F0'
+        }).setOrigin(0, 0));
+
+        panel.add(this.add.text(-55, -18, card.description, {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '13px',
+            color: '#F0F0F0',
+            wordWrap: { width: 230 },
+            lineSpacing: 3
+        }).setOrigin(0, 0));
+
+        var have = CardCollection.unlockedCount();
+        panel.add(this.add.text(0, 100, have + ' / ' + Cards.TOTAL, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '10px',
+            color: '#F8D830'
+        }).setOrigin(0.5));
+
+        panel.setScale(0);
+        this.tweens.add({ targets: panel, scale: 1, duration: 320, ease: 'Back.easeOut' });
+        this.tweens.add({
+            targets: panel,
+            alpha: 0,
+            delay: 4200,
+            duration: 450,
+            onComplete: function () { panel.destroy(); }
+        });
+
+        this.cardPopup = panel;
     },
 
     registerStaticCullObject: function (obj) {
@@ -2435,6 +2583,22 @@ var GameScene = new Phaser.Class({
         }
     },
 
+    /**
+     * Stamp this level's hidden card into the finished map.
+     *
+     * Runs after every other map transform for a reason: the injections above
+     * write into the same rows, and a card they overwrite is a collectible that
+     * randomly does not exist.
+     */
+    injectLevelCard: function (map, level) {
+        if (!window.Cards) return;
+        var card = Cards.forLevel(level);
+        if (!card || card.col === undefined) return;
+        var row = Cards.ROW;
+        if (!map[row] || card.col >= map[row].length) return;
+        map[row][card.col] = 71;
+    },
+
     // ==========================================
     // LEVEL DATA — hardcoded tilemaps
     // ==========================================
@@ -2459,6 +2623,11 @@ var GameScene = new Phaser.Class({
             // A ?-block with a solid tile directly below it can't be hit from
             // beneath — float it up one row so it's reachable.
             this._unstackBlocks(data.map);
+            // Last, so nothing above can overwrite it. Placing the card inside
+            // the level definitions meant injectBonusPipe / injectPowerups /
+            // _unstackBlocks sometimes landed on top of it and the card simply
+            // was not there that run.
+            this.injectLevelCard(data.map, level);
         }
         return data;
     },
