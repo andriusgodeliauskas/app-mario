@@ -447,3 +447,61 @@ git add -A && git commit -m "feat(villains): place new enemies across levels 8+"
 **Placeholders:** nėra TBD/TODO; kiekvienas žingsnis turi konkrečią komandą arba kodą.
 
 **Type consistency:** `Characters.byId`, `Characters.PLAYABLE_IDS`, `CharacterSettings.selectedId`, `heroKey`/`heroBigKey`, `HeroPowers.*`, `Villains.*` naudojami vienodai visuose taskuose.
+
+---
+
+## 4 etapas: kolekcionuojamos kortelės
+
+Patvirtinta 2026-08-23: kortelės slepiamos lygiuose (ne atrakinamos už veiksmus).
+
+### Task 10: Kortelių registras + progreso saugojimas
+
+**Files:**
+- Create: `js/data/cards.js`, `js/utils/cardCollection.js`
+- Test: `tests/unit/cards.test.js`
+
+**Interfaces:**
+- Produces: `Cards.LIST` (13 įrašų: `{id, name, lt, description, texture, frame, level}`),
+  `Cards.byId(id)`, `Cards.forLevel(n)`, `Cards.TOTAL`;
+  `CardCollection.unlock(id)`, `.isUnlocked(id)`, `.unlockedCount()`, `.all()`,
+  `.STORAGE_KEY = 'app-mario:cards:v1'`.
+
+- [ ] **Step 1: Write the failing test** — 13 kortelių, unikalūs id, kiekvienai
+  priskirtas skirtingas lygis, herojų aprašymai paimti iš `Characters` (ne
+  perrašyti ranka), sugadintas localStorage įrašas nesugriauna kolekcijos.
+- [ ] **Step 2: Run** `node tests/unit/cards.test.js` → FAIL (nėra modulio)
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Run** → PASS
+- [ ] **Step 5: Commit** `feat(cards): card registry and unlock persistence`
+
+### Task 11: Kortelė lygyje (tile 71) + atradimo animacija
+
+**Files:**
+- Create: `js/utils/sprites-cards.js`
+- Modify: `js/scenes/GameScene.js` (tile 71 → pickup, overlap → unlock + popup),
+  `js/scenes/BootScene.js` (`card-shine` animacija), `index.html`
+- Modify: lygių duomenys — po vieną kortelę 13-oje lygių
+- Test: `tests/cards-pickup.test.js`
+
+- [ ] **Step 1: Write the failing test** — kortelė egzistuoja lygyje, palietus
+  atsirakina localStorage'e, iššoka popup su tuo veikėju, antrą kartą tame
+  pačiame lygyje kortelės nebėra (jau surinkta).
+- [ ] **Step 2: Run** → FAIL
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Run** → PASS
+- [ ] **Step 5: Commit** `feat(cards): hidden collectible cards in levels`
+
+### Task 12: Kolekcijos galerija
+
+**Files:**
+- Create: `js/scenes/CardsScene.js`
+- Modify: `js/scenes/MenuScene.js` (KORTELES mygtukas), `js/config.js`, `index.html`
+- Test: `tests/cards-gallery.test.js`
+
+- [ ] **Step 1: Write the failing test** — galerija rodo 13 vietų, neatrakintos
+  yra siluetai su `?`, atrakinta rodo portretą ir vardą, paspaudus atsiveria
+  aprašymas, skaitiklis rodo `n/13`.
+- [ ] **Step 2: Run** → FAIL
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Run** → PASS
+- [ ] **Step 5: Commit** `feat(cards): collection gallery screen`
