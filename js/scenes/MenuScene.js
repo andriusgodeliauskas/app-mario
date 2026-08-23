@@ -172,8 +172,8 @@ var MenuScene = new Phaser.Class({
         this.add.sprite(W / 2 - 230, 90, 'star', 0).setOrigin(0.5).setScale(0.25).play('star-flash');
         this.add.sprite(W / 2 + 230, 90, 'star', 0).setOrigin(0.5).setScale(0.25).play('star-flash');
 
-        // Mario on ground
-        this.add.sprite(W / 2, groundY - 16, 'mario', 0).setOrigin(0.5, 1).setScale(0.25).play('mario-idle');
+        // Hero picker — the whole cast stands on the ground, tap to choose
+        this.createHeroPicker(W, groundY);
 
         // Decorative coins
         var coinPos = [{ x: W / 2 - 260, y: 50 }, { x: W / 2 + 260, y: 50 }];
@@ -199,21 +199,6 @@ var MenuScene = new Phaser.Class({
             color: '#666666'
         }).setOrigin(0.5);
 
-        // Blinking prompt
-        this.promptText = this.add.text(W / 2, groundY - 40, 'Pasirink lygi auksciau!', {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '8px',
-            color: '#888888'
-        }).setOrigin(0.5);
-
-        this.tweens.add({
-            targets: this.promptText,
-            alpha: 0.3,
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
 
         this.isStarting = false;
         console.log('[MenuScene] Menu created successfully.');
@@ -449,6 +434,106 @@ var MenuScene = new Phaser.Class({
     // ==========================================
     // START SPECIFIC LEVEL
     // ==========================================
+    /**
+     * The hero picker: every playable character standing on the ground below
+     * the level cards. Tapping one selects it immediately — there is no
+     * confirm step, because the only feedback a pre-reader needs is seeing
+     * their character grow.
+     *
+     * If the registry or its textures are missing for any reason, the menu
+     * falls back to the lone decorative Mario it had before.
+     */
+    createHeroPicker: function (W, groundY) {
+        var self = this;
+        var Chars = window.Characters;
+        var Settings = window.CharacterSettings;
+
+        if (!Chars || !Settings) {
+            this.add.sprite(W / 2, groundY - 16, 'mario', 0).setOrigin(0.5, 1).setScale(0.25).play('mario-idle');
+            return;
+        }
+
+        var ids = Chars.PLAYABLE_IDS;
+        var spacing = W / (ids.length + 1);
+        var rowY = groundY - 10;
+
+        // The hills and bushes behind the ground swallow small sprites, so the
+        // row gets its own dark strip — same treatment as the title panel.
+        var strip = this.add.graphics().setDepth(3);
+        strip.fillStyle(0x000000, 0.45);
+        strip.fillRoundedRect(12, groundY - 106, W - 24, 104, 12);
+        strip.lineStyle(3, 0xF8B800, 0.9);
+        strip.strokeRoundedRect(12, groundY - 106, W - 24, 104, 12);
+
+        this.add.text(W / 2, groundY - 96, 'PASIRINK VEIKEJA:', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '10px',
+            color: '#F8D830'
+        }).setOrigin(0.5).setDepth(6);
+
+        this.heroNameText = this.add.text(W / 2, groundY - 78, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '9px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(6);
+
+        this.heroButtons = [];
+
+        ids.forEach(function (id, i) {
+            var x = Math.round(spacing * (i + 1));
+            var key = (id === 'mario') ? 'mario' : 'hero-' + id;
+            if (!self.textures.exists(key)) return;
+
+            var ring = self.add.graphics().setDepth(4);
+            var spr = self.add.sprite(x, rowY, key, 0).setOrigin(0.5, 1).setScale(0.26).setDepth(5);
+            var zone = self.add.zone(x, rowY - 32, spacing - 4, 72)
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true });
+
+            zone.on('pointerdown', function () { self.selectHero(id); });
+            zone.on('pointerover', function () { if (self.selectedHeroId !== id) spr.setAlpha(1); });
+            zone.on('pointerout', function () { if (self.selectedHeroId !== id) spr.setAlpha(0.75); });
+
+            self.heroButtons.push({ id: id, sprite: spr, ring: ring, zone: zone, x: x, y: rowY });
+        });
+
+        this.selectHero(Settings.selectedId(), true);
+    },
+
+    /**
+     * Mark a hero as chosen and persist it. `silent` skips the click sound for
+     * the initial restore-from-storage call.
+     */
+    selectHero: function (id, silent) {
+        var ch = window.Characters.byId(id);
+        if (!ch) return;
+
+        this.selectedHeroId = id;
+        window.CharacterSettings.save({ id: id });
+        if (this.heroNameText) {
+            var en = ch.name.toUpperCase();
+            var lt = ch.lt.toUpperCase();
+            this.heroNameText.setText(en === lt ? en : en + '  -  ' + lt);
+        }
+
+        this.heroButtons.forEach(function (b) {
+            var on = (b.id === id);
+            b.sprite.setScale(on ? 0.36 : 0.26);
+            b.sprite.setAlpha(on ? 1 : 0.75);
+            b.ring.clear();
+            if (on) {
+                b.ring.fillStyle(0xF8D830, 0.18);
+                b.ring.fillRoundedRect(b.x - 30, b.y - 66, 60, 70, 8);
+                b.ring.lineStyle(3, 0xF8D830, 1);
+                b.ring.strokeRoundedRect(b.x - 30, b.y - 66, 60, 70, 8);
+            }
+        });
+
+        if (!silent && window.AudioManager && AudioManager.playCoin) {
+            try { AudioManager.playCoin(); } catch (e) { /* audio is optional */ }
+        }
+    },
+
     startLevel: function (levelInfo) {
         if (this.isStarting) return;
         this.isStarting = true;
