@@ -245,7 +245,7 @@ var GameScene = new Phaser.Class({
         this.player.setBounce(0);
         this.player.setCollideWorldBounds(false);
         this.player.setDepth(10);
-        this.player.play('mario-idle');
+        this.player.play(this.heroKey + '-idle');
 
         // ----------------------------------
         // Coins
@@ -1980,7 +1980,7 @@ var GameScene = new Phaser.Class({
             this.player.setTexture(this.heroKey);
             this.player.setSize(96, 120);
             this.player.setOffset(16, 8);
-            this.player.play('mario-idle');
+            this.player.play(this.heroKey + '-idle');
             this.isInvincible = true;
             this.invincibleTimer = this.difficultyProfile.invincibleMs;
             return;
@@ -2005,7 +2005,7 @@ var GameScene = new Phaser.Class({
 
         if (window.AudioManager) { AudioManager.stopMusic(); AudioManager.play('death'); }
 
-        this.player.play('mario-death');
+        this.player.play(this.heroKey + '-death');
         this.player.body.setVelocity(0, 0);
         this.player.body.setAllowGravity(false);
         this.player.body.setEnable(false);

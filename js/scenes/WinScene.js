@@ -328,10 +328,11 @@ var WinScene = new Phaser.Class({
         // --- Mario sprite (left) -- bounce-in ---
         var marioSprite = null;
         try {
-            marioSprite = this.add.sprite(W / 2 - 80, groundY - 24, 'mario', 0);
+            var heroKey = window.HeroRuntime ? HeroRuntime.keyFor(this) : 'mario';
+            marioSprite = this.add.sprite(W / 2 - 80, groundY - 24, heroKey, 0);
             marioSprite.setScale(0.75);
             marioSprite.setOrigin(0.5, 1);
-            marioSprite.play('mario-idle');
+            marioSprite.play(heroKey + '-idle');
         } catch (e) {
             // Fallback: draw a colored rect if sprite not available
             marioSprite = this.add.rectangle(W / 2 - 80, groundY - 32, 32, 48, 0xE8261C);
@@ -351,7 +352,8 @@ var WinScene = new Phaser.Class({
         // --- Princess sprite (right) -- bounce-in ---
         var princessSprite = null;
         try {
-            princessSprite = this.add.sprite(W / 2 + 80, groundY - 24, 'princess', 0);
+            var captiveKey = window.HeroRuntime ? HeroRuntime.captiveKey(this) : 'princess';
+            princessSprite = this.add.sprite(W / 2 + 80, groundY - 24, captiveKey, 0);
             princessSprite.setScale(0.75);
             princessSprite.setOrigin(0.5, 1);
         } catch (e) {
