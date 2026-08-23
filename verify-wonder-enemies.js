@@ -10,23 +10,23 @@ async function startLevel(page, level, difficulty) {
         settings.unlockAll = true;
         window.MathSettings.save(settings);
         const game = window.game;
-        ['MenuScene', 'GameScene', 'RunnerScene', 'WonderScene', 'WinScene', 'HUDScene'].forEach((key) => {
+        ['MenuScene', 'GameScene', 'WonderScene', 'WinScene', 'HUDScene'].forEach((key) => {
             const sc = game.scene.getScene(key);
             if (sc && sc.scene.isActive()) game.scene.stop(key);
         });
-        game.scene.start(level === 43 ? 'RunnerScene' : (level >= 44 ? 'WonderScene' : 'GameScene'), { level });
+        game.scene.start(level >= 43 ? 'WonderScene' : 'GameScene', { level });
     }, { level, difficulty });
     await page.waitForFunction((level) => {
-        const key = level === 43 ? 'RunnerScene' : (level >= 44 ? 'WonderScene' : 'GameScene');
+        const key = level >= 43 ? 'WonderScene' : 'GameScene';
         const s = window.game.scene.getScene(key);
-        return s && s.scene.isActive() && s.player && (level === 43 || s.player.body);
+        return s && s.scene.isActive() && s.player && s.player.body;
     }, level, { timeout: 10000 });
     await page.waitForTimeout(250);
 }
 
 async function countWonder(page, difficulty) {
     const rows = [];
-    for (let level = 44; level <= 53; level++) {
+    for (let level = 43; level <= 52; level++) {
         await startLevel(page, level, difficulty);
         rows.push(await page.evaluate((level) => {
             const s = window.game.scene.getScene('WonderScene');
@@ -103,7 +103,7 @@ async function stompAndDamageProof(page, levels) {
 }
 
 async function shellProof(page) {
-    await startLevel(page, 44, 'easy');
+    await startLevel(page, 43, 'easy');
     return page.evaluate(() => {
         const s = window.game.scene.getScene('WonderScene');
         const shell = s.wonderEnemies.getChildren().find(e => e.active && e.enemyType === 'koopa');
@@ -137,7 +137,7 @@ async function shellProof(page) {
 }
 
 async function ledgeProof(page) {
-    await startLevel(page, 44, 'easy');
+    await startLevel(page, 43, 'easy');
     return page.evaluate(() => {
         const s = window.game.scene.getScene('WonderScene');
         const e = s.wonderEnemies.getChildren().find(x => x.active && x.enemyType === 'goomba');
@@ -163,12 +163,12 @@ async function ledgeProof(page) {
 }
 
 async function touchRegression(page) {
-    const levels = [1, 20, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53];
+    const levels = [1, 20, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52];
     const rows = [];
     for (const level of levels) {
         await startLevel(page, level, 'easy');
         const before = await page.evaluate((level) => {
-            const key = level === 43 ? 'RunnerScene' : (level >= 44 ? 'WonderScene' : 'GameScene');
+            const key = level >= 43 ? 'WonderScene' : 'GameScene';
             const s = window.game.scene.getScene(key);
             return { x: s.player.x, y: s.player.y, lane: s.lane, jumpY: s.jumpY || 0 };
         }, level);
@@ -180,12 +180,12 @@ async function touchRegression(page) {
         await page.dispatchEvent('#touch-jump', 'touchend');
         await page.waitForTimeout(300);
         const after = await page.evaluate((level) => {
-            const key = level === 43 ? 'RunnerScene' : (level >= 44 ? 'WonderScene' : 'GameScene');
+            const key = level >= 43 ? 'WonderScene' : 'GameScene';
             const s = window.game.scene.getScene(key);
             return {
                 level,
                 scene: key,
-                spawned: !!(s.player && (level === 43 || s.player.body)),
+                spawned: !!(s.player && s.player.body),
                 dx: Number((s.player.x - window.__beforeX || 0).toFixed ? 0 : 0),
                 x: Number(s.player.x.toFixed(2)),
                 y: Number(s.player.y.toFixed(2)),
@@ -193,15 +193,15 @@ async function touchRegression(page) {
                 jumpY: s.jumpY || 0,
                 vx: s.player.body ? Number(s.player.body.velocity.x.toFixed(2)) : 0,
                 vy: s.player.body ? Number(s.player.body.velocity.y.toFixed(2)) : (s.jumpVelocity || 0),
-                mathSpawner: level === 43 ? true : !!(s.mathSpawner || s.bossActive || s.bossChallenge)
+                mathSpawner: !!(s.mathSpawner || s.bossActive || s.bossChallenge)
             };
         }, level);
         rows.push({
             level,
             scene: after.scene,
             spawned: after.spawned,
-            movedRight: level === 43 ? after.lane > before.lane : after.x > before.x + 5,
-            jumpWorked: level === 43 ? (after.jumpY > before.jumpY || Math.abs(after.vy) > 20) : (Math.abs(after.y - before.y) > 4 || Math.abs(after.vy) > 20),
+            movedRight: after.x > before.x + 5,
+            jumpWorked: (Math.abs(after.y - before.y) > 4 || Math.abs(after.vy) > 20),
             mathSpawner: after.mathSpawner,
             before,
             after
@@ -212,7 +212,7 @@ async function touchRegression(page) {
 
 async function completionProof(page) {
     const rows = [];
-    for (let level = 44; level <= 53; level++) {
+    for (let level = 43; level <= 52; level++) {
         await startLevel(page, level, 'easy');
         rows.push(await page.evaluate(() => {
             const s = window.game.scene.getScene('WonderScene');
@@ -237,7 +237,7 @@ async function completionProof(page) {
 }
 
 async function performance(page) {
-    const levels = [1, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53];
+    const levels = [1, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52];
     const rows = [];
     for (const level of levels) {
         await startLevel(page, level, 'easy');
@@ -261,7 +261,7 @@ async function performance(page) {
 }
 
 async function screenshots(page) {
-    const rooms = [44, 45, 47, 48, 52];
+    const rooms = [43, 44, 46, 47, 51];
     const rows = [];
     for (const level of rooms) {
         await startLevel(page, level, 'easy');
@@ -292,7 +292,7 @@ async function screenshots(page) {
 
     const countsEasy = await countWonder(page, 'easy');
     const countsHard = await countWonder(page, 'hard');
-    const stompDamage = await stompAndDamageProof(page, [44, 47, 49, 52]);
+    const stompDamage = await stompAndDamageProof(page, [43, 46, 48, 51]);
     const shell = await shellProof(page);
     const ledge = await ledgeProof(page);
     const regression = await touchRegression(page);

@@ -1,4 +1,6 @@
 /**
+ * Currently not wired into the game; kept in the repo for future runner work.
+ *
  * RunnerScene — Level 43 behind-the-back runner.
  *
  * This scene intentionally does not share GameScene's side-scrolling world,

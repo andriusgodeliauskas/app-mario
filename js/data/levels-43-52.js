@@ -9,7 +9,7 @@
         return out;
     }
 
-    window.LEVEL_GENERATORS[44] = function () {
+    window.LEVEL_GENERATORS[43] = function () {
         return {
             name: 'Wonder Plains',
             worldWidth: 5200,
@@ -44,7 +44,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[45] = function () {
+    window.LEVEL_GENERATORS[44] = function () {
         return {
             name: 'Fluff-Puff Peaks',
             worldWidth: 5600,
@@ -75,7 +75,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[46] = function () {
+    window.LEVEL_GENERATORS[45] = function () {
         return {
             name: 'Bioluminescent Forest',
             worldWidth: 5800,
@@ -130,7 +130,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[47] = function () {
+    window.LEVEL_GENERATORS[46] = function () {
         return {
             name: 'Pastel Depths',
             worldWidth: 5600,
@@ -167,7 +167,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[48] = function () {
+    window.LEVEL_GENERATORS[47] = function () {
         return {
             name: 'Neon Underground',
             worldWidth: 6200,
@@ -220,7 +220,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[49] = function () {
+    window.LEVEL_GENERATORS[48] = function () {
         return {
             name: 'Ice Slide',
             worldWidth: 6000,
@@ -252,7 +252,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[50] = function () {
+    window.LEVEL_GENERATORS[49] = function () {
         return {
             name: 'Wind Dunes',
             worldWidth: 6100,
@@ -289,7 +289,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[51] = function () {
+    window.LEVEL_GENERATORS[50] = function () {
         return {
             name: 'Clockwork Gears',
             worldWidth: 6200,
@@ -324,7 +324,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[52] = function () {
+    window.LEVEL_GENERATORS[51] = function () {
         return {
             name: 'Magnet Caves',
             worldWidth: 6100,
@@ -371,7 +371,7 @@
         };
     };
 
-    window.LEVEL_GENERATORS[53] = function () {
+    window.LEVEL_GENERATORS[52] = function () {
         return {
             name: 'Mirror Hall',
             worldWidth: 5600,

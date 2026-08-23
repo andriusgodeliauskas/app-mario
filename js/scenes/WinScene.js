@@ -702,7 +702,7 @@ var WinScene = new Phaser.Class({
             this.autoTimer = null;
         }
         var nextLevel = this.playerLevel + 1;
-        if (nextLevel > 53) {
+        if (nextLevel > 52) {
             nextLevel = 1;
         }
         var theme = window.getLevelTheme ? window.getLevelTheme(nextLevel) : null;

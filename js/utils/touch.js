@@ -15,7 +15,6 @@ window.TouchController = {
     enabled: false,
     _listenersBound: false,
     _viewportListenersBound: false,
-    _pausedForRotate: false,
 
     // Track active touches per button so multi-touch works correctly
     _activeTouches: {
@@ -147,7 +146,6 @@ window.TouchController = {
 
         if (clearInput) this.clearState();
         this._refreshScale();
-        this._syncRotatePause();
 
         this._pendingClearInput = this._pendingClearInput || clearInput;
         if (this._viewportTimer) window.clearTimeout(this._viewportTimer);
@@ -156,7 +154,6 @@ window.TouchController = {
             if (self._pendingClearInput) self.clearState();
             self._pendingClearInput = false;
             self._refreshScale();
-            self._syncRotatePause();
         }, 150);
     },
 
@@ -164,45 +161,6 @@ window.TouchController = {
         if (window.game && window.game.scale && window.game.scale.refresh) {
             window.game.scale.refresh();
         }
-    },
-
-    _isRotateOverlayVisible: function () {
-        if (!window.matchMedia) return false;
-        return window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
-    },
-
-    _syncRotatePause: function () {
-        if (!window.game || !window.game.scene) return;
-
-        var sceneManager = window.game.scene;
-        var overlayVisible = this._isRotateOverlayVisible();
-
-        if (overlayVisible) {
-            if (sceneManager.isActive && sceneManager.isActive('GameScene')) {
-                sceneManager.pause('GameScene');
-                this._pausedForRotate = true;
-            }
-            if (sceneManager.isActive && sceneManager.isActive('RunnerScene')) {
-                sceneManager.pause('RunnerScene');
-                this._pausedForRotate = true;
-            }
-            if (sceneManager.isActive && sceneManager.isActive('WonderScene')) {
-                sceneManager.pause('WonderScene');
-                this._pausedForRotate = true;
-            }
-            return;
-        }
-
-        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('GameScene')) {
-            sceneManager.resume('GameScene');
-        }
-        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('RunnerScene')) {
-            sceneManager.resume('RunnerScene');
-        }
-        if (this._pausedForRotate && sceneManager.isPaused && sceneManager.isPaused('WonderScene')) {
-            sceneManager.resume('WonderScene');
-        }
-        this._pausedForRotate = false;
     },
 
     _updateState: function (key, pressed) {

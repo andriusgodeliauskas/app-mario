@@ -91,22 +91,34 @@ async function visibleBox(page, selector) {
     return await locator.boundingBox();
 }
 
-async function assertPortraitOverlayHidesButton(page, url) {
-    await openGame(page, url, { expectButtonHidden: true });
+async function assertPortraitLayout(page, url) {
+    await openGame(page, url);
+    await page.screenshot({ path: path.join(screenshotDir, 'fullscreen-phone-portrait.png'), fullPage: true });
 
-    var overlayDisplay = await page.$eval('#rotate-overlay', function (el) {
-        return getComputedStyle(el).display;
-    });
-    if (overlayDisplay === 'none') {
-        throw new Error('Rotate overlay should be visible in portrait phone viewport');
+    var overlayExists = await page.$('#rotate-overlay').then(function (el) { return !!el; });
+    if (overlayExists) {
+        throw new Error('Rotate overlay should not exist in portrait phone viewport');
     }
 
-    var buttonVisible = await page.$eval('#fullscreen-toggle', function (el) {
-        return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-    });
-    if (buttonVisible) {
-        throw new Error('Fullscreen button should not be visible over rotate overlay');
+    var buttonBox = await visibleBox(page, '#fullscreen-toggle');
+    var dpadBox = await visibleBox(page, '#touch-dpad');
+    var jumpBox = await visibleBox(page, '#touch-jump');
+
+    if (buttonBox.width < 60 || buttonBox.height < 60) {
+        throw new Error('Portrait fullscreen button hit target is smaller than 60px');
     }
+    if (rectsIntersect(buttonBox, dpadBox)) {
+        throw new Error('Portrait fullscreen button intersects touch D-pad');
+    }
+    if (rectsIntersect(buttonBox, jumpBox)) {
+        throw new Error('Portrait fullscreen button intersects JUMP button');
+    }
+
+    return {
+        button: buttonBox,
+        dpad: dpadBox,
+        jump: jumpBox
+    };
 }
 
 async function assertLandscapeLayout(page, url) {
@@ -239,8 +251,10 @@ async function assertFullscreenClick(page, url) {
             isMobile: true,
             hasTouch: true
         }, errors);
-        await assertPortraitOverlayHidesButton(portraitPage, url);
-        console.log('Portrait rotate overlay hides fullscreen button: yes');
+        var portraitBoxes = await assertPortraitLayout(portraitPage, url);
+        console.log('Portrait button box: ' + JSON.stringify(portraitBoxes.button));
+        console.log('Portrait D-pad box: ' + JSON.stringify(portraitBoxes.dpad));
+        console.log('Portrait JUMP box: ' + JSON.stringify(portraitBoxes.jump));
         await portraitPage.close();
 
         var clickPage = await newCheckedPage(browser, {
@@ -256,6 +270,7 @@ async function assertFullscreenClick(page, url) {
 
         console.log('Screenshots:');
         console.log('  ' + path.join(screenshotDir, 'fullscreen-phone-landscape.png'));
+        console.log('  ' + path.join(screenshotDir, 'fullscreen-phone-portrait.png'));
         console.log('  ' + path.join(screenshotDir, 'fullscreen-desktop.png'));
         console.log('Fullscreen test passed.');
     } finally {

@@ -6,11 +6,16 @@
 
 // Cookie progress helper
 window.GameProgress = {
+    maxLevel: 52,
     getMaxLevel: function() {
         var match = document.cookie.match(/marioMaxLevel=(\d+)/);
-        return match ? parseInt(match[1]) : 1;
+        var level = match ? parseInt(match[1]) : 1;
+        if (!isFinite(level) || level < 1) level = 1;
+        if (level > this.maxLevel) level = this.maxLevel;
+        return level;
     },
     unlockLevel: function(level) {
+        if (level > this.maxLevel) level = this.maxLevel;
         var current = this.getMaxLevel();
         if (level > current) {
             document.cookie = 'marioMaxLevel=' + level + ';path=/;max-age=31536000';

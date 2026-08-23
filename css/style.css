@@ -29,64 +29,6 @@ html, body {
     -moz-osx-font-smoothing: unset;
 }
 
-#rotate-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 18px;
-    padding: 28px;
-    background-color: #101820;
-    color: #ffffff;
-    text-align: center;
-    pointer-events: auto;
-    touch-action: none;
-}
-
-.rotate-phone-icon {
-    width: 96px;
-    height: 96px;
-    animation: rotate-phone 1.8s ease-in-out infinite;
-}
-
-.rotate-phone-icon svg {
-    width: 100%;
-    height: 100%;
-    fill: none;
-    stroke: #ffd23f;
-    stroke-width: 5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.rotate-overlay-title {
-    max-width: 90vw;
-    font-size: 18px;
-    line-height: 1.5;
-}
-
-.rotate-overlay-subtitle {
-    max-width: 90vw;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 11px;
-    line-height: 1.6;
-}
-
-@keyframes rotate-phone {
-    0%, 100% {
-        transform: rotate(0deg);
-    }
-    45%, 65% {
-        transform: rotate(90deg);
-    }
-}
-
 /* Game Container — Centered */
 #game-container {
     position: relative;
@@ -222,25 +164,6 @@ html, body {
 
 /* Show only on touch devices */
 @media (pointer: coarse) {
-    #touch-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        padding: 0 16px 20px 16px;
-    }
-}
-
-@media (orientation: portrait) and (pointer: coarse) {
-    #rotate-overlay {
-        display: flex;
-    }
-
-    #fullscreen-toggle {
-        display: none;
-    }
-}
-
-@media (orientation: landscape) and (pointer: coarse) {
     html, body {
         width: 100vw;
         height: 100dvh;
@@ -254,12 +177,20 @@ html, body {
     }
 
     #touch-controls {
-        height: calc(112px + env(safe-area-inset-bottom) + var(--gesture-inset));
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
         padding:
             0
             calc(16px + env(safe-area-inset-right) + var(--gesture-inset))
             calc(14px + env(safe-area-inset-bottom) + var(--gesture-inset))
             calc(16px + env(safe-area-inset-left) + var(--gesture-inset));
+    }
+}
+
+@media (orientation: landscape) and (pointer: coarse) {
+    #touch-controls {
+        height: calc(112px + env(safe-area-inset-bottom) + var(--gesture-inset));
     }
 
     .touch-btn {
@@ -352,8 +283,12 @@ html, body {
 /* Responsive: smaller buttons on narrow portrait screens */
 @media (orientation: portrait) and (pointer: coarse) and (max-width: 480px) {
     #touch-controls {
-        height: 120px;
-        padding: 0 10px 12px 10px;
+        height: calc(112px + env(safe-area-inset-bottom) + var(--gesture-inset));
+        padding:
+            0
+            calc(10px + env(safe-area-inset-right) + var(--gesture-inset))
+            calc(12px + env(safe-area-inset-bottom) + var(--gesture-inset))
+            calc(10px + env(safe-area-inset-left) + var(--gesture-inset));
     }
 
     .touch-btn {

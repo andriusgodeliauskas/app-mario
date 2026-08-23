@@ -302,9 +302,8 @@ var HUDScene = new Phaser.Class({
             wonderScene.mathSpawner = null;
         }
 
-        // Stop both scenes and go to menu
+        // Stop gameplay scenes and go to menu
         this.scene.stop('GameScene');
-        this.scene.stop('RunnerScene');
         this.scene.stop('WonderScene');
         this.scene.stop('HUDScene');
         this.scene.start('MenuScene');
@@ -312,7 +311,6 @@ var HUDScene = new Phaser.Class({
 
     getActiveGameplaySceneKey: function () {
         if (this.scene.isActive('WonderScene')) return 'WonderScene';
-        if (this.scene.isActive('RunnerScene')) return 'RunnerScene';
         if (this.scene.isActive('GameScene')) return 'GameScene';
         return null;
     },

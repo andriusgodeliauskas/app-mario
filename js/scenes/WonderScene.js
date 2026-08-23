@@ -111,7 +111,7 @@ var WonderScene = new Phaser.Class({
         if (window.LEVEL_GENERATORS && window.LEVEL_GENERATORS[level]) {
             return window.LEVEL_GENERATORS[level]();
         }
-        return window.LEVEL_GENERATORS[44]();
+        return window.LEVEL_GENERATORS[43]();
     },
 
     createPhysicsGroups: function () {
@@ -885,7 +885,7 @@ var WonderScene = new Phaser.Class({
 
     getWonderEnemySpecs: function () {
         var level = this.currentLevel;
-        if (level === 44) return [
+        if (level === 43) return [
             { x: 430, y: 506, kind: 'plains-walker', dir: -1 },
             { x: 1140, y: 506, kind: 'plains-shell', dir: -1 },
             { x: 1460, y: 356, kind: 'plains-walker', dir: 1, patrol: 150 },
@@ -894,7 +894,7 @@ var WonderScene = new Phaser.Class({
             { x: 3540, y: 506, kind: 'plains-walker', dir: -1 },
             { x: 4620, y: 506, kind: 'plains-walker', dir: -1 }
         ];
-        if (level === 45) return [
+        if (level === 44) return [
             { x: 190, y: 390, kind: 'cloud-puff', dir: -1, patrol: 96, speed: 42, float: true },
             { x: 610, y: 374, kind: 'cloud-puff', dir: 1, patrol: 120, speed: 42, float: true },
             { x: 1260, y: 338, kind: 'cloud-puff', dir: -1, patrol: 140, speed: 40, float: true },
@@ -903,12 +903,12 @@ var WonderScene = new Phaser.Class({
             { x: 4300, y: 374, kind: 'cloud-puff', dir: 1, patrol: 142, speed: 42, float: true },
             { x: 5290, y: 390, kind: 'cloud-puff', dir: -1, patrol: 130, speed: 40, float: true }
         ];
-        if (level === 46) return [
+        if (level === 45) return [
             { x: 360, y: 506, kind: 'glow-crawler', dir: -1 },
             { x: 2220, y: 360, kind: 'glow-crawler', dir: -1, patrol: 160 },
             { x: 5200, y: 506, kind: 'glow-crawler', dir: -1 }
         ];
-        if (level === 47) return [
+        if (level === 46) return [
             { x: 430, y: 506, kind: 'depths-crab', dir: -1 },
             { x: 1040, y: 392, kind: 'depths-fish', dir: 1, patrol: 170, speed: 34, swim: true },
             { x: 1650, y: 346, kind: 'depths-fish', dir: -1, patrol: 160, speed: 34, swim: true },
@@ -917,7 +917,7 @@ var WonderScene = new Phaser.Class({
             { x: 3720, y: 414, kind: 'depths-crab', dir: 1, patrol: 152 },
             { x: 4560, y: 354, kind: 'depths-fish', dir: -1, patrol: 170, speed: 34, swim: true }
         ];
-        if (level === 48) return [
+        if (level === 47) return [
             { x: 450, y: 506, kind: 'neon-bot', dir: -1 },
             { x: 1500, y: 58, kind: 'neon-bot', dir: 1, gravity: 'up', patrol: 190 },
             { x: 2220, y: 330, kind: 'neon-bot', dir: -1, patrol: 150 },
@@ -926,7 +926,7 @@ var WonderScene = new Phaser.Class({
             { x: 4860, y: 506, kind: 'neon-shell', dir: -1 },
             { x: 5480, y: 506, kind: 'neon-bot', dir: 1 }
         ];
-        if (level === 49) return [
+        if (level === 48) return [
             { x: 430, y: 506, kind: 'ice-penguin', dir: -1, speed: 64 },
             { x: 1260, y: 506, kind: 'ice-penguin', dir: 1, speed: 64 },
             { x: 1720, y: 366, kind: 'ice-shell', dir: -1, patrol: 170, speed: 60 },
@@ -935,7 +935,7 @@ var WonderScene = new Phaser.Class({
             { x: 4340, y: 352, kind: 'ice-penguin', dir: 1, patrol: 170, speed: 60 },
             { x: 5200, y: 506, kind: 'ice-shell', dir: -1, speed: 60 }
         ];
-        if (level === 50) return [
+        if (level === 49) return [
             { x: 450, y: 506, kind: 'sand-crab', dir: -1 },
             { x: 1240, y: 382, kind: 'sand-crab', dir: 1, patrol: 150 },
             { x: 1800, y: 506, kind: 'sand-crab', dir: -1 },
@@ -944,7 +944,7 @@ var WonderScene = new Phaser.Class({
             { x: 3960, y: 506, kind: 'sand-crab', dir: -1 },
             { x: 5000, y: 352, kind: 'sand-crab', dir: 1, patrol: 150 }
         ];
-        if (level === 51) return [
+        if (level === 50) return [
             { x: 430, y: 392, kind: 'windup-bot', dir: -1, patrol: 128 },
             { x: 980, y: 382, kind: 'windup-bot', dir: 1, patrol: 128 },
             { x: 1580, y: 334, kind: 'windup-bot', dir: -1, patrol: 138 },
@@ -954,7 +954,7 @@ var WonderScene = new Phaser.Class({
             { x: 4680, y: 350, kind: 'windup-bot', dir: -1, patrol: 142 },
             { x: 5320, y: 392, kind: 'windup-shell', dir: 1, patrol: 132 }
         ];
-        if (level === 52) return [
+        if (level === 51) return [
             { x: 430, y: 506, kind: 'metal-bug', dir: -1, metal: true },
             { x: 1180, y: 506, kind: 'metal-bug', dir: 1, metal: true },
             { x: 1680, y: 350, kind: 'metal-shell', dir: -1, patrol: 150, metal: true },
@@ -963,7 +963,7 @@ var WonderScene = new Phaser.Class({
             { x: 5140, y: 372, kind: 'metal-shell', dir: 1, patrol: 150, metal: true },
             { x: 5620, y: 506, kind: 'metal-bug', dir: -1, metal: true }
         ];
-        if (level === 53) return [
+        if (level === 52) return [
             { x: 680, y: 376, kind: 'mirror-creature', dir: -1, patrol: 150 },
             { x: 1540, y: 350, kind: 'mirror-creature', dir: 1, patrol: 150 },
             { x: 2200, y: 392, kind: 'mirror-shell', dir: -1, patrol: 150 },
