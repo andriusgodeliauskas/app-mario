@@ -99,6 +99,7 @@ var HUDScene = new Phaser.Class({
         }
         this.marioIcon = this.add.sprite(livesX - 80, 30, heroKey, 0);
         this.marioIcon.setScale(0.175);
+        this.createHazardHud(W, H);
         this.marioIcon.setDepth(1);
 
         // ----------------------------------
@@ -362,6 +363,89 @@ var HUDScene = new Phaser.Class({
     // ==========================================
     // HELPER: Lives display with hearts
     // ==========================================
+/**
+     * Hard-difficulty readouts: the level timer, a wind arrow, and the storm
+     * warning. Built only when the hazards are actually on, and driven entirely
+     * by 'hazard' events from GameScene — the HUD never reaches into the
+     * hazard state itself.
+     */
+    createHazardHud: function (W, H) {
+        var self = this;
+        var game = this.scene.get('GameScene');
+        if (!game || !game.events) return;
+
+        this.hazardTimerText = this.add.text(W / 2, 44, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '11px',
+            color: '#FFFFFF'
+        }).setOrigin(0.5).setDepth(60).setVisible(false);
+
+        this.windText = this.add.text(W / 2 - 120, 44, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '11px',
+            color: '#A8D8F8'
+        }).setOrigin(0.5).setDepth(60).setVisible(false);
+
+        this.stormText = this.add.text(W / 2, 80, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '16px',
+            color: '#FFE44A'
+        }).setOrigin(0.5).setDepth(61).setVisible(false);
+
+        this._hazardHandler = function (e) { self.onHazard(e); };
+        game.events.on('hazard', this._hazardHandler);
+        this.events.once('shutdown', function () {
+            if (game && game.events) game.events.off('hazard', self._hazardHandler);
+        });
+    },
+
+    onHazard: function (e) {
+        if (!e || !this.hazardTimerText) return;
+
+        if (e.type === 'time') {
+            this.hazardTimerText.setVisible(true);
+            var secs = Math.ceil(e.left / 1000);
+            this.hazardTimerText.setText('LAIKAS ' + secs);
+            this.hazardTimerText.setColor(e.warning ? '#FF6060' : '#FFFFFF');
+            return;
+        }
+
+        if (e.type === 'wind') {
+            this.windText.setVisible(true);
+            this.windText.setText(e.dir > 0 ? 'VEJAS >>' : '<< VEJAS');
+            return;
+        }
+
+        if (e.type === 'warning') {
+            this.showStormBanner('LIETUS ARTEJA!', '#FFE44A');
+            return;
+        }
+        if (e.type === 'storm') {
+            this.showStormBanner('SLEPKIS PO KALADELEMIS!', '#FF8080');
+            return;
+        }
+        if (e.type === 'calm') {
+            if (this.stormText) this.stormText.setVisible(false);
+            return;
+        }
+        if (e.type === 'chaser') {
+            this.showStormBanner('KAZKAS TAVE VEJASI!', '#D8A8F8');
+        }
+    },
+
+    showStormBanner: function (text, color) {
+        if (!this.stormText) return;
+        this.stormText.setText(text).setColor(color).setVisible(true).setAlpha(1);
+        if (this._stormTween) this._stormTween.stop();
+        this._stormTween = this.tweens.add({
+            targets: this.stormText,
+            alpha: 0.25,
+            duration: 400,
+            yoyo: true,
+            repeat: 4
+        });
+    },
+
     getLivesDisplay: function (lives) {
         if (lives <= 0) return 'x0';
 

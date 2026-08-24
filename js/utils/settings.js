@@ -58,6 +58,9 @@
             distractorCloseness: 'close'
         },
         hard: {
+            // The only profile with environmental hazards: rain, lightning,
+            // wind, a chaser and a level timer. See js/utils/hazards.js.
+            hazards: true,
             lives: 2,
             enemyCount: 2.0,
             enemySpeed: 1.45,

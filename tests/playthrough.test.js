@@ -142,8 +142,7 @@ async function attempt(p, level, sceneKey) {
   await p.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.evaluate(h => {
     localStorage.setItem('app-mario:character:v1', JSON.stringify({ id: h }));
-    localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({
-      add: true, subtract: true, multiply: false, divide: false, difficulty: 'easy', unlockAll: true }));
+    localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({ add: { enabled: true, max: 10 }, subtract: { enabled: true, max: 10 }, multiply: { enabled: false, max: 10 }, divide: { enabled: false, max: 10 }, missingOperand: false, unlockAll: true, difficulty: 'easy' }));
     document.cookie = 'marioMaxLevel=52;path=/;max-age=31536000';
   }, HERO);
   await p.reload({ waitUntil: 'domcontentloaded' });

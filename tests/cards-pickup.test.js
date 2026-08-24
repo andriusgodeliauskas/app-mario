@@ -34,9 +34,7 @@ const startLevel = async (p, lvl) => {
   await p.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.evaluate(() => {
     localStorage.clear();
-    localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({
-      add: true, subtract: true, multiply: false, divide: false, difficulty: 'easy', unlockAll: true
-    }));
+    localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({ add: { enabled: true, max: 10 }, subtract: { enabled: true, max: 10 }, multiply: { enabled: false, max: 10 }, divide: { enabled: false, max: 10 }, missingOperand: false, unlockAll: true, difficulty: 'easy' }));
   });
   await p.reload({ waitUntil: 'domcontentloaded' });
   await p.waitForFunction(() => window.game && window.game.textures.exists('card-pickup'), null, { timeout: 20000 });

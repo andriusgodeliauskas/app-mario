@@ -188,7 +188,9 @@
 
         var dy = player.y - e.y;
         var len = Math.sqrt(dx * dx + dy * dy) || 1;
-        e.body.setVelocity((dx / len) * BOO_SPEED, (dy / len) * BOO_SPEED);
+        // The hard-mode chaser is the same Boo, just faster (Hazards sets this).
+        var speed = e.chaseSpeed || BOO_SPEED;
+        e.body.setVelocity((dx / len) * speed, (dy / len) * speed);
         e.setFlipX(dx > 0);
         return true;
     }

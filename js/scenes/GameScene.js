@@ -273,6 +273,9 @@ var GameScene = new Phaser.Class({
         // ----------------------------------
         this.createCardPickup(cardPos);
 
+        // Hard-difficulty weather, wind, chaser and timer (no-op elsewhere)
+        if (window.Hazards) Hazards.init(this);
+
         // ----------------------------------
         // Enemies
         // ----------------------------------
@@ -939,6 +942,9 @@ var GameScene = new Phaser.Class({
 
         // Glide, coin magnet and friends
         HeroPowers.update(this, delta, jumpHeld);
+
+        // Weather last: the wind adds to the velocity this frame just set.
+        if (window.Hazards) Hazards.update(this, delta);
 
         // ----------------------------------
         // Head-bump rescue: when Mario's head touches a ceiling, scan for any
@@ -2602,6 +2608,53 @@ var GameScene = new Phaser.Class({
         map[row][card.col] = 71;
     },
 
+    /**
+     * Storm shelters — only on `hard`, where the rain hazard runs.
+     *
+     * The rain damages anyone with no roof over their head, and a sweep of all
+     * 42 levels (tests/hazard-shelter.test.js) found roofless stretches of up to
+     * 64 tiles in EVERY one of them. Left alone, the storm would not be a hazard
+     * to dodge, it would be unavoidable damage.
+     *
+     * Rather than re-cut 42 levels by hand — and change how they look for the
+     * children playing on easy — the shelters are added here, at build time,
+     * only when hazards are on. A short stone ledge every so often: something to
+     * run for, close enough that running for it is a fair ask.
+     */
+    injectStormShelters: function (map) {
+        var SOLID = { 1: 1, 2: 1, 3: 1, 4: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1,
+                      6: 1, 7: 1, 8: 1, 9: 1, 11: 1, 12: 1, 13: 1 };
+        var SHELTER_ROW = 13;
+        var GAP = 9;              // never more than this many roofless tiles
+        var WIDTH = 3;
+        var cols = map[17] ? map[17].length : 0;
+
+        function covered(col) {
+            for (var r = 0; r <= 14; r++) {
+                if (map[r] && SOLID[map[r][col]]) return true;
+            }
+            return false;
+        }
+
+        function placeAt(col) {
+            for (var c = col; c < col + WIDTH && c < cols; c++) {
+                if (!map[SHELTER_ROW]) return;
+                // Never overwrite something that is already there
+                if (map[SHELTER_ROW][c] === 0) map[SHELTER_ROW][c] = 11;
+            }
+        }
+
+        var run = 0;
+        for (var col = 0; col < cols; col++) {
+            if (covered(col)) { run = 0; continue; }
+            run++;
+            if (run > GAP) {
+                placeAt(col);
+                run = 0;
+            }
+        }
+    },
+
     // ==========================================
     // LEVEL DATA — hardcoded tilemaps
     // ==========================================
@@ -2631,6 +2684,10 @@ var GameScene = new Phaser.Class({
             // _unstackBlocks sometimes landed on top of it and the card simply
             // was not there that run.
             this.injectLevelCard(data.map, level);
+            // Hard difficulty only: somewhere to hide from the storm.
+            if (this.difficultyProfile && this.difficultyProfile.hazards) {
+                this.injectStormShelters(data.map);
+            }
         }
         return data;
     },

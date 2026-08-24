@@ -26,9 +26,7 @@ const EXPECTED = {
   const p = await b.newPage({ viewport: { width: 800, height: 600 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await p.evaluate(() => localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({
-    add: true, subtract: true, multiply: false, divide: false, difficulty: 'easy', unlockAll: true
-  })));
+  await p.evaluate(() => localStorage.setItem('app-mario:math-settings:v1', JSON.stringify({ add: { enabled: true, max: 10 }, subtract: { enabled: true, max: 10 }, multiply: { enabled: false, max: 10 }, divide: { enabled: false, max: 10 }, missingOperand: false, unlockAll: true, difficulty: 'easy' })));
   await p.reload({ waitUntil: 'domcontentloaded' });
   await p.waitForFunction(() => window.game && window.game.textures.exists('boo'), null, { timeout: 20000 });
 
