@@ -229,6 +229,18 @@
     }
 
     /**
+     * Is this villain currently safe to touch?
+     *
+     * A watched Boo is. He cannot be stomped — that is the whole point of him —
+     * and landing on him counts as a stomp, so if a frozen Boo still hurt there
+     * would be no way past him at all: not over, not through. Freezing him has
+     * to be the way through, or he is a wall rather than a puzzle.
+     */
+    function isHarmless(enemy) {
+        return !!(enemy && enemy.enemyType === 'boo' && enemy.isFrozen);
+    }
+
+    /**
      * What a stomp does. GameScene asks before running its own squish logic.
      *   'ignore' — the stomp does nothing (Boo); the player takes the hit
      *   'damage' — a hit landed but the villain survives (Bowser Jr. round 1)
@@ -257,6 +269,7 @@
     window.Villains = {
         TILE_CODES: TILE_CODES,
         isVillain: isVillain,
+        isHarmless: isHarmless,
         typeForTile: typeForTile,
         spawn: spawn,
         updateOne: updateOne,

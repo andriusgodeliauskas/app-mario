@@ -2015,6 +2015,9 @@ var GameScene = new Phaser.Class({
     // ==========================================
     handleEnemyCollision: function (player, enemy) {
         if (!enemy.active) return;
+        // A Boo frozen under the player's gaze is safe to walk through — see
+        // Villains.isHarmless. Without this he is an impassable wall.
+        if (window.Villains && Villains.isHarmless(enemy)) return;
         var SHELL_SPEED = 280;
 
         // ----- Koopa shell interactions -----

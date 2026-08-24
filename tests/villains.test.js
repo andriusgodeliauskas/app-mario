@@ -73,6 +73,32 @@ const frames = (p, n) => p.evaluate(async k => {
   });
   stomp === 'ignore' ? ok('Boo neuzminamas (onStomp = ignore)') : bad('Boo uzminamas', stomp);
 
+  // ── A Boo you are looking at must be safe to pass ────────────────────────
+  // He freezes and covers his eyes when watched. If he still hurt on contact he
+  // would be an impassable wall: you cannot stomp him (that is the point), and
+  // landing on him counts as a stomp, so there would be no way past him at all.
+  const frozenSafe = await p.evaluate(async () => {
+    const s = window.game.scene.getScene('GameScene');
+    const livesBefore = s.lives;
+    s.isInvincible = false;
+    s.player.setFlipX(false);                      // facing right
+    const boo = window.Villains.spawn(s, 'boo', s.player.x + 60, s.player.y);
+    for (let i = 0; i < 10; i++) await new Promise(r => requestAnimationFrame(r));
+    const frozen = boo.isFrozen;
+    // walk straight into him while watching him
+    for (let i = 0; i < 25; i++) {
+      boo.x = s.player.x + 4; boo.y = s.player.y;
+      await new Promise(r => requestAnimationFrame(r));
+    }
+    const result = { frozen: frozen, livesBefore: livesBefore, livesAfter: s.lives, dead: s.isDead };
+    if (boo.active) boo.destroy();
+    return result;
+  });
+  frozenSafe.frozen ? ok('Boo sustingo, kai i ji ziurima') : bad('Boo nesustingo', '');
+  (frozenSafe.livesAfter === frozenSafe.livesBefore && !frozenSafe.dead)
+    ? ok('sustinges Boo nekenkia — pro ji galima praeiti')
+    : bad('sustinges Boo vis tiek atima gyvybe', JSON.stringify(frozenSafe));
+
   // ── Bowser Jr. takes two stomps ───────────────────────────────────────────
   const jr = await p.evaluate(() => {
     const s = window.game.scene.getScene('GameScene');
