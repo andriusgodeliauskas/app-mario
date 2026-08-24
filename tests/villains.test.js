@@ -134,6 +134,10 @@ const frames = (p, n) => p.evaluate(async k => {
     const d = window.Villains.spawn(s, 'dk', s.player.x + 250, s.player.y);
     const count = () => s.enemies.getChildren().filter(e => e.enemyType === 'dk-barrel').length;
     const before = count();
+    // Fire the next throw now. Waiting out the real 2.6s timer made this flaky:
+    // this container renders at ~4fps, so how much game time 300 animation
+    // frames buy varies run to run. The interval is not what is under test.
+    d._throwTimer = 20;
     let after = before, stayedPut = true;
     // Stop as soon as a barrel exists: left running, it rolls into the player,
     // costs a life and restarts the scene out from under the assertions.

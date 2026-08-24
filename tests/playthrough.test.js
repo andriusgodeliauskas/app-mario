@@ -43,6 +43,25 @@ async function attempt(p, level, sceneKey) {
     let s = scene();
     if (!s || !s.player) return { error: 'scena neuzsikrove' };
 
+    // Record what actually killed us. "Died at x=946" is not a finding; "died to
+    // hitWonderEnemy at x=946" is the difference between a bot problem and a
+    // level problem.
+    s.__kill = null;
+    ['playerHit', 'playerDeath'].forEach(fn => {
+      if (typeof s[fn] !== 'function' || s[fn].__wrapped) return;
+      const orig = s[fn].bind(s);
+      const wrapper = function () {
+        if (!s.__kill) {
+          const frames = (new Error()).stack.split('\n').slice(2, 4).join(' ');
+          const m = frames.match(/at \w+\.(\w+)/);
+          s.__kill = { fn: fn, by: m ? m[1] : frames.slice(0, 60), x: Math.round(s.player.x) };
+        }
+        return orig.apply(s, arguments);
+      };
+      wrapper.__wrapped = true;
+      s[fn] = wrapper;
+    });
+
     // Nothing is drawn while the bot plays — that is what makes it fast.
     game.scene.scenes.forEach(sc => { if (sc.sys && sc.sys.setVisible) sc.sys.setVisible(false); });
     game.loop.stop();
@@ -52,6 +71,12 @@ async function attempt(p, level, sceneKey) {
     const startX = s.player.x;
     let maxX = startX, jumpHeld = false, sinceJump = 0, stuckFrames = 0, lastX = startX;
     let backupFrames = 0;   // pressed against a wall: back off and take a run-up
+    let holdFrames = 16;    // how long the current jump is held
+    const tail = [];        // last frames before the end, for diagnosing failures
+    const remember = (pl, note) => {
+      tail.push(Math.round(pl.x) + ',' + Math.round(pl.y) + (note ? ' ' + note : ''));
+      if (tail.length > 40) tail.shift();
+    };
 
     right(true);
     for (let f = 0; f < maxFrames; f++) {
@@ -62,7 +87,7 @@ async function attempt(p, level, sceneKey) {
       s = scene();
       if (!s || !s.player || !s.player.body) break;
       if (s.levelComplete) { right(false); jump(false); return { done: true, maxX, frames: f }; }
-      if (s.isDead) { right(false); jump(false); return { done: false, died: true, maxX, x: s.player.x, frames: f }; }
+      if (s.isDead) { right(false); left(false); jump(false); return { done: false, died: true, maxX, x: s.player.x, frames: f, kill: s.__kill, tail: tail.slice(-24) }; }
 
       const pl = s.player;
       maxX = Math.max(maxX, pl.x);
@@ -78,19 +103,27 @@ async function attempt(p, level, sceneKey) {
       }
 
       let needJump = false;
+      let holdFor = 16;          // a short hop clears an enemy
       if (Math.abs(pl.x - lastX) < 0.4) stuckFrames++;
       else stuckFrames = 0;
 
       // An enemy just ahead: jump on it. A bot that walks into every goomba
       // reports level after level as "impossible" for reasons no player has.
+      // WonderScene keeps its own group ('wonderEnemies') alongside 'enemies';
+      // a bot that only watches one walks straight into the other.
       let enemyAhead = false;
-      if (s.enemies && s.enemies.getChildren) {
-        const kids = s.enemies.getChildren();
+      const groups = [s.enemies, s.wonderEnemies];
+      for (let gi = 0; gi < groups.length && !enemyAhead; gi++) {
+        const grp = groups[gi];
+        if (!grp || !grp.getChildren) continue;
+        const kids = grp.getChildren();
         for (let e = 0; e < kids.length; e++) {
           const en = kids[e];
           if (!en.active || en.isSquished) continue;
           const dx = en.x - pl.x;
-          if (dx > 0 && dx < 90 && Math.abs(en.y - pl.y) < 60) { enemyAhead = true; break; }
+          // Jump early enough that the descent lands ON them: a Wonder stomp
+          // needs velocity.y > 40, so brushing them at the apex just hurts.
+          if (dx > 20 && dx < 130 && Math.abs(en.y - pl.y) < 70) { enemyAhead = true; break; }
         }
       }
 
@@ -100,8 +133,11 @@ async function attempt(p, level, sceneKey) {
         if (stuckFrames > 12) needJump = true;
         if (s.hasSolidTileAtPoint) {
           const feet = pl.body.bottom + 6;
-          if (!s.hasSolidTileAtPoint(pl.body.right + 30, feet)) needJump = true;
-          else if (!s.hasSolidTileAtPoint(pl.body.right + 70, feet)) needJump = true;
+          // A gap needs the FULL jump held, not the short hop: the game caps
+          // upward speed the moment the button is released, so a 16-frame tap
+          // falls well short of a wide gap.
+          if (!s.hasSolidTileAtPoint(pl.body.right + 24, feet)) { needJump = true; holdFor = 30; }
+          else if (!s.hasSolidTileAtPoint(pl.body.right + 64, feet)) { needJump = true; holdFor = 30; }
         }
       }
 
@@ -117,13 +153,25 @@ async function attempt(p, level, sceneKey) {
       lastX = pl.x;
 
       sinceJump++;
-      if (needJump && onGround && sinceJump > 8) { jump(true); jumpHeld = true; sinceJump = 0; }
-      else if (jumpHeld && sinceJump > 16) { jump(false); jumpHeld = false; }
+      let note = '';
+      if (needJump && onGround) {
+        // No fixed cooldown. The game needs a fresh press, so if the button is
+        // still down from the last jump, release it now and press next frame.
+        // A frame-count cooldown made the bot walk off ledges it had just
+        // spotted, because it had hopped an enemy a moment earlier.
+        // ...but not on the frame we just pressed: the body is still touching the
+        // ground for one more frame, and releasing there turns a full jump into
+        // a hop that clears nothing.
+        if (jumpHeld && sinceJump > 3) { jump(false); jumpHeld = false; note = 'rel!'; }
+        else if (!jumpHeld) { jump(true); jumpHeld = true; sinceJump = 0; holdFrames = holdFor; note = 'JUMP' + holdFor; }
+      } else if (jumpHeld && sinceJump > holdFrames) { jump(false); jumpHeld = false; note = 'rel'; }
+      if (!onGround && !note) note = 'air';
+      remember(pl, note + (enemyAhead ? ' E' : ''));
 
       if (pl.y > 900) { right(false); jump(false); return { done: false, fell: true, maxX, x: pl.x, frames: f }; }
     }
     right(false); left(false); jump(false);
-    return { done: false, timeout: true, maxX, x: s && s.player ? s.player.x : -1 };
+    return { done: false, timeout: true, tail: tail.slice(-24), maxX, x: s && s.player ? s.player.x : -1 };
   }, { sceneKey, maxFrames: Number(process.env.FRAMES || 5400) });
 }
 
@@ -173,15 +221,29 @@ async function attempt(p, level, sceneKey) {
       if (outcome && outcome.done) break;
     }
 
-    const line = { level, name: theme.name, scene: theme.scene, ...outcome, errs: errs.slice(0, 2) };
+    const gates = await p.evaluate(sk => {
+      const s = window.game.scene.getScene(sk);
+      if (!s || !s.levelData) return null;
+      const g = [];
+      if (s.levelData.keyGoal) g.push('reikia ' + s.levelData.keyGoal + ' rakt.');
+      if (s.levelData.mirrorTwin) g.push('veidrodinis dvynys');
+      if (s.levelData.bossDoor) g.push('boso durys');
+      if (s.levelData.gravityZones && s.levelData.gravityZones.length) g.push('gravitacijos zonos');
+      if (s.levelData.magnetPolarity !== undefined) g.push('magnetai');
+      return g;
+    }, theme.scene).catch(() => null);
+
+    const line = { level, name: theme.name, scene: theme.scene, gates, ...outcome, errs: errs.slice(0, 2) };
     results.push(line);
     const status = outcome.done ? '✓ PEREITA'
-      : outcome.died ? '✗ mire'
+      : outcome.died ? ('✗ mire' + (outcome.kill ? ' (' + outcome.kill.by + ')' : ''))
       : outcome.fell ? '✗ ikrito'
       : outcome.timeout ? '✗ neuzbaige (timeout)'
       : '✗ ' + JSON.stringify(outcome);
-    console.log(`  ${String(level).padStart(2)} ${theme.name.padEnd(24)} ${status}   maxX=${Math.round(outcome.maxX || 0)}`);
+    const gateNote = (gates && gates.length) ? '   [' + gates.join(', ') + ']' : '';
+    console.log(`  ${String(level).padStart(2)} ${theme.name.padEnd(24)} ${status}   maxX=${Math.round(outcome.maxX || 0)}${gateNote}`);
     if (line.errs.length) console.log('       klaidos: ' + line.errs.join(' | '));
+    if (process.env.TRAIL && outcome.tail) console.log('       ' + outcome.tail.join(' | '));
   }
 
   const done = results.filter(r => r.done).length;

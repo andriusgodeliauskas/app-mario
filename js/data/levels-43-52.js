@@ -53,14 +53,23 @@
             noGround: true,
             ground: [
                 { x: 40, y: 430, width: 260, height: 48 },
-                { x: 5160, y: 430, width: 360, height: 48 }
+                // Reaches 80px further left (was x:5160,width:360). The last cloud ends at
+                // 4888 and a jump from it covers ~244px against a 272px gap — the run to
+                // the flag could not be completed. Right edge unchanged.
+                { x: 5080, y: 430, width: 440, height: 48 }
             ],
             segmented: [
                 { x: 520, y: 410, count: 5, speed: 2.0, offset: 0.42 },
                 { x: 1180, y: 374, count: 6, speed: 1.65, offset: 0.48 },
                 { x: 1980, y: 420, count: 5, speed: 1.9, offset: 0.5 },
-                { x: 3040, y: 382, count: 7, speed: 1.55, offset: 0.42 },
-                { x: 4200, y: 410, count: 6, speed: 1.8, offset: 0.45 }
+                // Extended LEFT (were x:3040/count:7 and x:4200/count:6). The gap
+                // from the cloud before each of these was 408px and 388px, and a
+                // full running jump covers ~273px — both were uncrossable, which
+                // made this room, and therefore rooms 45-52 behind it, unfinishable.
+                // The right-hand ends are unchanged so the gaps after them stay as
+                // authored. See tests/wonder-reach.test.js.
+                { x: 2832, y: 382, count: 11, speed: 1.55, offset: 0.42 },
+                { x: 4044, y: 410, count: 9, speed: 1.8, offset: 0.45 }
             ],
             dissolvingClouds: [
                 { x: 860, y: 330, width: 160 },
