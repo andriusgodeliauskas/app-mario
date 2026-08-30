@@ -57,11 +57,13 @@ const bad = (n, e) => { failed++; fails.push(n); console.log('  ✗ ' + n + ' �
       //   landing d px ABOVE:               400t^2 - 520t + d = 0  (first root)
       // A flat constant flagged real jumps as impossible and cleared others that
       // are not.
-      // MARGIN is calibrated, not guessed: a measured full-speed, fully-held
-      // jump on flat ground covers 220px and rises 165px. The bare parabola
-      // says 260px — the difference is that landing registers when the body
-      // touches down, not when the arc completes.
-      const V0 = 520, G = 800, RUN = 200, MARGIN = 0.846;
+      // Measured IN WonderScene, which is not GameScene: a full-speed jump here
+      // covers 270px flat and rises 165px, at 205px/s. The first version of this
+      // model borrowed GameScene's numbers and came out at 220px — conservative
+      // enough to flag real, crossable jumps as impossible.
+      // MARGIN trims the measured maximum: a gap a child can only clear with a
+      // frame-perfect jump off the very edge is not a gap they can clear.
+      const V0 = 520, G = 800, RUN = 205, MARGIN = 0.94;
       const MAX_UP = (V0 * V0) / (2 * G);        // 169px
 
       const reachFor = rise => {                  // rise > 0 => target is higher

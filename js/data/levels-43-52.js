@@ -61,15 +61,18 @@
             segmented: [
                 { x: 520, y: 410, count: 5, speed: 2.0, offset: 0.42 },
                 { x: 1180, y: 374, count: 6, speed: 1.65, offset: 0.48 },
-                { x: 1980, y: 420, count: 5, speed: 1.9, offset: 0.5 },
+                // Two segments longer (was count:5). The jump from here to the cloud at 2432
+                // needed 220px across a 74px rise; the arc is only ~56px high by then, so
+                // the player hit the cloud's side instead of its top — 6 of 6 attempts died.
+                { x: 1980, y: 420, count: 7, speed: 1.9, offset: 0.5 },
                 // Extended LEFT (were x:3040/count:7 and x:4200/count:6). The gap
                 // from the cloud before each of these was 408px and 388px, and a
                 // full running jump covers ~273px — both were uncrossable, which
                 // made this room, and therefore rooms 45-52 behind it, unfinishable.
                 // The right-hand ends are unchanged so the gaps after them stay as
                 // authored. See tests/wonder-reach.test.js.
-                { x: 2832, y: 382, count: 11, speed: 1.55, offset: 0.42 },
-                { x: 4044, y: 410, count: 9, speed: 1.8, offset: 0.45 }
+                { x: 2832, y: 382, count: 13, speed: 1.55, offset: 0.42 },
+                { x: 4044, y: 410, count: 11, speed: 1.8, offset: 0.45 }
             ],
             dissolvingClouds: [
                 { x: 860, y: 330, width: 160 },
@@ -186,26 +189,40 @@
             groundFill: 'wonder-neon-fill',
             platformTop: 'wonder-neon-top',
             gravityMode: true,
-            keyGoal: 5,
+            // Three of the five keys sit on the floor route, so a child who never works
+            // out the gravity flip can still open the door. The two by the ceiling are
+            // the reward for working it out.
+            keyGoal: 3,
+            // Floor gaps are 200px — a measured Wonder run-jump clears 270px, so
+            // every gap is crossable on foot. They used to be 260/380/440/520px:
+            // only the gravity route crossed them, and the first UP pad sat AFTER
+            // the first gap, so the room could not even be entered.
             ground: [
-                { x: 0, y: 544, width: 780, height: 64 },
-                { x: 1040, y: 544, width: 720, height: 64 },
-                { x: 2140, y: 544, width: 660, height: 64 },
-                { x: 3240, y: 544, width: 720, height: 64 },
+                { x: 0, y: 544, width: 840, height: 64 },
+                { x: 1040, y: 544, width: 900, height: 64 },
+                { x: 2140, y: 544, width: 900, height: 64 },
+                { x: 3240, y: 544, width: 1040, height: 64 },
                 { x: 4480, y: 544, width: 1720, height: 64 },
-                { x: 1330, y: -8, width: 500, height: 40 },
-                { x: 2850, y: -8, width: 560, height: 40 }
+                // Ceilings. Each one must extend past its DOWN pad, or a flipped
+                // player walks off the edge and falls up out of the world.
+                { x: 700, y: -8, width: 500, height: 40 },
+                { x: 1330, y: -8, width: 670, height: 40 },
+                { x: 2850, y: -8, width: 950, height: 40 }
             ],
             platforms: [
                 { x: 520, y: 408, width: 192 },
                 { x: 1120, y: 306, width: 224 },
                 { x: 1560, y: 146, width: 224 },
-                { x: 2180, y: 368, width: 224 },
+                { x: 2180, y: 420, width: 224 },
                 { x: 3020, y: 188, width: 256 },
                 { x: 3560, y: 394, width: 224 },
-                { x: 4320, y: 306, width: 224 }
+                { x: 4320, y: 420, width: 224 }
             ],
+            // A flip lifts you ~481px while drifting ~225px right, so every UP pad
+            // needs a ceiling starting within reach of that landing point.
             gravityZones: [
+                { x: 560, y: 466, axis: 'up', label: 'UP' },
+                { x: 1050, y: 64, axis: 'down', label: 'DOWN' },
                 { x: 1180, y: 466, axis: 'up', label: 'UP' },
                 { x: 1940, y: 64, axis: 'down', label: 'DOWN' },
                 { x: 2860, y: 466, axis: 'up', label: 'UP' },
@@ -216,7 +233,7 @@
                 { x: 1560, y: 96 },
                 { x: 2320, y: 314 },
                 { x: 3180, y: 136 },
-                { x: 4370, y: 252 }
+                { x: 4370, y: 300 }
             ],
             neonPosts: [
                 { x: 860, y: 512 }, { x: 1880, y: 66 }, { x: 2680, y: 512 },
@@ -315,19 +332,34 @@
                 { x: 430, y: 430, width: 192 },
                 { x: 5280, y: 430, width: 224 }
             ],
+            // Fifteen gears at 320px spacing (was six, 600-820px apart). Bodies are
+            // 150px wide, so ~170px of air at rest and ~240px when two neighbours
+            // swing apart — inside the measured 270px jump either way, so crossing
+            // never depends on waiting for a favourable phase. Before this the
+            // CLOSEST the old gears ever came was 380-690px and the last sat 845px
+            // from the exit: the room could not be crossed at all, at any timing.
             gearPlatforms: [
-                { x: 980, y: 420, radiusX: 70, radiusY: 28, speed: 0.62, phase: 0 },
-                { x: 1580, y: 372, radiusX: 82, radiusY: 32, speed: 0.55, phase: 1.7 },
-                { x: 2290, y: 420, radiusX: 76, radiusY: 30, speed: 0.6, phase: 0.4 },
-                { x: 3020, y: 382, radiusX: 84, radiusY: 34, speed: 0.52, phase: 1.3 },
-                { x: 3860, y: 424, radiusX: 78, radiusY: 28, speed: 0.58, phase: 2.2 },
-                { x: 4680, y: 388, radiusX: 84, radiusY: 32, speed: 0.54, phase: 0.9 }
+                { x: 950, y: 420, radiusX: 70, radiusY: 28, speed: 0.62, phase: 0.0 },
+                { x: 1270, y: 386, radiusX: 78, radiusY: 32, speed: 0.55, phase: 1.7 },
+                { x: 1590, y: 424, radiusX: 74, radiusY: 30, speed: 0.6, phase: 0.4 },
+                { x: 1910, y: 378, radiusX: 84, radiusY: 34, speed: 0.52, phase: 1.3 },
+                { x: 2230, y: 418, radiusX: 76, radiusY: 28, speed: 0.58, phase: 2.2 },
+                { x: 2550, y: 382, radiusX: 80, radiusY: 32, speed: 0.54, phase: 0.9 },
+                { x: 2870, y: 420, radiusX: 72, radiusY: 30, speed: 0.63, phase: 2.7 },
+                { x: 3190, y: 374, radiusX: 82, radiusY: 34, speed: 0.51, phase: 0.6 },
+                { x: 3510, y: 422, radiusX: 76, radiusY: 28, speed: 0.59, phase: 1.9 },
+                { x: 3830, y: 386, radiusX: 84, radiusY: 32, speed: 0.56, phase: 3.0 },
+                { x: 4150, y: 416, radiusX: 70, radiusY: 30, speed: 0.61, phase: 1.1 },
+                { x: 4470, y: 380, radiusX: 78, radiusY: 28, speed: 0.53, phase: 2.4 },
+                { x: 4790, y: 424, radiusX: 74, radiusY: 32, speed: 0.57, phase: 0.3 },
+                { x: 5110, y: 390, radiusX: 80, radiusY: 30, speed: 0.6, phase: 1.5 },
+                { x: 5430, y: 412, radiusX: 72, radiusY: 28, speed: 0.5, phase: 2.0 }
             ],
             pipes: [
                 { x: 760, y: 500, width: 410 }, { x: 1740, y: 492, width: 460 },
                 { x: 3140, y: 500, width: 500 }, { x: 4380, y: 492, width: 440 }
             ],
-            coins: coins([[360, 468], [980, 352], [1580, 304], [2290, 352], [3020, 314], [3860, 356], [4680, 320], [5320, 360], [5740, 468]]),
+            coins: coins([[360, 468], [950, 352], [1650, 356], [2350, 350], [3050, 352], [3750, 354], [4450, 348], [5150, 356], [5740, 468]]),
             flag: { x: 6000, y: 352 },
             finishGroundY: 544
         };
